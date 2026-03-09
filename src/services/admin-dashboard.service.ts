@@ -32,11 +32,19 @@ export interface ActivityItem {
   createdAt: string;
 }
 
+export interface ChartDataPoint {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
 export interface DashboardData {
   overview: DashboardOverview;
   today: DashboardToday;
   pendingActions: PendingActions;
   recentActivity: ActivityItem[];
+  orderStatusCounts: Record<string, number>;
+  chartData: ChartDataPoint[];
 }
 
 export interface OrderStats {
@@ -250,8 +258,8 @@ class AdminDashboardService {
   /**
    * Get main dashboard overview with key metrics
    */
-  async getDashboard(): Promise<DashboardData> {
-    const response = await enhancedApiService.get<{ data: DashboardData }>('/api/admin/dashboard');
+  async getDashboard(params?: { dateFrom?: string; dateTo?: string }): Promise<DashboardData> {
+    const response = await enhancedApiService.get<{ data: DashboardData }>('/api/admin/dashboard', { params });
     return response.data;
   }
 

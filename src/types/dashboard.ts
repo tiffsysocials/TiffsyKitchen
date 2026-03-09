@@ -82,7 +82,7 @@ export interface MealSlotSnapshot {
 
 // Order status funnel item interface
 export interface OrderStatusFunnelItem {
-  status: OrderStatus;
+  status: string;
   label: string;
   count: number;
   color: string;

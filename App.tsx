@@ -584,48 +584,33 @@ function App() {
     }
   };
 
-  const handleVerificationComplete = async (token: string) => {
+  const handleVerificationComplete = async (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string }) => {
     console.log('========== APP.TSX: OTP VERIFIED ==========');
-    console.log('Firebase Token Received:', token ? 'YES' : 'NO');
-    console.log('Token Length:', token?.length);
+    console.log('Token Received:', data.token ? 'YES' : 'NO');
+    console.log('Is New User:', data.isNewUser);
+    console.log('User Role:', data.role);
     console.log('===========================================');
 
     try {
-      // Store auth token first
-      await AsyncStorage.setItem('authToken', token);
-
-      // Update API service with the token
-      await apiService.login(token);
-
-      // ⚠️ CRITICAL: Call /api/auth/sync IMMEDIATELY after Firebase authentication
-      // This links the Firebase UID to the database user record
-      console.log('⚠️  CRITICAL: Calling /api/auth/sync to link Firebase UID...');
-      const syncResponse = await authService.syncWithBackend();
-
-      console.log('========== SYNC RESPONSE RECEIVED ==========');
-      console.log('Is New User:', syncResponse.data?.isNewUser);
-      console.log('User Role:', syncResponse.data?.user?.role);
-      console.log('Kitchen Approval Status:', syncResponse.data?.kitchenApprovalStatus);
-      console.log('===========================================');
-
       // Check if new user (needs registration)
-      if (syncResponse.data?.isNewUser) {
-        console.log('⚠️  New user detected - registration required');
-        // TODO: Navigate to registration screen
-        // For now, clear data and show login again
+      if (data.isNewUser) {
+        console.log('New user detected - registration required');
         await authService.clearAdminData();
         setIsAuthenticated(false);
         return;
       }
 
-      // Get user from sync response
-      const backendUser = syncResponse.data?.user;
-      if (!backendUser) {
-        console.error('⚠️  No user data in sync response');
+      const backendUser = data.user;
+      if (!backendUser || !data.token) {
+        console.error('No user data or token in verify response');
         await authService.clearAdminData();
         setIsAuthenticated(false);
         return;
       }
+
+      // Store auth token
+      await AsyncStorage.setItem('authToken', data.token);
+      await apiService.login(data.token);
 
       // Map backend user to app user format
       const userProfile = {
@@ -639,7 +624,7 @@ function App() {
         status: backendUser.status,
         isActive: backendUser.isActive,
         isVerified: backendUser.isVerified,
-        kitchenId: backendUser.kitchenId, // Include kitchenId for Kitchen Staff
+        kitchenId: backendUser.kitchenId,
         createdAt: backendUser.createdAt,
         updatedAt: backendUser.updatedAt,
       };
@@ -656,27 +641,33 @@ function App() {
       console.log('Mapped App Role:', appRole);
 
       if (!appRole) {
-        console.error('⚠️  Invalid role received from backend:', userProfile.role);
+        console.error('Invalid role received from backend:', userProfile.role);
         await authService.clearAdminData();
         throw new Error('Invalid user role');
       }
 
-      // Store user role
+      // Check kitchen approval status for KITCHEN_STAFF
+      if (appRole === 'KITCHEN_STAFF' && data.kitchenApprovalStatus && data.kitchenApprovalStatus !== 'APPROVED') {
+        console.log('Kitchen not approved. Status:', data.kitchenApprovalStatus);
+        await authService.clearAdminData();
+        throw new Error(
+          data.kitchenApprovalStatus === 'PENDING'
+            ? 'Your kitchen registration is pending approval.'
+            : 'Your kitchen registration was not approved.'
+        );
+      }
+
+      // Store user role and data
       await AsyncStorage.setItem('userRole', appRole);
       setUserRole(appRole);
-
-      // Store user data
       await AsyncStorage.setItem('userData', JSON.stringify(userProfile));
 
-      // Get phone number that was stored during OTP verification
       const phoneNumber = await AsyncStorage.getItem('userPhoneNumber');
       if (phoneNumber) {
         await AsyncStorage.setItem('adminPhone', phoneNumber);
       }
 
-      console.log('✅ User authenticated successfully with role:', appRole);
-      console.log('✅ Firebase UID linked to database user');
-      console.log('Navigating to appropriate dashboard...');
+      console.log('User authenticated successfully with role:', appRole);
 
       // Initialize FCM and register token
       console.log('Initializing FCM service...');
@@ -684,7 +675,7 @@ function App() {
 
       setIsAuthenticated(true);
     } catch (error) {
-      console.error('❌ Error during authentication:', error);
+      console.error('Error during authentication:', error);
       await authService.clearAdminData();
       setIsAuthenticated(false);
       setUserRole(null);

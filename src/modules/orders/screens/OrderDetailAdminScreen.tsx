@@ -927,13 +927,31 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
         )}
 
         {/* Special Instructions */}
-        {order.specialInstructions && (
+        {(order.specialInstructions || order.leaveAtDoor || order.doNotContact) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Special Instructions</Text>
             <View style={styles.card}>
-              <Text style={styles.instructionsText}>
-                {order.specialInstructions}
-              </Text>
+              {order.specialInstructions && (
+                <Text style={styles.instructionsText}>
+                  {order.specialInstructions}
+                </Text>
+              )}
+              {(order.leaveAtDoor || order.doNotContact) && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: order.specialInstructions ? 8 : 0, gap: 8 }}>
+                  {order.leaveAtDoor && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E3F2FD', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <MaterialIcons name="door-front" size={14} color="#1976D2" />
+                      <Text style={{ marginLeft: 4, fontSize: 12, color: '#1976D2', fontWeight: '600' }}>Leave at Door</Text>
+                    </View>
+                  )}
+                  {order.doNotContact && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <MaterialIcons name="phone-disabled" size={14} color="#D32F2F" />
+                      <Text style={{ marginLeft: 4, fontSize: 12, color: '#D32F2F', fontWeight: '600' }}>Do Not Contact</Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           </View>
         )}

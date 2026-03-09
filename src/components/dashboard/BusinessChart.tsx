@@ -8,9 +8,18 @@ interface BusinessChartProps {
 }
 
 export const BusinessChart: React.FC<BusinessChartProps> = ({ data }) => {
-  const maxValue = Math.max(...data.points.map((p) => p.value));
+  if (!data.points || data.points.length === 0) {
+    return (
+      <View style={styles.container}>
+        <SectionHeader title={data.title} />
+        <Text style={{ textAlign: 'center', color: '#9ca3af', paddingVertical: 24 }}>No data available</Text>
+      </View>
+    );
+  }
+
+  const maxValue = Math.max(...data.points.map((p) => p.value)) || 1;
   const maxSecondary = data.points[0]?.secondaryValue
-    ? Math.max(...data.points.map((p) => p.secondaryValue || 0))
+    ? Math.max(...data.points.map((p) => p.secondaryValue || 0)) || 1
     : 0;
 
   const formatValue = (value: number): string => {

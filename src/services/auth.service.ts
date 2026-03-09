@@ -68,51 +68,15 @@ class AuthService {
       });
     }
 
-    return apiService.post<LoginResponse>('/auth/staff/login', { username, password, role });
+    return apiService.post<LoginResponse>('/api/auth/admin/login', { username, password, role });
   }
 
   async sendOTP(phone: string): Promise<void> {
-    await apiService.post('/auth/send-otp', { phone });
+    await apiService.post('/api/auth/send-otp', { phone });
   }
 
-  async verifyOTP(phone: string, otp: string): Promise<LoginResponse> {
-    return apiService.post<LoginResponse>('/auth/verify-otp', { phone, otp });
-  }
-
-  /**
-   * Sync with backend after Firebase authentication
-   * This is CRITICAL - must be called immediately after Firebase OTP verification
-   * Links Firebase UID to database user record
-   *
-   * Note: The Firebase token must already be set via apiService.login() before calling this
-   */
-  async syncWithBackend(): Promise<any> {
-    try {
-      console.log('========== SYNCING WITH BACKEND ==========');
-      console.log('Calling POST /api/auth/sync...');
-      console.log('Token already set in API service');
-      console.log('==========================================');
-
-      // Call sync endpoint - token is automatically added by apiService
-      const response = await apiService.post<any>('/api/auth/sync');
-
-      console.log('========== SYNC RESPONSE ==========');
-      console.log('Success:', response.success);
-      console.log('Is New User:', response.data?.isNewUser);
-      console.log('User Role:', response.data?.user?.role);
-      console.log('User Status:', response.data?.user?.status);
-      console.log('Kitchen ID:', response.data?.user?.kitchenId);
-      console.log('Kitchen Approval Status:', response.data?.kitchenApprovalStatus);
-      console.log('Firebase UID:', response.data?.user?.firebaseUid);
-      console.log('===================================');
-
-      return response;
-    } catch (error) {
-      console.error('========== SYNC ERROR ==========');
-      console.error('Failed to sync with backend:', error);
-      console.error('================================');
-      throw error;
-    }
+  async verifyOTP(phone: string, otp: string): Promise<any> {
+    return apiService.post<any>('/api/auth/verify-otp', { phone, otp });
   }
 
   async getProfile(): Promise<User> {
@@ -180,14 +144,14 @@ class AuthService {
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
-    return apiService.patch<User>('/auth/profile', data);
+    return apiService.patch<User>('/api/auth/profile', data);
   }
 
   async logout(): Promise<void> {
     if (USE_MOCK_LOGIN) {
       return Promise.resolve();
     }
-    await apiService.post('/auth/logout');
+    await apiService.post('/api/auth/logout');
   }
 
   // Admin-specific methods for managing stored admin data

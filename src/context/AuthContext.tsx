@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
 import { User, UserRole } from '../types/user';
 import { authService } from '../services/auth.service';
 import { apiService } from '../services/api.enhanced.service';
@@ -52,31 +51,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const verifyOTP = async (phone: string, otp: string) => {
     const response = await authService.verifyOTP(phone, otp);
-    await AsyncStorage.setItem('authToken', response.token);
-    setUser(response.user);
+    const { token, user: userData } = response.data || response;
+    if (token) {
+      await AsyncStorage.setItem('authToken', token);
+    }
+    if (userData) {
+      setUser(userData);
+    }
   };
 
   const logout = async () => {
     try {
       console.log('========== AUTH CONTEXT: LOGOUT ==========');
 
-      // 1. Sign out from Firebase
-      console.log('Signing out from Firebase...');
-      await auth().signOut();
-
-      // 2. Clear all admin data from AsyncStorage
+      // 1. Clear all admin data from AsyncStorage
       console.log('Clearing admin data...');
       await authService.clearAdminData();
 
-      // 3. Clear API service cache
+      // 2. Clear API service cache (clears JWT token)
       console.log('Clearing API service cache...');
       await apiService.logout();
 
-      // 4. Clear React Query cache
+      // 3. Clear React Query cache
       console.log('Clearing React Query cache...');
       clearAllCache();
 
-      // 5. Reset user state
+      // 4. Reset user state
       console.log('Resetting user state...');
       setUser(null);
 

@@ -149,11 +149,19 @@ export interface DashboardActivity {
   createdAt: string;
 }
 
+export interface DashboardChartDataPoint {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
 export interface DashboardData {
   overview: DashboardOverview;
   today: DashboardToday;
   pendingActions: DashboardPendingActions;
   recentActivity: DashboardActivity[];
+  orderStatusCounts: Record<string, number>;
+  chartData: DashboardChartDataPoint[];
 }
 
 // ============================================================================
@@ -666,6 +674,8 @@ export interface Order {
   status: OrderStatus;
   statusTimeline: StatusEntry[];
   specialInstructions?: string;
+  leaveAtDoor?: boolean;
+  doNotContact?: boolean;
   batchId?: string; // Added when order is batched for delivery
   driverId?: string; // Added when driver is assigned
   placedAt: string;

@@ -450,6 +450,23 @@ export const DriverOrderManagementScreen: React.FC = () => {
                 </View>
               )}
 
+              {(order.leaveAtDoor || order.doNotContact) && (
+                <View style={[styles.instructionsBox, { marginTop: 4 }]}>
+                  {order.leaveAtDoor && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+                      <MaterialIcons name="door-front" size={14} color={colors.primary} />
+                      <Text style={[styles.instructionsText, { color: colors.primary }]}>Leave at Door</Text>
+                    </View>
+                  )}
+                  {order.doNotContact && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="phone-disabled" size={14} color={colors.error} />
+                      <Text style={[styles.instructionsText, { color: colors.error }]}>Do Not Contact</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {isPickedUp && order.status !== 'DELIVERED' && order.status !== 'FAILED' && (
                 <View style={styles.orderActions}>
                   <TouchableOpacity

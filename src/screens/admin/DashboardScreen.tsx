@@ -13,12 +13,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useAlert } from '../../hooks/useAlert';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { MealType } from '../../types/dashboard';
 import {
   FilterBar,
   KpiCard,
   OrderStatusFunnel,
-  MealSlotCard,
   BusinessChart,
   RecentActivityList,
   SectionHeader,
@@ -27,7 +25,6 @@ import {
 import DeliveryOverviewCard from '../../modules/delivery/components/DeliveryOverviewCard';
 import adminDashboardService from '../../services/admin-dashboard.service';
 import { DashboardData } from '../../types/api.types';
-import { OrderStatus as DashboardOrderStatus } from '../../types/dashboard';
 import { useInAppNotifications } from '../../context/InAppNotificationContext';
 
 const DATE_RANGES = [
@@ -54,10 +51,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [selectedRange, setSelectedRange] = useState(0);
   const { showInfo } = useAlert();
 
+  // Compute date range from selected filter
+  const dateRangeParams = DATE_RANGES[selectedRange].getValue();
+
   // Fetch real dashboard data from API
   const { data: apiData, isLoading: loading, isFetching, error: queryError, refetch } = useQuery<DashboardData>({
-    queryKey: ['adminDashboard', selectedRange],
-    queryFn: () => adminDashboardService.getDashboard(),
+    queryKey: ['adminDashboard', dateRangeParams],
+    queryFn: () => adminDashboardService.getDashboard(dateRangeParams),
     staleTime: 30000,
     refetchInterval: 60000,
   });
@@ -84,16 +84,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     showInfo('Order Status', `Viewing orders with status: ${status}`);
   };
 
-  const handlePlanPress = (planId: string) => {
-    showInfo('Plan Details', `Viewing plan: ${planId}`);
-  };
-
   const handleActivityPress = (activityId: string) => {
     showInfo('Activity Details', `Viewing activity: ${activityId}`);
-  };
-
-  const handleViewAllPlans = () => {
-    showInfo('Plans', 'Navigating to all plans');
   };
 
   const handleViewAllActivity = () => {
@@ -125,7 +117,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         id: activity._id,
         type: 'system' as const,
         title: `${activity.action} ${activity.entityType}`,
-        description: `by ${activity.userId.name} (${activity.userId.role})`,
+        description: `by ${activity.userId?.name || 'Unknown'} (${activity.userId?.role || 'Unknown'})`,
         timestamp: new Date(activity.createdAt),
         icon: actionIcons[activity.action] || 'info',
         color: actionColors[activity.action] || '#6b7280',
@@ -217,69 +209,52 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     ];
   };
 
-  // Map real API data to order status
+  // Map real API order status counts to funnel items
   const getOrderStatus = () => {
-    if (!apiData) return [];
+    if (!apiData?.orderStatusCounts) return [];
 
-    // Only pendingOrders is real data; others are estimates until API provides per-status counts
-    const pendingOrders = apiData.pendingActions.pendingOrders;
-    const remaining = Math.max(0, apiData.today.orders - pendingOrders);
-    return [
-      { status: 'ordered' as DashboardOrderStatus, label: 'Pending', icon: 'pending', count: pendingOrders, color: '#f59e0b' },
-      { status: 'confirmed' as DashboardOrderStatus, label: 'Confirmed', icon: 'check-circle', count: Math.round(remaining * 0.33), color: '#3b82f6' },
-      { status: 'preparing' as DashboardOrderStatus, label: 'Preparing', icon: 'restaurant-menu', count: Math.round(remaining * 0.27), color: '#8b5cf6' },
-      { status: 'out_for_delivery' as DashboardOrderStatus, label: 'Out for Delivery', icon: 'delivery-dining', count: Math.round(remaining * 0.20), color: '#06b6d4' },
-      { status: 'delivered' as DashboardOrderStatus, label: 'Delivered', icon: 'done-all', count: Math.round(remaining * 0.13), color: '#10b981' },
-      { status: 'cancelled' as DashboardOrderStatus, label: 'Cancelled', icon: 'cancel', count: Math.round(remaining * 0.07), color: '#ef4444' },
+    const sc = apiData.orderStatusCounts;
+    const statusConfig = [
+      { status: 'PLACED', label: 'Pending', icon: 'pending', color: '#f59e0b' },
+      { status: 'ACCEPTED', label: 'Confirmed', icon: 'check-circle', color: '#3b82f6' },
+      { status: 'PREPARING', label: 'Preparing', icon: 'restaurant-menu', color: '#8b5cf6' },
+      { status: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', icon: 'delivery-dining', color: '#06b6d4' },
+      { status: 'DELIVERED', label: 'Delivered', icon: 'done-all', color: '#10b981' },
+      { status: 'CANCELLED', label: 'Cancelled', icon: 'cancel', color: '#ef4444' },
     ];
+
+    return statusConfig.map((item) => ({
+      ...item,
+      count: sc[item.status] || 0,
+    }));
   };
 
-  // Map real API data to chart format
+  // Map real API chart data to chart format
   const getChartData = () => {
-    if (!apiData) return {
-      title: '7-Day Trend',
+    const emptyChart = {
+      title: 'Revenue & Orders',
       primaryLabel: 'Revenue (₹)',
       secondaryLabel: 'Orders',
       primaryColor: '#F56B4C',
       secondaryColor: '#3b82f6',
-      points: [],
+      points: [] as Array<{ date: string; label: string; value: number; secondaryValue: number }>,
     };
 
-    // Create a simple 7-day trend using today's data
-    const today = new Date();
-    const points = [];
+    if (!apiData?.chartData || apiData.chartData.length === 0) return emptyChart;
 
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const points = apiData.chartData.map((item) => {
+      const d = new Date(item.date + 'T00:00:00');
+      return {
+        date: item.date,
+        label: dayLabels[d.getDay()],
+        value: Math.round(item.revenue),
+        secondaryValue: item.orders,
+      };
+    });
 
-      const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const label = dayLabels[date.getDay()];
-
-      // Deterministic scaling factors for past days (today = 1.0)
-      const dayFactors = [0.75, 0.82, 0.90, 0.78, 0.95, 0.88, 1.0];
-      const multiplier = dayFactors[6 - i];
-
-      points.push({
-        date: date.toISOString().split('T')[0],
-        label,
-        value: Math.round(apiData.today.revenue * multiplier),
-        secondaryValue: Math.round(apiData.today.orders * multiplier),
-      });
-    }
-
-    return {
-      title: '7-Day Trend',
-      primaryLabel: 'Revenue (₹)',
-      secondaryLabel: 'Orders',
-      primaryColor: '#F56B4C',
-      secondaryColor: '#3b82f6',
-      points,
-    };
+    return { ...emptyChart, points };
   };
-
-  // Note: Meal slots data not available from API, will be empty until API provides this
-  const filteredMealSlots: any[] = [];
 
   const filteredKpis = getKpiMetrics();
   const filteredOrderStatus = getOrderStatus();
@@ -324,7 +299,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <MaterialIcons name="error-outline" size={64} color="#ef4444" />
             <Text style={styles.errorTitle}>Unable to Load Dashboard</Text>
             <Text style={styles.errorMessage}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
               <MaterialIcons name="refresh" size={20} color="#ffffff" />
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
@@ -379,14 +354,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               onItemPress={handleOrderStatusPress}
             />
 
-            {/* Meal Slot Snapshot */}
-            <SectionHeader title="Meal Slots" subtitle="Current status" />
-            <View style={styles.mealSlotGrid}>
-              {filteredMealSlots.map((slot) => (
-                <MealSlotCard key={slot.mealType} slot={slot} />
-              ))}
-            </View>
-
             {/* Delivery Overview */}
             <SectionHeader title="Delivery Overview" />
             <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
@@ -395,13 +362,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
             {/* Business Chart */}
             <BusinessChart data={chartData} />
-
-            {/* Plan Summary - Hidden until API provides this data */}
-            {/* <PlanSummaryRow
-          plans={[]}
-          onPlanPress={handlePlanPress}
-          onViewAllPress={handleViewAllPlans}
-        /> */}
 
             {/* Recent Activity */}
             <RecentActivityList
@@ -499,11 +459,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 8,
-  },
-  mealSlotGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
   },
   bottomSpacing: {
     height: 20,

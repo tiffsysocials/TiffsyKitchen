@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import auth from '@react-native-firebase/auth';
 
 const BASE_URL = 'https://d31od4t2t5epcb.cloudfront.net';
 
@@ -86,8 +85,7 @@ class EnhancedApiService {
   }
 
   /**
-   * Refresh authentication token
-   * Gets a fresh Firebase ID token from the currently signed-in user
+   * Refresh authentication token via backend JWT refresh endpoint
    * Handles concurrent refresh requests (prevents multiple refresh calls)
    */
   private async refreshToken(): Promise<string | null> {
@@ -100,29 +98,34 @@ class EnhancedApiService {
       try {
         console.log('========== TOKEN REFRESH STARTED ==========');
 
-        // Get current Firebase user
-        const currentUser = auth().currentUser;
-
-        if (!currentUser) {
-          console.log('No Firebase user found, cannot refresh token');
-          await this.setAuthToken(null);
+        const currentToken = await this.getAuthToken();
+        if (!currentToken) {
+          console.log('No token found, cannot refresh');
           return null;
         }
 
-        console.log('Firebase user found, getting fresh ID token...');
+        // Call backend refresh endpoint with current (possibly expired) token
+        const response = await fetch(`${BASE_URL}/api/auth/token/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`,
+          },
+        });
 
-        // Get a fresh Firebase ID token
-        // forceRefresh: true ensures we get a new token even if cached one hasn't expired
-        const freshToken = await currentUser.getIdToken(true);
+        const data = await response.json();
 
-        console.log('Fresh Firebase token obtained');
-        console.log('Token length:', freshToken.length);
-        console.log('========================================');
+        if (response.ok && data.data?.token) {
+          const freshToken = data.data.token;
+          console.log('Fresh JWT token obtained');
+          console.log('========================================');
+          await this.setAuthToken(freshToken);
+          return freshToken;
+        }
 
-        // Store the new token
-        await this.setAuthToken(freshToken);
-
-        return freshToken;
+        console.log('Token refresh failed, clearing token');
+        await this.setAuthToken(null);
+        return null;
       } catch (error) {
         console.error('========== TOKEN REFRESH FAILED ==========');
         console.error('Error:', error);

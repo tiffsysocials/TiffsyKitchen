@@ -10,13 +10,13 @@ import {
 import { useAlert } from '../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import auth, { FirebaseAuthTypes, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
+import { authService } from '../../services/auth.service';
 
 const PRIMARY_COLOR = '#F56B4C';
 
 interface PhoneAuthScreenProps {
-  onVerificationComplete: (token: string) => void;
+  onVerificationComplete: (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string }) => void;
 }
 
 const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplete }) => {
@@ -30,7 +30,6 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneError, setPhoneError] = useState<string | undefined>();
   const [otpError, setOtpError] = useState<string | undefined>();
-  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
 
   // Validate Indian phone number
   const validateIndianPhoneNumber = (number: string): boolean => {
@@ -55,9 +54,8 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
     }
   };
 
-  // Send OTP via Firebase
+  // Send OTP via backend (MSG91)
   const handleSendOtp = async () => {
-    // Validate phone number
     if (!phoneNumber.trim()) {
       setPhoneError('Phone number is required');
       return;
@@ -72,45 +70,17 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
     setPhoneError(undefined);
 
     try {
-      // Format phone number for Firebase (add +91 country code)
-      const formattedPhoneNumber = `+91${phoneNumber}`;
-
-      console.log('========== FIREBASE OTP REQUEST ==========');
-      console.log('Phone Number:', formattedPhoneNumber);
-      console.log('Timestamp:', new Date().toISOString());
+      console.log('========== SEND OTP REQUEST ==========');
+      console.log('Phone Number:', phoneNumber);
       console.log('==========================================');
 
-      // Send OTP using Firebase (modular API)
-      const confirmationResult = await signInWithPhoneNumber(auth(), formattedPhoneNumber);
+      await authService.sendOTP(phoneNumber);
 
-      console.log('========== FIREBASE OTP RESPONSE ==========');
-      console.log('Status: SUCCESS');
-      console.log('Confirmation Result:', confirmationResult);
-      console.log('Verification ID:', confirmationResult.verificationId);
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('===========================================');
-
-      setConfirmation(confirmationResult);
       setShowOtpInput(true);
       showSuccess('Success', 'OTP has been sent to your phone number');
     } catch (error: any) {
-      console.log('========== FIREBASE OTP ERROR ==========');
-      console.log('Status: FAILED');
-      console.log('Error Code:', error.code);
-      console.log('Error Message:', error.message);
-      console.log('Full Error:', error);
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('========================================');
       console.error('Error sending OTP:', error);
-
-      // Handle specific Firebase errors
-      if (error.code === 'auth/invalid-phone-number') {
-        setPhoneError('Invalid phone number format');
-      } else if (error.code === 'auth/too-many-requests') {
-        setPhoneError('Too many requests. Please try again later');
-      } else {
-        setPhoneError('Failed to send OTP. Please try again');
-      }
+      setPhoneError(error.message || 'Failed to send OTP. Please try again');
     } finally {
       setIsSubmitting(false);
     }
@@ -161,18 +131,12 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
     }
   };
 
-  // Verify OTP with Firebase
+  // Verify OTP via backend (MSG91)
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
 
-    // Validate OTP
     if (otpCode.length !== 6) {
       setOtpError('Please enter the complete 6-digit OTP');
-      return;
-    }
-
-    if (!confirmation) {
-      setOtpError('No confirmation code available. Please resend OTP');
       return;
     }
 
@@ -180,74 +144,47 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
     setOtpError(undefined);
 
     try {
-      console.log('========== FIREBASE OTP VERIFY REQUEST ==========');
-      console.log('OTP Code:', otpCode);
-      console.log('Verification ID:', confirmation.verificationId);
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('=================================================');
+      console.log('========== VERIFY OTP REQUEST ==========');
+      console.log('Phone:', phoneNumber);
+      console.log('==========================================');
 
-      // Verify OTP with Firebase
-      const userCredential = await confirmation.confirm(otpCode);
+      const response = await authService.verifyOTP(phoneNumber, otpCode);
+      const { token, user, isNewUser } = response.data || {};
 
-      if (!userCredential) {
-        console.log('========== FIREBASE OTP VERIFY FAILED ==========');
-        console.log('Status: NO USER CREDENTIAL');
-        console.log('Timestamp:', new Date().toISOString());
-        console.log('================================================');
-        setOtpError('Verification failed. Please try again');
-        return;
-      }
-
-      console.log('========== FIREBASE OTP VERIFY RESPONSE ==========');
-      console.log('Status: SUCCESS');
-      console.log('User ID:', userCredential.user.uid);
-      console.log('Phone Number:', userCredential.user.phoneNumber);
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('==================================================');
-
-      // Get Firebase ID token
-      const idToken = await userCredential.user.getIdToken();
-
-      console.log('========== FIREBASE ID TOKEN ==========');
-      console.log('Token Length:', idToken.length);
-      console.log('Token (first 50 chars):', idToken.substring(0, 50) + '...');
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('=======================================');
+      console.log('========== VERIFY OTP RESPONSE ==========');
+      console.log('Is New User:', isNewUser);
+      console.log('User Role:', user?.role);
+      console.log('==========================================');
 
       // Store phone number for later use
       await AsyncStorage.setItem('userPhoneNumber', phoneNumber);
 
-      // Pass token to parent component
-      onVerificationComplete(idToken);
+      // Pass verification result to parent
+      onVerificationComplete({
+        token: token || response.data?.registrationToken || '',
+        user,
+        role: user?.role || '',
+        isNewUser: isNewUser || false,
+        kitchenApprovalStatus: response.data?.kitchenApprovalStatus,
+      });
     } catch (error: any) {
-      console.log('========== FIREBASE OTP VERIFY ERROR ==========');
-      console.log('Status: FAILED');
-      console.log('Error Code:', error.code);
-      console.log('Error Message:', error.message);
-      console.log('Full Error:', error);
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('===============================================');
       console.error('Error verifying OTP:', error);
-
-      // Handle specific Firebase errors
-      if (error.code === 'auth/invalid-verification-code') {
-        setOtpError('Invalid OTP. Please check and try again');
-      } else if (error.code === 'auth/code-expired') {
-        setOtpError('OTP has expired. Please request a new one');
-      } else {
-        setOtpError('Failed to verify OTP. Please try again');
-      }
+      setOtpError(error.message || 'Failed to verify OTP. Please try again');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Resend OTP
-  const handleResendOtp = () => {
+  // Resend OTP via backend
+  const handleResendOtp = async () => {
     setOtp(['', '', '', '', '', '']);
     setOtpError(undefined);
-    setShowOtpInput(false);
-    handleSendOtp();
+    try {
+      await authService.sendOTP(phoneNumber);
+      showSuccess('Success', 'OTP resent successfully');
+    } catch (error: any) {
+      setOtpError(error.message || 'Failed to resend OTP');
+    }
   };
 
   const isPhoneValid = validateIndianPhoneNumber(phoneNumber);
