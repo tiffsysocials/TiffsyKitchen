@@ -431,6 +431,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
+    flex: 1,
+    marginLeft: 8,
   },
   addButton: {
     width: 40,

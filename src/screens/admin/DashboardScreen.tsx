@@ -14,13 +14,11 @@ import { useAlert } from '../../hooks/useAlert';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
-  FilterBar,
   KpiCard,
   OrderStatusFunnel,
   BusinessChart,
   RecentActivityList,
   SectionHeader,
-  DatePickerModal,
 } from '../../components/dashboard';
 import DeliveryOverviewCard from '../../modules/delivery/components/DeliveryOverviewCard';
 import adminDashboardService from '../../services/admin-dashboard.service';
@@ -46,8 +44,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onLogout,
 
 }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [selectedRange, setSelectedRange] = useState(0);
   const { showInfo } = useAlert();
 
@@ -66,15 +62,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   // Get unread notification count
   const { unreadCount } = useInAppNotifications();
 
-  const handleDatePress = () => {
-    setDatePickerVisible(true);
+  const getOverviewTitle = (): string => {
+    const labels: Record<number, string> = {
+      0: "Today's Overview",
+      1: 'Last 7 Days Overview',
+      2: 'Last 30 Days Overview',
+      3: 'All Time Overview',
+    };
+    return labels[selectedRange] || "Today's Overview";
   };
-
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
-
-
 
   const handleRefresh = async () => {
     await refetch();
@@ -169,8 +165,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       },
       {
         id: 'today-orders',
-        label: "Today's Orders",
-        value: apiData.today.orders,
+        label: selectedRange === 0 ? "Today's Orders" : "Period Orders",
+        value: selectedRange === 0 ? apiData.today.orders : apiData.overview.totalOrders,
         changePercent: 0,
         changeDirection: 'neutral' as const,
         icon: 'shopping-cart',
@@ -334,14 +330,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               ))}
             </View>
 
-            {/* Date Picker */}
-            <FilterBar
-              selectedDate={selectedDate}
-              onDatePress={handleDatePress}
-            />
-
             {/* KPI Cards */}
-            <SectionHeader title="Today's Overview" />
+            <SectionHeader title={getOverviewTitle()} />
             <View style={styles.kpiGrid}>
               {filteredKpis.map((metric) => (
                 <KpiCard key={metric.id} metric={metric} />
@@ -352,12 +342,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <OrderStatusFunnel
               items={filteredOrderStatus}
               onItemPress={handleOrderStatusPress}
+              filterLabel={DATE_RANGES[selectedRange].label.toLowerCase()}
             />
 
             {/* Delivery Overview */}
             <SectionHeader title="Delivery Overview" />
             <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-              <DeliveryOverviewCard />
+              <DeliveryOverviewCard dateFrom={(dateRangeParams as any).dateFrom} dateTo={(dateRangeParams as any).dateTo} />
             </View>
 
             {/* Business Chart */}
@@ -376,12 +367,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </ScrollView>
         )}
 
-        <DatePickerModal
-          visible={datePickerVisible}
-          selectedDate={selectedDate}
-          onClose={() => setDatePickerVisible(false)}
-          onDateSelect={handleDateSelect}
-        />
       </View>
     </SafeAreaScreen>
   );

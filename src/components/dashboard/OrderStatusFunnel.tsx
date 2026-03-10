@@ -7,11 +7,13 @@ import { SectionHeader } from './SectionHeader';
 interface OrderStatusFunnelProps {
   items: OrderStatusFunnelItem[];
   onItemPress?: (status: string) => void;
+  filterLabel?: string;
 }
 
 export const OrderStatusFunnel: React.FC<OrderStatusFunnelProps> = ({
   items,
   onItemPress,
+  filterLabel,
 }) => {
   const totalOrders = items.reduce((sum, item) => sum + item.count, 0);
 
@@ -19,7 +21,7 @@ export const OrderStatusFunnel: React.FC<OrderStatusFunnelProps> = ({
     <View style={styles.container}>
       <SectionHeader
         title="Order Status"
-        subtitle={`${totalOrders} total orders today`}
+        subtitle={`${totalOrders} total orders${filterLabel ? ` (${filterLabel})` : ''}`}
       />
       <View style={styles.funnelContainer}>
         {items.map((item, index) => (

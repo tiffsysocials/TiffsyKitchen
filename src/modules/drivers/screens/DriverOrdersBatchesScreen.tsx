@@ -825,7 +825,11 @@ export const DriverOrdersBatchesScreen: React.FC<DriverOrdersBatchesScreenProps>
   };
 
   return (
-    <SafeAreaScreen>
+    <SafeAreaScreen
+      topBackgroundColor="#F56B4C"
+      bottomBackgroundColor="#f9fafb"
+      backgroundColor="#f9fafb"
+    >
       <Header
         title="Driver Batches & Orders"
         onMenuPress={onMenuPress}

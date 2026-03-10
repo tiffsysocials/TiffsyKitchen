@@ -311,7 +311,7 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
 
         {/* Tags Row */}
         <View style={styles.tagsRow}>
-          <OrderSourceBadge orderSource={order.orderSource} />
+          {order.orderSource !== 'SCHEDULED' && <OrderSourceBadge orderSource={order.orderSource} />}
           <View
             style={[
               styles.tag,

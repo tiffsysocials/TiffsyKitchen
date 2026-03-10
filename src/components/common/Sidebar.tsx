@@ -270,13 +270,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {
               width: SIDEBAR_WIDTH,
               transform: [{ translateX: slideAnim }],
-              paddingTop: insets.top,
             },
           ]}
           className="bg-white h-full shadow-2xl"
         >
           {/* User Profile Section */}
-          <View className="bg-[#F56B4C] px-4 py-5">
+          <View className="bg-[#F56B4C] px-4 pb-5" style={{ paddingTop: insets.top + 20 }}>
             <Text className="text-white font-bold text-lg">
               {user?.fullName || 'User'}
             </Text>

@@ -347,8 +347,21 @@ class EnhancedApiService {
 
   // Public API methods
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'GET' });
+  async get<T>(endpoint: string, options?: { params?: Record<string, any> }): Promise<ApiResponse<T>> {
+    let url = endpoint;
+    if (options?.params) {
+      const queryParams = new URLSearchParams();
+      for (const [key, value] of Object.entries(options.params)) {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, String(value));
+        }
+      }
+      const qs = queryParams.toString();
+      if (qs) {
+        url += (url.includes('?') ? '&' : '?') + qs;
+      }
+    }
+    return this.request<T>(url, { method: 'GET' });
   }
 
   async post<T>(endpoint: string, data?: unknown, skipRetry = false): Promise<ApiResponse<T>> {

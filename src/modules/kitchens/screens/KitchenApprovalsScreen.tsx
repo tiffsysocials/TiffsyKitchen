@@ -166,7 +166,11 @@ export const KitchenApprovalsScreen: React.FC<KitchenApprovalsScreenProps> = ({
   };
 
   return (
-    <SafeAreaScreen>
+    <SafeAreaScreen
+      topBackgroundColor="#F56B4C"
+      bottomBackgroundColor="#f9fafb"
+      backgroundColor="#f9fafb"
+    >
       <Header title="Kitchen Approvals" onMenuPress={onMenuPress} />
 
       <View style={styles.container}>

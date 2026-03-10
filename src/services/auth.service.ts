@@ -72,11 +72,11 @@ class AuthService {
   }
 
   async sendOTP(phone: string): Promise<void> {
-    await apiService.post('/api/auth/send-otp', { phone });
+    await apiService.post('/api/auth/send-otp', { phone }, true);
   }
 
   async verifyOTP(phone: string, otp: string): Promise<any> {
-    return apiService.post<any>('/api/auth/verify-otp', { phone, otp });
+    return apiService.post<any>('/api/auth/verify-otp', { phone, otp }, true);
   }
 
   async getProfile(): Promise<User> {

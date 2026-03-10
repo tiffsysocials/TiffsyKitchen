@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface HeaderProps {
@@ -18,14 +17,11 @@ export const Header: React.FC<HeaderProps> = ({
   onBackPress,
   rightComponent
 }) => {
-  const insets = useSafeAreaInsets();
-
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#F56B4C" />
       <View
-        className="bg-[#F56B4C] px-4 pb-3"
-        style={{ paddingTop: insets.top + 8 }}
+        className="bg-[#F56B4C] px-4 pb-3 pt-2"
       >
         <View className="flex-row items-center justify-between">
           {/* Back Arrow or Hamburger Menu */}
@@ -37,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="text-white text-xl font-bold flex-1 text-center">
+          <Text className="text-white text-xl font-bold flex-1 ml-2">
             {title}
           </Text>
 

@@ -185,7 +185,11 @@ export const DriversManagementScreen: React.FC<DriversManagementScreenProps> = (
   }
 
   return (
-    <SafeAreaScreen>
+    <SafeAreaScreen
+      topBackgroundColor="#F56B4C"
+      bottomBackgroundColor="#f9fafb"
+      backgroundColor="#f9fafb"
+    >
       <Header title="Driver Approvals" onMenuPress={onMenuPress} />
 
       <View style={styles.container}>

@@ -5,22 +5,33 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Card } from '../../../components/common/Card';
 import adminDashboardService from '../../../services/admin-dashboard.service';
 
-const DeliveryOverviewCard: React.FC = () => {
+interface DeliveryOverviewCardProps {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+const DeliveryOverviewCard: React.FC<DeliveryOverviewCardProps> = ({ dateFrom, dateTo }) => {
   const today = new Date().toISOString().split('T')[0];
+  const effectiveDateFrom = dateFrom || today;
+  const effectiveDateTo = dateTo || today;
 
   const { data } = useQuery({
-    queryKey: ['deliveryStatsToday'],
-    queryFn: () => adminDashboardService.getDeliveryStats({ dateFrom: today, dateTo: today }),
+    queryKey: ['deliveryStats', effectiveDateFrom, effectiveDateTo],
+    queryFn: () => adminDashboardService.getDeliveryStats({ dateFrom: effectiveDateFrom, dateTo: effectiveDateTo }),
   });
 
   const stats = data as any;
   if (!stats) return null;
 
+  const isToday = effectiveDateFrom === today && effectiveDateTo === today;
+
   return (
     <Card className="p-4">
       <View className="flex-row items-center mb-3">
         <Icon name="local-shipping" size={20} color="#F56B4C" />
-        <Text className="text-base font-semibold text-gray-800 ml-2">Today's Deliveries</Text>
+        <Text className="text-base font-semibold text-gray-800 ml-2">
+          {isToday ? "Today's Deliveries" : 'Deliveries'}
+        </Text>
       </View>
 
       <View className="flex-row mb-3">

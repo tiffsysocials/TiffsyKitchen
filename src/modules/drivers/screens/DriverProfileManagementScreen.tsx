@@ -321,7 +321,11 @@ export const DriverProfileManagementScreen: React.FC<DriverProfileManagementScre
   }
 
   return (
-    <SafeAreaScreen>
+    <SafeAreaScreen
+      topBackgroundColor="#F56B4C"
+      bottomBackgroundColor="#f9fafb"
+      backgroundColor="#f9fafb"
+    >
       <Header title="Driver Profile Management" onMenuPress={onMenuPress} />
 
       <View style={styles.container}>
