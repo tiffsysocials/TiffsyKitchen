@@ -84,6 +84,12 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        externalNativeBuild {
+            cmake {
+                // Reduce debug info to cut per-compile-unit memory usage
+                cppFlags "-g1"
+            }
+        }
     }
     signingConfigs {
         debug {

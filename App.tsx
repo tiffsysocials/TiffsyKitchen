@@ -62,6 +62,7 @@ import { CouponsManagementScreen } from './src/modules/coupons';
 import DeliveryConfigScreen from './src/modules/settings/screens/DeliveryConfigScreen';
 import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
+import { BannerManagementScreen } from './src/modules/banners';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -523,6 +524,13 @@ const MainContent: React.FC<{
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="AutoOrderAddons" onMenuPress={onMenuPress}>
           <AutoOrderAddonsScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
+    case 'Banners':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN']} screenName="Banners" onMenuPress={onMenuPress}>
+          <BannerManagementScreen onMenuPress={onMenuPress} />
         </PermissionGuard>
       );
 

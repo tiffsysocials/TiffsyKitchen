@@ -218,6 +218,14 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     roles: ['ADMIN'],
     group: 'System',
   },
+  {
+    id: '24',
+    label: 'Banners',
+    icon: 'view-carousel',
+    screen: 'Banners',
+    roles: ['ADMIN'],
+    group: 'System',
+  },
 ];
 
 /**

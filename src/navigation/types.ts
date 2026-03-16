@@ -35,6 +35,7 @@ export type DrawerParamList = {
   OrderCharges: undefined;
   Coupons: undefined;
   Referrals: undefined;
+  Banners: undefined;
   Settings: undefined;
 };
 

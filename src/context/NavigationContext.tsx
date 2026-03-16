@@ -41,7 +41,8 @@ export type ScreenName =
   | 'OrderCharges'
   | 'AutoOrderAddons'
   | 'Coupons'
-  | 'Referrals';
+  | 'Referrals'
+  | 'Banners';
 
 interface NavigationContextType {
   currentScreen: ScreenName;

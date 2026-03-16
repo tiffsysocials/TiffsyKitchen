@@ -32,6 +32,7 @@ import { UserRole } from '../types/user';
 import { getMenuItemsForRole, MenuItem } from '../utils/rbac';
 import { CouponsManagementScreen } from '../modules/coupons';
 import { ReferralManagementScreen } from '../modules/referrals';
+import { BannerManagementScreen } from '../modules/banners';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Stack = createStackNavigator();
@@ -269,6 +270,10 @@ export default function DrawerNavigator({ onLogout }: { onLogout: () => void }) 
 
       <Drawer.Screen name="Referrals">
         {(props) => <ReferralManagementScreen onMenuPress={() => props.navigation.toggleDrawer()} />}
+      </Drawer.Screen>
+
+      <Drawer.Screen name="Banners">
+        {(props) => <BannerManagementScreen onMenuPress={() => props.navigation.toggleDrawer()} />}
       </Drawer.Screen>
 
       <Drawer.Screen name="Settings">
