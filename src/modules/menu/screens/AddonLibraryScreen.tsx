@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
 import { addonService } from '../../../services/addon.service';
 import { Addon } from '../../../types/api.types';
@@ -228,21 +229,21 @@ export const AddonLibraryScreen: React.FC<AddonLibraryScreenProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F56B4C" />
+        <ActivityIndicator size="large" color="#FE8733" />
       </View>
     );
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Top Header with Back Button */}
-      <View style={[styles.topHeader, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.topHeader, { paddingTop: 8 }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Add-ons Library</Text>
         <View style={styles.headerPlaceholder} />
-      </View>
+      </GradientBox>
 
       <FlatList
         ListHeaderComponent={
@@ -270,7 +271,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   topHeader: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   createButton: {
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   },
   usageText: {
     fontSize: 12,
-    color: '#F56B4C',
+    color: '#FE8733',
   },
   actions: {
     flexDirection: 'row',

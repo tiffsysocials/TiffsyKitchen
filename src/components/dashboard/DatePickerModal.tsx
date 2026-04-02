@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   quickDateText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#F56B4C',
+    color: '#FE8733',
   },
   monthNav: {
     flexDirection: 'row',
@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   todayText: {
-    color: '#F56B4C',
+    color: '#FE8733',
     fontWeight: '600',
   },
   selectedCell: {
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     borderRadius: 20,
   },
   selectedText: {

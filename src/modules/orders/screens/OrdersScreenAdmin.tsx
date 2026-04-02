@@ -24,6 +24,7 @@ import OrderStatsCard from '../components/OrderStatsCard';
 import ExpandableKitchenOrderCard from '../components/ExpandableKitchenOrderCard';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -350,7 +351,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     if (ordersLoading && !ordersData) {
       return (
         <View style={styles.statsLoadingContainer}>
-          <ActivityIndicator size="small" color="#F56B4C" />
+          <ActivityIndicator size="small" color="#FE8733" />
         </View>
       );
     }
@@ -364,7 +365,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         <OrderStatsCard
           label="Today's Orders"
           value={todayStats.total}
-          color="#F56B4C"
+          color="#FE8733"
           icon="receipt-long"
         />
         <OrderStatsCard
@@ -476,15 +477,15 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   };
 
   return (
-    <SafeAreaScreen style={{ flex: 1 }} backgroundColor="#F56B4C">
+    <SafeAreaScreen style={{ flex: 1 }} backgroundColor="#FE8733">
       {/* Header */}
       {onMenuPress && (
-        <View style={[styles.header, { paddingTop: 8 }]}>
+        <GradientBox style={[styles.header, { paddingTop: 8 }]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Orders Management</Text>
-        </View>
+        </GradientBox>
       )}
 
       {/* Stats and Filters Section */}
@@ -497,7 +498,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
           <TouchableOpacity
             style={styles.datePickerButton}
             onPress={() => setShowDatePicker(true)}>
-            <Icon name="calendar-today" size={18} color="#F56B4C" />
+            <Icon name="calendar-today" size={18} color="#FE8733" />
             <Text style={styles.datePickerButtonText}>
               {selectedDate ? formatDisplayDate(selectedDate) : 'All Dates'}
             </Text>
@@ -554,8 +555,8 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
             <RefreshControl
               refreshing={ordersLoading && !isFetching}
               onRefresh={handleRefresh}
-              tintColor="#F56B4C"
-              colors={['#F56B4C']}
+              tintColor="#FE8733"
+              colors={['#FE8733']}
             />
           }
           ListEmptyComponent={!ordersLoading ? renderEmptyState : null}
@@ -589,13 +590,13 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
             <Calendar
               onDayPress={handleDateSelect}
               markedDates={selectedDate ? {
-                [selectedDate]: { selected: true, selectedColor: '#F56B4C' },
+                [selectedDate]: { selected: true, selectedColor: '#FE8733' },
               } : {}}
               maxDate={getTodayDateString()}
               theme={{
-                todayTextColor: '#F56B4C',
-                selectedDayBackgroundColor: '#F56B4C',
-                arrowColor: '#F56B4C',
+                todayTextColor: '#FE8733',
+                selectedDayBackgroundColor: '#FE8733',
+                arrowColor: '#FE8733',
               }}
             />
           </View>
@@ -611,7 +612,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingBottom: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -683,10 +683,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   filterChipActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
     elevation: 3,
-    shadowColor: '#F56B4C',
+    shadowColor: '#FE8733',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

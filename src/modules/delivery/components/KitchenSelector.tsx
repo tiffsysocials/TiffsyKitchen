@@ -46,7 +46,7 @@ const KitchenSelector: React.FC<Props> = ({ selectedKitchenId, onSelect, label =
 
             {isLoading ? (
               <View className="p-8 items-center">
-                <ActivityIndicator color="#F56B4C" />
+                <ActivityIndicator color="#FE8733" />
               </View>
             ) : (
               <FlatList
@@ -67,7 +67,7 @@ const KitchenSelector: React.FC<Props> = ({ selectedKitchenId, onSelect, label =
                     <Icon
                       name={item._id ? 'store' : 'select-all'}
                       size={20}
-                      color={(item._id === selectedKitchenId) || (!item._id && !selectedKitchenId) ? '#F56B4C' : '#6b7280'}
+                      color={(item._id === selectedKitchenId) || (!item._id && !selectedKitchenId) ? '#FE8733' : '#6b7280'}
                     />
                     <Text
                       className={`text-base ml-3 ${

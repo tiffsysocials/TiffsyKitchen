@@ -32,7 +32,7 @@ const MealWindowSelector: React.FC<Props> = ({ selected, onSelect, allowNull = t
             <Icon
               name={option.icon}
               size={18}
-              color={selected === option.value ? '#F56B4C' : '#6b7280'}
+              color={selected === option.value ? '#FE8733' : '#6b7280'}
             />
             <Text
               className={`text-sm ml-1 ${

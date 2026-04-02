@@ -16,6 +16,7 @@ import { deliveryService } from '../../../services/delivery.service';
 import kitchenService from '../../../services/kitchen.service';
 import { ordersService } from '../../../services/orders.service';
 import { Batch, BatchStatus, MealWindow, Kitchen } from '../../../types/api.types';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface BatchManagementScreenProps {
   route: {
@@ -318,7 +319,7 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
@@ -326,7 +327,7 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
           <Text style={styles.headerTitle}>Batch Management</Text>
           <Text style={styles.headerSubtitle}>{kitchenName}</Text>
         </View>
-      </View>
+      </GradientBox>
 
       <ScrollView
         style={styles.scrollView}
@@ -534,7 +535,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.primary,
   },
   headerTitle: {
     fontSize: 18,

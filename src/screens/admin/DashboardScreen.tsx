@@ -24,6 +24,7 @@ import DeliveryOverviewCard from '../../modules/delivery/components/DeliveryOver
 import adminDashboardService from '../../services/admin-dashboard.service';
 import { DashboardData } from '../../types/api.types';
 import { useInAppNotifications } from '../../context/InAppNotificationContext';
+import { GradientBox } from '../../components/common/GradientBox';
 
 const DATE_RANGES = [
   { label: 'Today', getValue: () => { const d = new Date().toISOString().split('T')[0]; return { dateFrom: d, dateTo: d }; } },
@@ -231,7 +232,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       title: 'Revenue & Orders',
       primaryLabel: 'Revenue (₹)',
       secondaryLabel: 'Orders',
-      primaryColor: '#F56B4C',
+      primaryColor: '#FE8733',
       secondaryColor: '#3b82f6',
       points: [] as Array<{ date: string; label: string; value: number; secondaryValue: number }>,
     };
@@ -257,9 +258,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const chartData = getChartData();
 
   return (
-    <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor="#F56B4C" bottomBackgroundColor="#f3f4f6">
+    <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor="#FE8733" bottomBackgroundColor="#f3f4f6">
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={26} color="#ffffff" />
         </TouchableOpacity>
@@ -280,13 +281,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <Text style={styles.avatarText}>A</Text>
           </View>
         </View>
-      </View>
+      </GradientBox>
       <View style={{ flex: 1, backgroundColor: '#f3f4f6' }}>
 
         {/* Loading State */}
         {loading && !apiData ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#F56B4C" />
+            <ActivityIndicator size="large" color="#FE8733" />
             <Text style={styles.loadingText}>Loading dashboard...</Text>
           </View>
         ) : error ? (
@@ -310,8 +311,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <RefreshControl
                 refreshing={isFetching && !!apiData}
                 onRefresh={handleRefresh}
-                colors={['#F56B4C']}
-                tintColor="#F56B4C"
+                colors={['#FE8733']}
+                tintColor="#FE8733"
               />
             }
           >
@@ -378,7 +379,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   header: {
-    backgroundColor: '#F56B4C',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F56B4C',
+    color: '#FE8733',
   },
   scrollView: {
     flex: 1,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -507,8 +507,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   dateRangeChipActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
   dateRangeText: {
     fontSize: 13,

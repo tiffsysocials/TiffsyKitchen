@@ -16,6 +16,7 @@ import { deliveryService } from '../../../services/delivery.service';
 import { MealWindow } from '../../../types/api.types';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import BatchDetailScreen from '../../../modules/delivery/screens/BatchDetailScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface BatchHistoryScreenProps {
   navigation?: any;
@@ -389,7 +390,7 @@ export const BatchHistoryScreen: React.FC<BatchHistoryScreenProps> = ({
   return (
     <SafeAreaScreen style={{ flex: 1 }} backgroundColor={colors.primary}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity
           onPress={() => {
             if (navigation) {
@@ -410,7 +411,7 @@ export const BatchHistoryScreen: React.FC<BatchHistoryScreenProps> = ({
         <TouchableOpacity onPress={handleRefresh}>
           <Icon name="refresh" size={24} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
 
         {/* Filters */}
@@ -512,7 +513,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: 16,
-    backgroundColor: colors.primary,
   },
   headerTitle: {
     fontSize: 20,

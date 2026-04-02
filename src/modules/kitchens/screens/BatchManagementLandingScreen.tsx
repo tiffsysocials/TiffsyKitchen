@@ -18,6 +18,7 @@ import { ordersService } from '../../../services/orders.service';
 import { Kitchen, MealWindow, Order } from '../../../types/api.types';
 import { BatchHistoryScreen } from './BatchHistoryScreen';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface BatchManagementLandingScreenProps {
   navigation?: any;
@@ -528,7 +529,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   if (selectedKitchen) {
     return (
       <SafeAreaScreen style={{ flex: 1 }} backgroundColor={colors.primary}>
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={handleBackToKitchenList}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
@@ -537,7 +538,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
             <Text style={styles.headerSubtitle}>Batch Operations</Text>
           </View>
           <View style={{ width: 24 }} />
-        </View>
+        </GradientBox>
 
         <ScrollView style={[styles.content, { backgroundColor: colors.background }]}>
           {/* Meal Window Selection */}
@@ -848,7 +849,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   if (loading) {
     return (
       <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={() => {
             if (navigation) {
               navigation.goBack();
@@ -859,7 +860,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
             <Icon name={onMenuPress ? "menu" : "arrow-left"} size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { marginLeft: spacing.md, flex: 1, textAlign: 'left' }]}>Batch Management</Text>
-        </View>
+        </GradientBox>
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading kitchens...</Text>
@@ -870,7 +871,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
 
   return (
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={() => {
           if (navigation) {
             navigation.goBack();
@@ -881,7 +882,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
           <Icon name={onMenuPress ? "menu" : "arrow-left"} size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { marginLeft: spacing.md, flex: 1, textAlign: 'left' }]}>Batch Management</Text>
-      </View>
+      </GradientBox>
 
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         <View style={styles.introSection}>
@@ -972,7 +973,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: 16,
-    backgroundColor: colors.primary,
   },
   headerTitle: {
     fontSize: 20,

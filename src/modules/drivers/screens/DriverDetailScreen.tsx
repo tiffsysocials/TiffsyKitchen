@@ -58,7 +58,7 @@ const getInitials = (name: string): string => {
 
 const getAvatarColor = (name: string): string => {
   const colors = [
-    '#F56B4C', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b',
+    '#FE8733', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b',
     '#ef4444', '#06b6d4', '#ec4899', '#14b8a6', '#f97316'
   ];
   const index = name.charCodeAt(0) % colors.length;

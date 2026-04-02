@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { deliveryService } from '../../../services/delivery.service';
 import { Card } from '../../../components/common/Card';
 import BatchStatusBadge from '../components/BatchStatusBadge';
@@ -62,9 +63,9 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center bg-gray-50">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
         </View>
       </SafeAreaScreen>
     );
@@ -72,7 +73,7 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
 
   if (!batch) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center bg-gray-50">
           <Icon name="error-outline" size={48} color="#d1d5db" />
           <Text className="text-gray-400 text-base mt-4">Batch not found</Text>
@@ -85,9 +86,9 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onBack} className="mr-4">
           <Icon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -97,7 +98,7 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
           </Text>
         </View>
         <BatchStatusBadge status={batch.status} />
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1">
         {/* Batch Info Card */}
@@ -199,7 +200,7 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
           ) : (
             <View className="items-center py-16">
               {isActive ? (
-                <ActivityIndicator color="#F56B4C" />
+                <ActivityIndicator color="#FE8733" />
               ) : (
                 <>
                   <Icon name="location-off" size={48} color="#d1d5db" />

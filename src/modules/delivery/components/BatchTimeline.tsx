@@ -59,7 +59,7 @@ const BatchTimeline: React.FC<Props> = ({ batch, orders, assignments }) => {
     events.push({
       time: batch.driverAssignedAt,
       icon: 'person',
-      color: '#F56B4C',
+      color: '#FE8733',
       title: `${batch.driverId.name} assigned`,
       subtitle: batch.assignmentStrategy?.assignedScore
         ? `Score: ${batch.assignmentStrategy.assignedScore}`

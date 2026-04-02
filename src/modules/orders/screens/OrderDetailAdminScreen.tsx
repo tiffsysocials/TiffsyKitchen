@@ -25,6 +25,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { wp, hp, rf, rs } from '../../../theme/responsive';
 import { getAutoAcceptBadgeInfo, getAutoAcceptDescription } from '../../../utils/autoAccept';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface OrderDetailAdminScreenProps {
   route: {
@@ -448,10 +449,10 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
   });
 
   return (
-    <SafeAreaScreen style={{ flex: 1 }} backgroundColor="#F56B4C">
+    <SafeAreaScreen style={{ flex: 1 }} backgroundColor="#FE8733">
       <ScrollView style={[styles.scrollView, { backgroundColor: '#F5F5F5' }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -477,7 +478,7 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
               </View>
             </View>
           </View>
-        </View>
+        </GradientBox>
 
         {/* Auto-Accept Info Alert */}
         {(() => {
@@ -1144,7 +1145,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingTop: rs(12),
     paddingBottom: rs(20),
     paddingHorizontal: wp(5),
@@ -1376,13 +1376,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#F56B4C',
+    borderColor: '#FE8733',
     borderRadius: 8,
   },
   trackOrderButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#F56B4C',
+    color: '#FE8733',
   },
 });
 

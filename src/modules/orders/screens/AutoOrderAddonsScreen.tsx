@@ -22,8 +22,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../../../services/api.service';
 import { useAlert } from '../../../hooks/useAlert';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 
-const PRIMARY = '#F56B4C';
+const PRIMARY = '#FE8733';
 
 // ---- Types ----------------------------------------------------------------
 
@@ -210,9 +211,9 @@ const AutoOrderAddonsScreen = ({ onMenuPress }: AutoOrderAddonsScreenProps) => {
   // ---- Main render ----------------------------------------------------------
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#F9FAFB" backgroundColor="#F9FAFB">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#F9FAFB" backgroundColor="#F9FAFB">
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         {onMenuPress && (
           <TouchableOpacity onPress={onMenuPress} style={styles.menuBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -222,7 +223,7 @@ const AutoOrderAddonsScreen = ({ onMenuPress }: AutoOrderAddonsScreenProps) => {
         <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
           <Icon name="refresh" size={22} color="white" />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Status filter pills */}
       <View style={styles.filterRow}>
@@ -331,7 +332,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
 
   header: {
-    backgroundColor: PRIMARY,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,

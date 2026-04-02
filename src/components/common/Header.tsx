@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { colors } from '../../theme/colors';
+import { GradientBox } from './GradientBox';
 
 interface HeaderProps {
   title: string;
@@ -19,9 +21,9 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#F56B4C" />
-      <View
-        className="bg-[#F56B4C] px-4 pb-3 pt-2"
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <GradientBox
+        style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8 }}
       >
         <View className="flex-row items-center justify-between">
           {/* Back Arrow or Hamburger Menu */}
@@ -42,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
             {rightComponent}
           </View>
         </View>
-      </View>
+      </GradientBox>
     </>
   );
 };

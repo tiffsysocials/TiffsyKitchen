@@ -11,6 +11,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { KitchenStatus, MealSummary, CutoffSettings, statusColors } from '../models/types';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 // Time picker constants
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
@@ -133,7 +134,7 @@ export const KitchenHeader: React.FC<KitchenHeaderProps> = ({
   const statusStyle = statusColors[status];
 
   return (
-    <View style={styles.container}>
+    <GradientBox style={styles.container}>
       {/* Title Row */}
       <View style={styles.titleRow}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
@@ -460,13 +461,12 @@ export const KitchenHeader: React.FC<KitchenHeaderProps> = ({
           </View>
         </View>
       </Modal>
-    </View>
+    </GradientBox>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary,
     paddingBottom: spacing.md,
   },
   titleRow: {

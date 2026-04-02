@@ -17,6 +17,7 @@ import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { Kitchen, Zone, KitchenDetailsResponse } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface KitchenDetailScreenProps {
   route: {
@@ -201,13 +202,13 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kitchen Details</Text>
           <View style={{ width: 24 }} />
-        </View>
+        </GradientBox>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading kitchen details...</Text>
@@ -219,13 +220,13 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   if (error || !kitchen) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kitchen Details</Text>
           <View style={{ width: 24 }} />
-        </View>
+        </GradientBox>
         <View style={styles.errorContainer}>
           <Icon name="alert-circle" size={64} color={colors.error} />
           <Text style={styles.errorTitle}>Failed to load details</Text>
@@ -247,13 +248,13 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Kitchen Details</Text>
         <View style={{ width: 24 }} />
-      </View>
+      </GradientBox>
 
       <ScrollView style={styles.scrollView}>
         {/* Kitchen Header */}
@@ -542,7 +543,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    backgroundColor: colors.primary,
   },
   headerTitle: {
     fontSize: 18,

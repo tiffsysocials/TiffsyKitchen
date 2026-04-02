@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface MenuHeaderProps {
   onMenuPress: () => void;
@@ -13,8 +14,8 @@ export const MenuHeader: React.FC<MenuHeaderProps> = ({ onMenuPress }) => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#F56B4C" />
-      <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <GradientBox style={styles.container}>
         <View style={[styles.titleRow, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcons name="menu" size={26} color={colors.white} />
@@ -24,14 +25,13 @@ export const MenuHeader: React.FC<MenuHeaderProps> = ({ onMenuPress }) => {
             <Text style={styles.subtitle}>Configure daily Lunch/Dinner menus</Text>
           </View>
         </View>
-      </View>
+      </GradientBox>
     </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary,
     paddingBottom: spacing.md,
   },
   titleRow: {

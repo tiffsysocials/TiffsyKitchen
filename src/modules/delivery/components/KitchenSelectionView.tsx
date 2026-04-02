@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, TextInput 
 import { useQuery } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import kitchenService from '../../../services/kitchen.service';
 
 interface Props {
@@ -29,19 +30,19 @@ const KitchenSelectionView: React.FC<Props> = ({ onMenuPress, onKitchenSelect })
     : kitchens;
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-4">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-semibold">Delivery Management</Text>
-      </View>
+      </GradientBox>
 
       <View className="flex-1 p-4">
         {/* Intro */}
         <View className="bg-white rounded-xl p-6 items-center mb-4 shadow-sm">
-          <Icon name="local-shipping" size={48} color="#F56B4C" />
+          <Icon name="local-shipping" size={48} color="#FE8733" />
           <Text className="text-xl font-semibold text-gray-800 mt-3">Select a Kitchen</Text>
           <Text className="text-sm text-gray-500 text-center mt-2 leading-5">
             Choose a kitchen to manage delivery batches, dispatch orders, and view statistics.
@@ -71,7 +72,7 @@ const KitchenSelectionView: React.FC<Props> = ({ onMenuPress, onKitchenSelect })
 
         {isLoading ? (
           <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#F56B4C" />
+            <ActivityIndicator size="large" color="#FE8733" />
             <Text className="text-sm text-gray-500 mt-3">Loading kitchens...</Text>
           </View>
         ) : filteredKitchens.length === 0 ? (
@@ -91,7 +92,7 @@ const KitchenSelectionView: React.FC<Props> = ({ onMenuPress, onKitchenSelect })
                 onPress={() => onKitchenSelect(kitchen)}
               >
                 <View className="w-12 h-12 rounded-lg bg-orange-50 justify-center items-center mr-3">
-                  <Icon name="restaurant" size={24} color="#F56B4C" />
+                  <Icon name="restaurant" size={24} color="#FE8733" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-semibold text-gray-800 mb-1">{kitchen.name}</Text>

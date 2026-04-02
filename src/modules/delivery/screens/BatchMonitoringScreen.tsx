@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshContr
 import { useQuery } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { deliveryService } from '../../../services/delivery.service';
 import BatchCard from '../components/BatchCard';
 import BatchFilters from '../components/BatchFilters';
@@ -45,9 +46,9 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
   };
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-4">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -55,7 +56,7 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
         {pagination && (
           <Text className="text-white text-sm opacity-80">{pagination.total} batches</Text>
         )}
-      </View>
+      </GradientBox>
 
       {/* Filters */}
       <BatchFilters filters={filters} onFiltersChange={handleFiltersChange} />
@@ -63,7 +64,7 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
       {/* Batch List */}
       {isLoading && page === 1 ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
         </View>
       ) : (
         <FlatList
@@ -77,7 +78,7 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={handleRefresh}
-              colors={['#F56B4C']}
+              colors={['#FE8733']}
             />
           }
           onEndReached={handleLoadMore}
@@ -92,7 +93,7 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
           ListFooterComponent={
             isLoading && page > 1 ? (
               <View className="py-4 items-center">
-                <ActivityIndicator color="#F56B4C" />
+                <ActivityIndicator color="#FE8733" />
               </View>
             ) : null
           }

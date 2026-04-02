@@ -21,6 +21,7 @@ import { useApi } from '../../../hooks/useApi';
 import { Order as APIOrder, OrderListResponse } from '../../../types/api.types';
 import { SummaryStatCard } from '../components';
 import { colors } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface OrdersListScreenProps {
   onMenuPress: () => void;
@@ -169,13 +170,13 @@ export const OrdersListScreenEnhanced: React.FC<OrdersListScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
           <MaterialIcons name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Orders</Text>
         <View style={styles.headerRight} />
-      </View>
+      </GradientBox>
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
@@ -306,7 +307,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 4,

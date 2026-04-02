@@ -14,7 +14,7 @@ interface SubscriptionPlanCardProps {
   onPress: () => void;
 }
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({ plan, onPress }) => {
   // Calculate discount percentage

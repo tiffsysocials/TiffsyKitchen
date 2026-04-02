@@ -23,6 +23,7 @@ import { CouponFormModal } from '../components/CouponFormModal';
 import { CouponDetailModal } from '../components/CouponDetailModal';
 import { CouponFiltersState, DEFAULT_COUPON_FILTERS } from '../models/types';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface CouponsManagementScreenProps {
   onMenuPress?: () => void;
@@ -263,12 +264,12 @@ export const CouponsManagementScreen: React.FC<CouponsManagementScreenProps> = (
     return (
       <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
         {onMenuPress && (
-          <View style={styles.header}>
+          <GradientBox style={styles.header}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <MaterialIcon name="menu" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Coupon Management</Text>
-          </View>
+          </GradientBox>
         )}
         <CouponFiltersComponent filters={filters} onFiltersChange={handleFiltersChange} onRefresh={handleRefresh} />
         <View style={styles.loadingContainer}>
@@ -284,12 +285,12 @@ export const CouponsManagementScreen: React.FC<CouponsManagementScreenProps> = (
     return (
       <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.background} bottomBackgroundColor={colors.background} darkIcon>
         {onMenuPress && (
-          <View style={[styles.header, { backgroundColor: colors.background, paddingTop: 12 }]}>
+          <GradientBox style={[styles.header, { backgroundColor: colors.background, paddingTop: 12 }]}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <MaterialIcon name="menu" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Coupon Management</Text>
-          </View>
+          </GradientBox>
         )}
         <CouponFiltersComponent filters={filters} onFiltersChange={handleFiltersChange} onRefresh={handleRefresh} />
         <View style={styles.errorContainer}>
@@ -309,12 +310,12 @@ export const CouponsManagementScreen: React.FC<CouponsManagementScreenProps> = (
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
       {/* Header */}
       {onMenuPress && (
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Coupon Management</Text>
-        </View>
+        </GradientBox>
       )}
 
       {/* Filters */}
@@ -383,7 +384,6 @@ export const CouponsManagementScreen: React.FC<CouponsManagementScreenProps> = (
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: 12,
     flexDirection: 'row',

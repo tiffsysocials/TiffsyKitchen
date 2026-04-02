@@ -1,8 +1,12 @@
 export const colors = {
   // Primary
-  primary: '#F56B4C',
+  primary: '#FE8733',
   primaryLight: '#fff7ed',
   primaryDark: '#ea580c',
+
+  // Header gradient
+  headerGradientStart: '#FD9E2F',
+  headerGradientEnd: '#FF6636',
 
   // Secondary
   secondary: '#6366f1',
@@ -54,7 +58,7 @@ export const colors = {
   // User role colors
   roleCustomer: '#3b82f6',
   roleDriver: '#8b5cf6',
-  roleKitchenStaff: '#F56B4C',
+  roleKitchenStaff: '#FE8733',
   roleKitchenAdmin: '#ef4444',
 
   // Overlay

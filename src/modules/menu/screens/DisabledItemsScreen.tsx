@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
 import { menuManagementService } from '../../../services/menu-management.service';
 import { MenuItem } from '../../../types/api.types';
@@ -146,15 +147,15 @@ export const DisabledItemsScreen: React.FC<DisabledItemsScreenProps> = ({
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Top Header with Back Button */}
-      <View style={[styles.topHeader, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.topHeader, { paddingTop: 8 }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.topHeaderTitle}>Disabled Items</Text>
         <View style={styles.headerPlaceholder} />
-      </View>
+      </GradientBox>
 
       <FlatList
         ListHeaderComponent={renderHeader()}
@@ -177,7 +178,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   topHeader: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',

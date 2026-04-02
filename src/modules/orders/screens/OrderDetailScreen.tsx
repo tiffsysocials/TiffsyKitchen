@@ -28,6 +28,7 @@ import {
   OrderSectionsState,
 } from '../storage/orderNotesStorage';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
 
 interface OrderDetailScreenProps {
@@ -579,7 +580,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
@@ -590,7 +591,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
           </Text>
         </View>
         <StatusBadge status={order.status} type="order" size="medium" showIcon />
-      </View>
+      </GradientBox>
 
       {/* Failure Banner */}
       {renderFailureBanner()}
@@ -622,7 +623,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,

@@ -119,7 +119,7 @@ const PlaceholderScreen: React.FC<{
 }> = ({ title, onMenuPress }) => (
   <View style={{ flex: 1, backgroundColor: '#f3f4f6' }}>
     {/* Header */}
-    <View style={{ backgroundColor: '#F56B4C', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+    <View style={{ backgroundColor: '#FE8733', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
       <TouchableOpacity onPress={onMenuPress} style={{ marginRight: 16 }}>
         <Icon name="menu" size={24} color="#ffffff" />
       </TouchableOpacity>

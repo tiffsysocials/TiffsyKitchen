@@ -13,9 +13,10 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { usersService } from '../../../services/users.service';
 import { Customer } from '../../../types/api.types';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const colors = {
-  primary: '#F56B4C',
+  primary: '#FE8733',
   secondary: '#4ECDC4',
   success: '#10b981',
   warning: '#f59e0b',
@@ -207,13 +208,13 @@ export const UsersListScreen: React.FC<UsersListScreenProps> = ({
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcons name="menu" size={24} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Customers</Text>
           <View style={styles.placeholder} />
-        </View>
+        </GradientBox>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading customers...</Text>
@@ -225,13 +226,13 @@ export const UsersListScreen: React.FC<UsersListScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={24} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Customers</Text>
         <View style={styles.placeholder} />
-      </View>
+      </GradientBox>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -350,7 +351,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    backgroundColor: '#F56B4C',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

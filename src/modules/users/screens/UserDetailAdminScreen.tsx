@@ -30,7 +30,7 @@ interface UserDetailAdminScreenProps {
 }
 
 const colors = {
-  primary: '#F56B4C',
+  primary: '#FE8733',
   success: '#10b981',
   warning: '#f59e0b',
   danger: '#ef4444',

@@ -26,6 +26,7 @@ import { Calendar } from 'react-native-calendars';
 import { isAutoOrder, isAutoAccepted } from '../../../utils/autoAccept';
 import { useAlert } from '../../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' | 'AUTO_ORDERS' }[] = [
   { label: 'All', value: 'ALL' },
@@ -440,7 +441,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     if (!isFetching) return null;
     return (
       <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#F56B4C" />
+        <ActivityIndicator size="small" color="#FE8733" />
       </View>
     );
   };
@@ -458,13 +459,13 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
 
   return (
     <SafeAreaScreen
-      topBackgroundColor="#F56B4C"
+      topBackgroundColor="#FE8733"
       bottomBackgroundColor="#f9fafb"
       backgroundColor="#f9fafb"
     >
       {/* Header */}
       {onMenuPress && (
-        <View style={[styles.header, { paddingTop: 8 }]}>
+        <GradientBox style={[styles.header, { paddingTop: 8 }]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
@@ -501,13 +502,13 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
               </>
             )}
           </View>
-        </View>
+        </GradientBox>
       )}
 
       {/* Selected Date Display */}
       {selectedDate && (
         <View style={styles.selectedDateContainer}>
-          <Icon name="event" size={18} color="#F56B4C" />
+          <Icon name="event" size={18} color="#FE8733" />
           <Text style={styles.selectedDateText}>{formatDisplayDate(selectedDate)}</Text>
         </View>
       )}
@@ -688,16 +689,16 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
                   ? {
                       [selectedDate]: {
                         selected: true,
-                        selectedColor: '#F56B4C',
+                        selectedColor: '#FE8733',
                       },
                     }
                   : {}
               }
               theme={{
-                todayTextColor: '#F56B4C',
-                selectedDayBackgroundColor: '#F56B4C',
+                todayTextColor: '#FE8733',
+                selectedDayBackgroundColor: '#FE8733',
                 selectedDayTextColor: '#ffffff',
-                arrowColor: '#F56B4C',
+                arrowColor: '#FE8733',
                 monthTextColor: '#111827',
                 textMonthFontWeight: '600',
                 textDayFontSize: 14,
@@ -718,7 +719,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingBottom: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
   selectedDateText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F56B4C',
+    color: '#FE8733',
   },
   filterSection: {
     backgroundColor: '#FFFFFF',
@@ -798,8 +798,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   filterChipActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
   filterChipText: {
     fontSize: 13,
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 2,
-    borderTopColor: '#F56B4C',
+    borderTopColor: '#FE8733',
     paddingHorizontal: 16,
     paddingVertical: 6,
     elevation: 8,

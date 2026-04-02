@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   showMoreText: {
     fontSize: 13,
-    color: '#F56B4C',
+    color: '#FE8733',
     fontWeight: '600',
   },
 });

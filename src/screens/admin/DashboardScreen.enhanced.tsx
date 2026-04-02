@@ -25,6 +25,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../components/common/GradientBox';
 import { useApi } from '../../hooks/useApi';
 import { DashboardData } from '../../types/api.types';
 
@@ -34,7 +35,7 @@ interface DashboardScreenProps {
   onLogout?: () => void;
 }
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 export const DashboardScreenEnhanced: React.FC<DashboardScreenProps> = ({
   onMenuPress,
@@ -66,7 +67,7 @@ export const DashboardScreenEnhanced: React.FC<DashboardScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={onMenuPress || (() => { })}>
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -99,7 +100,7 @@ export const DashboardScreenEnhanced: React.FC<DashboardScreenProps> = ({
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </GradientBox>
 
       {/* Content */}
       {loading && !data ? (
@@ -394,7 +395,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PRIMARY_COLOR,
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 4,

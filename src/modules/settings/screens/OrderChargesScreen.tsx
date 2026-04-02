@@ -13,6 +13,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import adminDashboardService, { SystemConfig } from '../../../services/admin-dashboard.service';
 import { Card } from '../../../components/common/Card';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface OrderChargesScreenProps {
   onMenuPress?: () => void;
@@ -75,9 +76,9 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
 
   if (isLoading) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center bg-gray-50">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
           <Text className="text-gray-500 mt-2">Loading config...</Text>
         </View>
       </SafeAreaScreen>
@@ -87,21 +88,21 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
   const fees = formData.fees as any;
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-4">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-semibold">Order Charges</Text>
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1">
       {/* Basic Charges */}
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="attach-money" size={24} color="#F56B4C" />
+            <Icon name="attach-money" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Basic Charges</Text>
           </View>
 
@@ -167,7 +168,7 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="receipt" size={24} color="#F56B4C" />
+            <Icon name="receipt" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Tax</Text>
           </View>
 
@@ -191,7 +192,7 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="trending-up" size={24} color="#F56B4C" />
+            <Icon name="trending-up" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Surge Pricing</Text>
           </View>
 
@@ -225,7 +226,7 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="shopping-cart" size={24} color="#F56B4C" />
+            <Icon name="shopping-cart" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Small Order Fee</Text>
           </View>
 
@@ -272,7 +273,7 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="nightlight-round" size={24} color="#F56B4C" />
+            <Icon name="nightlight-round" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Late Night Fee</Text>
           </View>
 

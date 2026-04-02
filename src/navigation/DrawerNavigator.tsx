@@ -10,6 +10,7 @@ import { createDrawerNavigator, DrawerContentComponentProps, DrawerActions } fro
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GradientBox } from '../components/common/GradientBox';
 import { DrawerParamList } from './types';
 import DashboardScreen from '../screens/admin/DashboardScreen.enhanced';
 import OrdersNavigator from './OrdersNavigator';
@@ -37,7 +38,7 @@ import { BannerManagementScreen } from '../modules/banners';
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Stack = createStackNavigator();
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 /**
  * Kitchens Stack Navigator
@@ -122,11 +123,11 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   return (
     <View style={styles.drawerContainer}>
       {/* Drawer Header */}
-      <View style={styles.drawerHeader}>
+      <GradientBox style={styles.drawerHeader}>
         <Icon name={headerConfig.icon} size={48} color="#ffffff" />
         <Text style={styles.drawerTitle}>{headerConfig.title}</Text>
         <Text style={styles.drawerSubtitle}>TiffsyKitchen</Text>
-      </View>
+      </GradientBox>
 
       {/* Menu Items */}
       <ScrollView style={styles.menuContainer}>
@@ -306,7 +307,6 @@ const styles = StyleSheet.create({
 
   // Drawer Header
   drawerHeader: {
-    backgroundColor: PRIMARY_COLOR,
     padding: 24,
     paddingTop: 48,
     alignItems: 'center',

@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAlert } from '../../hooks/useAlert';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../components/common/GradientBox';
 import { Card } from '../../components/common/Card';
 import {
   notificationService,
@@ -612,14 +613,14 @@ interface SendPushNotificationScreenProps {
 
 export const SendPushNotificationScreen: React.FC<SendPushNotificationScreenProps> = ({ onMenuPress }) => {
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" backgroundColor="#f3f4f6">
+    <SafeAreaScreen topBackgroundColor="#FE8733" backgroundColor="#f3f4f6">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 py-3.5 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-3 p-1">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-lg font-bold flex-1">Push Notifications</Text>
-      </View>
+      </GradientBox>
 
       <ScrollView
         className="flex-1 bg-gray-50"

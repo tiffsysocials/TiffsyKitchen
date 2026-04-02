@@ -86,13 +86,13 @@ const BatchStatsDashboard: React.FC<Props> = ({ kitchenId, mealWindow, isAdmin, 
     { label: 'Completed', value: statusCounts.COMPLETED, color: '#d1fae5' },
     { label: 'Partial', value: statusCounts.PARTIAL_COMPLETE, color: '#fed7aa' },
     { label: 'Cancelled', value: statusCounts.CANCELLED, color: '#fecaca' },
-    { label: 'Total', value: totalBatches, color: '#F56B4C' },
+    { label: 'Total', value: totalBatches, color: '#FE8733' },
   ];
 
   if (isLoading) {
     return (
       <View className="px-4 py-8 items-center">
-        <ActivityIndicator color="#F56B4C" />
+        <ActivityIndicator color="#FE8733" />
         <Text className="text-sm text-gray-500 mt-2">Loading statistics...</Text>
       </View>
     );
@@ -107,7 +107,7 @@ const BatchStatsDashboard: React.FC<Props> = ({ kitchenId, mealWindow, isAdmin, 
       <View className="flex-row mb-3">
         <Card className="flex-1 p-4 mr-1.5 items-center">
           <View className="w-11 h-11 rounded-lg bg-orange-50 items-center justify-center mb-2">
-            <Icon name="inventory-2" size={24} color="#F56B4C" />
+            <Icon name="inventory-2" size={24} color="#FE8733" />
           </View>
           <Text className="text-3xl font-bold text-gray-800">{availableForBatching}</Text>
           <Text className="text-[11px] font-semibold text-gray-500 text-center leading-[14px]">
@@ -170,7 +170,7 @@ const BatchStatsDashboard: React.FC<Props> = ({ kitchenId, mealWindow, isAdmin, 
               <Text className="text-[10px] text-gray-500">Failed</Text>
             </View>
             <View className="items-center">
-              <Icon name="percent" size={28} color="#F56B4C" />
+              <Icon name="percent" size={28} color="#FE8733" />
               <Text className="text-2xl font-bold text-gray-800">{Math.round(deliveryStats.successRate || 0)}%</Text>
               <Text className="text-[10px] text-gray-500">Success</Text>
             </View>
@@ -186,14 +186,14 @@ const BatchStatsDashboard: React.FC<Props> = ({ kitchenId, mealWindow, isAdmin, 
 
       {/* View History Button */}
       <TouchableOpacity
-        className="flex-row items-center justify-center bg-white p-4 rounded-xl border border-[#F56B4C] mb-6"
+        className="flex-row items-center justify-center bg-white p-4 rounded-xl border border-[#FE8733] mb-6"
         onPress={onViewHistory}
       >
-        <Icon name="view-list" size={20} color="#F56B4C" />
-        <Text className="text-sm font-semibold text-[#F56B4C] ml-2 text-center">
+        <Icon name="view-list" size={20} color="#FE8733" />
+        <Text className="text-sm font-semibold text-[#FE8733] ml-2 text-center">
           View Detailed Batch History
         </Text>
-        <Icon name="chevron-right" size={20} color="#F56B4C" />
+        <Icon name="chevron-right" size={20} color="#FE8733" />
       </TouchableOpacity>
     </View>
   );

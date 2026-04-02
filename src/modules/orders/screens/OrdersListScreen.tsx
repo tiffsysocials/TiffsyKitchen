@@ -18,6 +18,7 @@ import { OrderCard, FilterChip, SummaryStatCard } from '../components';
 import { filterOrders, sortOrders, calculateSummaryStats, formatCurrency } from '../utils/orderUtils';
 import { loadAllOrdersPreferences, saveAllOrdersPreferences, defaultFilters } from '../storage/ordersPreferencesStorage';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface OrdersListScreenProps {
   onMenuPress: () => void;
@@ -162,7 +163,7 @@ export const OrdersListScreen: React.FC<OrdersListScreenProps> = ({
           title="Lunch"
           value={summaryStats.lunchOrders}
           icon="wb-sunny"
-          iconColor="#F56B4C"
+          iconColor="#FE8733"
           iconBgColor="#fff7ed"
           style={styles.statCard}
           compact
@@ -476,7 +477,7 @@ export const OrdersListScreen: React.FC<OrdersListScreenProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={26} color={colors.white} />
         </TouchableOpacity>
@@ -484,7 +485,7 @@ export const OrdersListScreen: React.FC<OrdersListScreenProps> = ({
         <TouchableOpacity style={styles.sortButton} onPress={() => setShowSortModal(true)}>
           <MaterialIcons name="sort" size={24} color={colors.white} />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Context Bar: City & Date */}
       <View style={styles.contextBar}>
@@ -585,7 +586,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

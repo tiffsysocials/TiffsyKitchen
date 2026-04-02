@@ -826,7 +826,7 @@ export const DriverOrdersBatchesScreen: React.FC<DriverOrdersBatchesScreenProps>
 
   return (
     <SafeAreaScreen
-      topBackgroundColor="#F56B4C"
+      topBackgroundColor="#FE8733"
       bottomBackgroundColor="#f9fafb"
       backgroundColor="#f9fafb"
     >

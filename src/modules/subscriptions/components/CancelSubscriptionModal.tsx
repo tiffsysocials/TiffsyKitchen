@@ -27,7 +27,7 @@ interface CancelSubscriptionModalProps {
   customerName: string;
 }
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 export const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
   visible,

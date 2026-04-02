@@ -18,6 +18,7 @@ import {
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { colors } from '../../../theme/colors';
 import { Kitchen } from '../../../types/api.types';
 import { MenuManagementExample } from '../MenuManagementExample';
@@ -89,14 +90,14 @@ export const MenuManagementMain: React.FC<MenuManagementMainProps> = ({
 
   // Show kitchen selection
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View style={[styles.header, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.header, { paddingTop: 8 }]}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Menu Management</Text>
-      </View>
+      </GradientBox>
 
       {/* Content */}
       <View style={styles.content}>
@@ -181,7 +182,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',

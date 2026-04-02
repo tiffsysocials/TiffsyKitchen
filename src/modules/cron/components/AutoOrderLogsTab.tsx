@@ -19,7 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getAutoOrderLogs } from '../../../services/cron.service';
 import { AutoOrderLogStatus, AutoOrderLog } from '../../../types/cron.types';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 type StatusFilter = 'ALL' | AutoOrderLogStatus;
 type MealFilter = 'ALL' | 'LUNCH' | 'DINNER';

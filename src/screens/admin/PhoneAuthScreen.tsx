@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
 import { authService } from '../../services/auth.service';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 interface PhoneAuthScreenProps {
   onVerificationComplete: (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string }) => void;

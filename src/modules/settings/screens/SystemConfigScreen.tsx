@@ -58,7 +58,7 @@ const SystemConfigScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#F56B4C" />
+        <ActivityIndicator size="large" color="#FE8733" />
       </View>
     );
   }
@@ -69,7 +69,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="p-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="schedule" size={24} color="#F56B4C" />
+            <Icon name="schedule" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Cutoff Times</Text>
           </View>
 
@@ -99,7 +99,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="attach-money" size={24} color="#F56B4C" />
+            <Icon name="attach-money" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Fees</Text>
           </View>
 
@@ -164,7 +164,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="cancel" size={24} color="#F56B4C" />
+            <Icon name="cancel" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Cancellation Policy</Text>
           </View>
 
@@ -195,7 +195,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="money-off" size={24} color="#F56B4C" />
+            <Icon name="money-off" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Refund Settings</Text>
           </View>
 
@@ -227,7 +227,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="autorenew" size={24} color="#F56B4C" />
+            <Icon name="autorenew" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Auto-Order Settings</Text>
           </View>
 
@@ -288,7 +288,7 @@ const SystemConfigScreen: React.FC = () => {
       <View className="px-4 pb-4">
         <Card className="p-4">
           <View className="flex-row items-center mb-4">
-            <Icon name="event" size={24} color="#F56B4C" />
+            <Icon name="event" size={24} color="#FE8733" />
             <Text className="text-lg font-semibold text-gray-800 ml-2">Scheduled Meals</Text>
           </View>
 

@@ -32,6 +32,7 @@ import {
   ReferralConfig,
   ReferralStatus,
 } from '../../../types/api.types';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface Props {
   onMenuPress: () => void;
@@ -378,12 +379,12 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
   return (
     <SafeAreaScreen topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background} backgroundColor={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <Icon name="menu" size={24} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Referral Program</Text>
-      </View>
+      </GradientBox>
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
@@ -424,7 +425,6 @@ export default ReferralManagementScreen;
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: spacing.sm,

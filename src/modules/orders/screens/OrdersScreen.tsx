@@ -17,6 +17,7 @@ import { Order, OrderStatus } from '../../../types/api.types';
 import OrderCardAdmin from '../components/OrderCardAdmin';
 import OrderStatsCard from '../components/OrderStatsCard';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -100,7 +101,7 @@ const OrdersScreen = ({ onMenuPress, navigation }: OrdersScreenProps) => {
     if (statsLoading || !statsData) {
       return (
         <View style={styles.statsLoadingContainer}>
-          <ActivityIndicator size="small" color="#F56B4C" />
+          <ActivityIndicator size="small" color="#FE8733" />
         </View>
       );
     }
@@ -116,7 +117,7 @@ const OrdersScreen = ({ onMenuPress, navigation }: OrdersScreenProps) => {
         <OrderStatsCard
           label="Today's Orders"
           value={today.total}
-          color="#F56B4C"
+          color="#FE8733"
           icon="receipt-long"
         />
         <OrderStatsCard
@@ -210,18 +211,18 @@ const OrdersScreen = ({ onMenuPress, navigation }: OrdersScreenProps) => {
 
   return (
     <SafeAreaScreen
-      topBackgroundColor="#F56B4C"
+      topBackgroundColor="#FE8733"
       bottomBackgroundColor="#f9fafb"
       backgroundColor="#f9fafb"
     >
       {/* Header */}
       {onMenuPress && (
-        <View style={[styles.header, { paddingTop: 8 }]}>
+        <GradientBox style={[styles.header, { paddingTop: 8 }]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Orders Management</Text>
-        </View>
+        </GradientBox>
       )}
 
       {/* Stats and Filters Section - Fixed Height */}
@@ -263,7 +264,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingBottom: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -334,10 +334,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   filterChipActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
     elevation: 3,
-    shadowColor: '#F56B4C',
+    shadowColor: '#FE8733',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

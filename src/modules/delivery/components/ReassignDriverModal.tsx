@@ -78,7 +78,7 @@ const ReassignDriverModal: React.FC<Props> = ({ visible, batchId, onClose, onSuc
           <Text className="text-sm font-medium text-gray-700 px-4 pt-4 pb-2">Select New Driver</Text>
           {isLoading ? (
             <View className="p-8 items-center">
-              <ActivityIndicator color="#F56B4C" />
+              <ActivityIndicator color="#FE8733" />
             </View>
           ) : (
             <FlatList

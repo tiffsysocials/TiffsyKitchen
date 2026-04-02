@@ -16,9 +16,10 @@ import { vouchersService } from '../../../services/vouchers.service';
 import { User, UserRole, UserStatus } from '../../../types/api.types';
 import { UserCard } from '../components/UserCard';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const colors = {
-  primary: '#F56B4C',
+  primary: '#FE8733',
   success: '#10b981',
   gray: '#6b7280',
   lightGray: '#f3f4f6',
@@ -280,14 +281,14 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor={colors.lightGray} backgroundColor={colors.lightGray}>
-        <View style={[styles.header, {paddingTop: 8}]}>
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor={colors.lightGray} backgroundColor={colors.lightGray}>
+        <GradientBox style={[styles.header, {paddingTop: 8}]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcons name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Users</Text>
           <View style={styles.placeholder} />
-        </View>
+        </GradientBox>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading users...</Text>
@@ -299,9 +300,9 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
   const canAddUser = activeRoleTab !== 'ALL' && activeRoleTab !== 'CUSTOMER';
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor={colors.lightGray} backgroundColor={colors.lightGray}>
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor={colors.lightGray} backgroundColor={colors.lightGray}>
       {/* Header */}
-      <View style={[styles.header, {paddingTop: 8}]}>
+      <GradientBox style={[styles.header, {paddingTop: 8}]}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -312,7 +313,7 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
           </TouchableOpacity>
         )}
         {!canAddUser && <View style={styles.placeholder} />}
-      </View>
+      </GradientBox>
 
       {/* Role Tabs */}
       <View style={styles.roleTabsContainer}>
@@ -417,7 +418,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingBottom: 12,
-    backgroundColor: '#F56B4C',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

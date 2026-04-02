@@ -38,7 +38,7 @@ const BatchFilters: React.FC<Props> = ({ filters, onFiltersChange }) => {
             filters.status ? 'border-orange-500 bg-orange-50' : 'border-gray-300 bg-white'
           }`}
         >
-          <Icon name="filter-list" size={16} color={filters.status ? '#F56B4C' : '#6b7280'} />
+          <Icon name="filter-list" size={16} color={filters.status ? '#FE8733' : '#6b7280'} />
           <Text className={`text-sm ml-1 ${filters.status ? 'text-orange-700' : 'text-gray-600'}`}>
             {activeStatusLabel}
           </Text>

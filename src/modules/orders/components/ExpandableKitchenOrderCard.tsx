@@ -76,7 +76,7 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
         <View style={styles.headerContent}>
           {/* Kitchen Icon */}
           <View style={styles.iconContainer}>
-            <Icon name="restaurant" size={24} color="#F56B4C" />
+            <Icon name="restaurant" size={24} color="#FE8733" />
           </View>
 
           {/* Kitchen Info */}
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#F56B4C',
+    borderLeftColor: '#FE8733',
   },
   headerContent: {
     flexDirection: 'row',

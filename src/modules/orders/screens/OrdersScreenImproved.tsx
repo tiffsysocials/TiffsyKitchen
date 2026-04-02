@@ -16,6 +16,7 @@ import {Order, OrderStatus} from '../../../types/api.types';
 import OrderCardAdminImproved from '../components/OrderCardAdminImproved';
 import OrderStatsCardImproved from '../components/OrderStatsCardImproved';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 const STATUS_FILTERS: {label: string; value: OrderStatus | 'ALL'; icon: string}[] = [
   {label: 'All', value: 'ALL', icon: 'apps'},
@@ -96,7 +97,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
     if (statsLoading || !statsData) {
       return (
         <View style={styles.statsLoadingContainer}>
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
         </View>
       );
     }
@@ -107,7 +108,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
       {
         label: "Today's Orders",
         value: today.total,
-        color: '#F56B4C',
+        color: '#FE8733',
         icon: 'receipt-long',
         trend: '+12%',
       },
@@ -238,7 +239,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
     if (!isFetching) return null;
     return (
       <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#F56B4C" />
+        <ActivityIndicator size="small" color="#FE8733" />
         <Text style={styles.loadingFooterText}>Loading more...</Text>
       </View>
     );
@@ -267,7 +268,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
     <View style={styles.container}>
       {/* Header */}
       {onMenuPress && (
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <Icon name="menu" size={26} color="#ffffff" />
@@ -287,7 +288,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
               </View>
             )}
           </TouchableOpacity>
-        </View>
+        </GradientBox>
       )}
 
       {renderStatsSection()}
@@ -301,8 +302,8 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
           <RefreshControl
             refreshing={ordersLoading && !isFetching}
             onRefresh={handleRefresh}
-            colors={['#F56B4C']}
-            tintColor="#F56B4C"
+            colors={['#FE8733']}
+            tintColor="#FE8733"
           />
         }
         ListHeaderComponent={renderListHeader}
@@ -326,7 +327,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#F56B4C',
+    borderColor: '#FE8733',
   },
   notificationBadgeText: {
     color: '#FFFFFF',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   clearFilterText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F56B4C',
+    color: '#FE8733',
   },
   filtersContainer: {
     paddingHorizontal: 16,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterChipActive: {
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
   },
   filterChipText: {
     fontSize: 14,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   clearFilterButton: {
     marginTop: 24,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,

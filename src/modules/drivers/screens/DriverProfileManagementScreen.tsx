@@ -322,7 +322,7 @@ export const DriverProfileManagementScreen: React.FC<DriverProfileManagementScre
 
   return (
     <SafeAreaScreen
-      topBackgroundColor="#F56B4C"
+      topBackgroundColor="#FE8733"
       bottomBackgroundColor="#f9fafb"
       backgroundColor="#f9fafb"
     >

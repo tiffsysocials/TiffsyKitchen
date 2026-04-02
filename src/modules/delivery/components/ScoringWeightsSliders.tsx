@@ -47,9 +47,9 @@ const ScoringWeightsSliders: React.FC<Props> = ({ weights, onChange }) => {
             minimumValue={0}
             maximumValue={100}
             step={5}
-            minimumTrackTintColor="#F56B4C"
+            minimumTrackTintColor="#FE8733"
             maximumTrackTintColor="#d1d5db"
-            thumbTintColor="#F56B4C"
+            thumbTintColor="#FE8733"
           />
         </View>
       ))}

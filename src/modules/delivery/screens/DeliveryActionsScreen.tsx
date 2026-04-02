@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import { useMutation } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { deliveryService } from '../../../services/delivery.service';
 import { Card } from '../../../components/common/Card';
 import { useAlert } from '../../../hooks/useAlert';
@@ -87,14 +88,14 @@ const DeliveryActionsScreen: React.FC<Props> = ({ onMenuPress }) => {
   });
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-4">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-semibold">Delivery Actions</Text>
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1">
         {/* Selectors */}
@@ -117,7 +118,7 @@ const DeliveryActionsScreen: React.FC<Props> = ({ onMenuPress }) => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-2">
-              <Icon name="layers" size={24} color="#F56B4C" />
+              <Icon name="layers" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">Batch Orders</Text>
             </View>
             <Text className="text-sm text-gray-500 mb-4">
@@ -151,7 +152,7 @@ const DeliveryActionsScreen: React.FC<Props> = ({ onMenuPress }) => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-2">
-              <Icon name="local-shipping" size={24} color="#F56B4C" />
+              <Icon name="local-shipping" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">Dispatch Batches</Text>
             </View>
             <Text className="text-sm text-gray-500 mb-4">
@@ -194,7 +195,7 @@ const DeliveryActionsScreen: React.FC<Props> = ({ onMenuPress }) => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-2">
-              <Icon name="notifications-active" size={24} color="#F56B4C" />
+              <Icon name="notifications-active" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">Send Kitchen Reminder</Text>
             </View>
             <Text className="text-sm text-gray-500 mb-4">

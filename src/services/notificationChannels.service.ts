@@ -127,7 +127,7 @@ export const createNotificationChannels = async (): Promise<void> => {
       badge: true,
       visibility: AndroidVisibility.PUBLIC,
       lights: true,
-      lightColor: '#F56B4C',
+      lightColor: '#FE8733',
     });
     console.log('✅ Created channel:', NOTIFICATION_CHANNELS.KITCHEN);
 

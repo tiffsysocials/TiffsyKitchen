@@ -27,7 +27,7 @@ import {
   triggerKitchenAcceptanceTimeout,
 } from '../../../services/cron.service';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 export const CronJobsTab: React.FC = () => {
   const { showSuccess, showError } = useAlert();

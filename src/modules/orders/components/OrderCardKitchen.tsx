@@ -354,7 +354,7 @@ const OrderCardKitchen: React.FC<OrderCardKitchenProps> = ({
           onPress={() => setShowStatusModal(false)}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Icon name="swap-vert" size={20} color="#F56B4C" />
+              <Icon name="swap-vert" size={20} color="#FE8733" />
               <Text style={styles.modalTitle}>Kitchen Status Update</Text>
               <TouchableOpacity
                 onPress={() => setShowStatusModal(false)}
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     borderColor: '#f3f4f6',
   },
   cardSelected: {
-    borderColor: '#F56B4C',
+    borderColor: '#FE8733',
     borderWidth: 2,
     backgroundColor: '#FFF5F3',
   },
@@ -461,8 +461,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
   header: {
     flexDirection: 'row',
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   },
   viewDetailsText: {
     fontSize: 14,
-    color: '#F56B4C',
+    color: '#FE8733',
     textAlign: 'center',
     fontWeight: '600',
   },

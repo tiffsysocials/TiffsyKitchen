@@ -136,7 +136,7 @@ const ReportsScreen: React.FC = () => {
                   key={type.value}
                   onPress={() => setReportType(type.value)}
                   className={`px-4 py-2 rounded-lg ${reportType === type.value
-                    ? 'bg-[#F56B4C]'
+                    ? 'bg-[#FE8733]'
                     : 'bg-gray-100'
                     }`}
                 >
@@ -161,7 +161,7 @@ const ReportsScreen: React.FC = () => {
                 key={option.value}
                 onPress={() => setSegmentBy(option.value)}
                 className={`flex-1 px-4 py-2 rounded-lg ${segmentBy === option.value
-                  ? 'bg-[#F56B4C]'
+                  ? 'bg-[#FE8733]'
                   : 'bg-gray-100'
                   }`}
               >
@@ -224,7 +224,7 @@ const ReportsScreen: React.FC = () => {
       {/* Report Data */}
       {isLoading ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
         </View>
       ) : (
         <FlatList

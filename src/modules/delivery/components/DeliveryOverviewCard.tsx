@@ -28,7 +28,7 @@ const DeliveryOverviewCard: React.FC<DeliveryOverviewCardProps> = ({ dateFrom, d
   return (
     <Card className="p-4">
       <View className="flex-row items-center mb-3">
-        <Icon name="local-shipping" size={20} color="#F56B4C" />
+        <Icon name="local-shipping" size={20} color="#FE8733" />
         <Text className="text-base font-semibold text-gray-800 ml-2">
           {isToday ? "Today's Deliveries" : 'Deliveries'}
         </Text>

@@ -25,6 +25,7 @@ import {
   KitchenFilters,
   KitchenFormState,
 } from '../components';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface KitchensManagementScreenProps {
   onMenuPress?: () => void;
@@ -445,12 +446,12 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
     return (
       <SafeAreaScreen topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background} backgroundColor={colors.background}>
         {onMenuPress && (
-          <View style={styles.header}>
+          <GradientBox style={styles.header}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <MaterialIcon name="menu" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Kitchen Management</Text>
-          </View>
+          </GradientBox>
         )}
         <KitchenFiltersComponent
           filters={filters}
@@ -469,12 +470,12 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
     return (
       <SafeAreaScreen topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background} backgroundColor={colors.background}>
         {onMenuPress && (
-          <View style={styles.header}>
+          <GradientBox style={styles.header}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <MaterialIcon name="menu" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Kitchen Management</Text>
-          </View>
+          </GradientBox>
         )}
         <KitchenFiltersComponent
           filters={filters}
@@ -499,12 +500,12 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   return (
     <SafeAreaScreen topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background} backgroundColor={colors.background}>
       {onMenuPress && (
-        <View style={[styles.header, { paddingTop: 8 }]}>
+        <GradientBox style={[styles.header, { paddingTop: 8 }]}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kitchen Management</Text>
-        </View>
+        </GradientBox>
       )}
       <KitchenFiltersComponent
         filters={filters}
@@ -557,7 +558,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: 12,
     flexDirection: 'row',

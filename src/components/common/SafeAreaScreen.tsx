@@ -2,6 +2,9 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, StatusBar, Platform } from 'react-native';
 import { useSafeAreaInsets, Edge } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
+import { GradientBox } from './GradientBox';
+
+const PRIMARY_COLORS = [colors.primary, '#FE8733', '#FE8733'];
 
 interface SafeAreaScreenProps {
     children: React.ReactNode;
@@ -11,6 +14,7 @@ interface SafeAreaScreenProps {
     backgroundColor?: string;
     statusBarColor?: string;
     darkIcon?: boolean;
+    useGradientTop?: boolean;
 }
 
 export const SafeAreaScreen: React.FC<SafeAreaScreenProps> = ({
@@ -21,6 +25,7 @@ export const SafeAreaScreen: React.FC<SafeAreaScreenProps> = ({
     backgroundColor = colors.background,
     statusBarColor,
     darkIcon = false,
+    useGradientTop,
 }) => {
     const insets = useSafeAreaInsets();
 
@@ -28,15 +33,23 @@ export const SafeAreaScreen: React.FC<SafeAreaScreenProps> = ({
     const effectiveTopColor = topBackgroundColor || backgroundColor;
     const effectiveBottomColor = bottomBackgroundColor || backgroundColor;
 
+    // Auto-detect gradient when top color is primary
+    const shouldUseGradient = useGradientTop ?? PRIMARY_COLORS.includes(effectiveTopColor);
+
     return (
         <View style={[styles.container, style]}>
             <StatusBar
-                backgroundColor={statusBarColor || effectiveTopColor}
+                backgroundColor={shouldUseGradient ? 'transparent' : (statusBarColor || effectiveTopColor)}
                 barStyle={darkIcon ? 'dark-content' : 'light-content'}
+                translucent={shouldUseGradient}
             />
 
-            {/* Top Spacer */}
-            <View style={{ height: insets.top, backgroundColor: effectiveTopColor }} />
+            {/* Top Spacer - when gradient, transparent status bar lets gradient show through */}
+            {shouldUseGradient ? (
+                <GradientBox style={{ height: insets.top }} />
+            ) : (
+                <View style={{ height: insets.top, backgroundColor: effectiveTopColor }} />
+            )}
 
             {/* Content */}
             <View style={[styles.content, { backgroundColor }]}>

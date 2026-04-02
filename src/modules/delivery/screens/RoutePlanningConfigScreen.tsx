@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Slider from '@react-native-community/slider';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import adminDashboardService from '../../../services/admin-dashboard.service';
 import { Card } from '../../../components/common/Card';
 import { useAlert } from '../../../hooks/useAlert';
@@ -130,9 +131,9 @@ const RoutePlanningConfigScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center bg-gray-50">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
           <Text className="text-gray-500 mt-2">Loading config...</Text>
         </View>
       </SafeAreaScreen>
@@ -141,13 +142,13 @@ const RoutePlanningConfigScreen: React.FC = () => {
 
   if (isError) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
-        <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+        <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={goBack} className="mr-4">
             <Icon name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text className="text-white text-xl font-semibold">Route Planning</Text>
-        </View>
+        </GradientBox>
         <View className="flex-1 justify-center items-center bg-gray-50 p-4">
           <Icon name="error-outline" size={48} color="#EF4444" />
           <Text className="text-red-600 text-lg font-semibold mt-2">Failed to load config</Text>
@@ -166,14 +167,14 @@ const RoutePlanningConfigScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={goBack} className="mr-4">
           <Icon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-semibold">Route Planning</Text>
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1">
         {/* Master Toggle */}
@@ -181,7 +182,7 @@ const RoutePlanningConfigScreen: React.FC = () => {
           <Card className="p-4">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <Icon name="route" size={24} color="#F56B4C" />
+                <Icon name="route" size={24} color="#FE8733" />
                 <Text className="text-lg font-semibold text-gray-800 ml-2">Enable Route Planning</Text>
               </View>
               <TouchableOpacity
@@ -201,7 +202,7 @@ const RoutePlanningConfigScreen: React.FC = () => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-4">
-              <Icon name="tune" size={24} color="#F56B4C" />
+              <Icon name="tune" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">Algorithm Settings</Text>
             </View>
 
@@ -265,9 +266,9 @@ const RoutePlanningConfigScreen: React.FC = () => {
                 minimumValue={500}
                 maximumValue={5000}
                 step={100}
-                minimumTrackTintColor="#F56B4C"
+                minimumTrackTintColor="#FE8733"
                 maximumTrackTintColor="#d1d5db"
-                thumbTintColor="#F56B4C"
+                thumbTintColor="#FE8733"
               />
               <View className="flex-row justify-between">
                 <Text className="text-xs text-gray-500">500m</Text>
@@ -281,7 +282,7 @@ const RoutePlanningConfigScreen: React.FC = () => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-4">
-              <Icon name="straighten" size={24} color="#F56B4C" />
+              <Icon name="straighten" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">Distance Calculation</Text>
             </View>
 
@@ -329,7 +330,7 @@ const RoutePlanningConfigScreen: React.FC = () => {
         <View className="px-4 pb-4">
           <Card className="p-4">
             <View className="flex-row items-center mb-4">
-              <Icon name="cloud" size={24} color="#F56B4C" />
+              <Icon name="cloud" size={24} color="#FE8733" />
               <Text className="text-lg font-semibold text-gray-800 ml-2">OSRM (Advanced)</Text>
             </View>
 

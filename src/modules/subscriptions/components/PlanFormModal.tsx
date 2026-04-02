@@ -26,7 +26,7 @@ interface PlanFormModalProps {
   plan?: SubscriptionPlan; // For edit mode
 }
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 const DURATION_OPTIONS = [7, 14, 30, 60];
 const VOUCHERS_PER_DAY_OPTIONS = [1, 2, 3, 4];
 

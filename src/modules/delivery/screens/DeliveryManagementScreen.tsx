@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import KitchenSelectionView from '../components/KitchenSelectionView';
 import DeliveryActionsPanel from '../components/DeliveryActionsPanel';
 import BatchStatsDashboard from '../components/BatchStatsDashboard';
@@ -81,9 +82,9 @@ const DeliveryManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
   // Loading state
   if (loading) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
         </View>
       </SafeAreaScreen>
     );
@@ -114,7 +115,7 @@ const DeliveryManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
   // No kitchen available (shouldn't happen for kitchen staff)
   if (!kitchenId) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center p-8">
           <Icon name="error-outline" size={48} color="#d1d5db" />
           <Text className="text-gray-400 text-base mt-4 text-center">
@@ -127,9 +128,9 @@ const DeliveryManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
 
   // Main operations view
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         {isAdmin ? (
           <TouchableOpacity onPress={handleBackToKitchenList} className="mr-4">
             <Icon name="arrow-back" size={24} color="#ffffff" />
@@ -145,7 +146,7 @@ const DeliveryManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
           </Text>
           <Text className="text-white/80 text-xs">Delivery Operations</Text>
         </View>
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1">
         {/* Meal Window Selector */}

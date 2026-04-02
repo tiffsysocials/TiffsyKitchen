@@ -12,12 +12,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { CronJobsTab } from '../components/CronJobsTab';
 import { AutoOrderLogsTab } from '../components/AutoOrderLogsTab';
 import { FailureSummaryTab } from '../components/FailureSummaryTab';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 type CronTab = 'jobs' | 'logs' | 'summary';
 
@@ -52,14 +53,14 @@ export const CronManagementScreen: React.FC<CronManagementScreenProps> = ({ onMe
       backgroundColor="#f9fafb"
     >
       {/* Header */}
-      <View style={[styles.header, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.header, { paddingTop: 8 }]}>
         {onMenuPress && (
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle}>Cron Management</Text>
-      </View>
+      </GradientBox>
 
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -100,7 +101,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PRIMARY_COLOR,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },

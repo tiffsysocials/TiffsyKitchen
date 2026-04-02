@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
 import { addonService } from '../../../services/addon.service';
 import { Addon, DietaryType, CreateAddonRequest } from '../../../types/api.types';
@@ -171,20 +172,20 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F56B4C" />
+        <ActivityIndicator size="large" color="#FE8733" />
       </View>
     );
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
-      <View style={[styles.header, { paddingTop: 8 }]}>
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <GradientBox style={[styles.header, { paddingTop: 8 }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditMode ? 'Edit Add-on' : 'Create Add-on'}</Text>
         <View style={styles.headerPlaceholder} />
-      </View>
+      </GradientBox>
 
       <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
         {/* Name */}
@@ -340,7 +341,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -423,8 +423,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   radioButtonActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
   radioButtonText: {
     fontSize: 14,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   infoWarning: {
     fontSize: 12,
-    color: '#F56B4C',
+    color: '#FE8733',
     marginTop: 4,
     fontStyle: 'italic',
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     flex: 1,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

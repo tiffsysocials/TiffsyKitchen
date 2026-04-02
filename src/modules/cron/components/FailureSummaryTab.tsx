@@ -19,7 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useQuery } from '@tanstack/react-query';
 import { getAutoOrderLogsSummary } from '../../../services/cron.service';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 const CATEGORY_ICONS: Record<string, string> = {
   NO_VOUCHERS: 'credit-card-off',

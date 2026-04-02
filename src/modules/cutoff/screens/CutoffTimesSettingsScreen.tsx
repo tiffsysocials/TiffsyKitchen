@@ -35,6 +35,7 @@ import {
   SettingsPreview,
 } from '../components';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface CutoffTimesSettingsScreenProps {
   onMenuPress: () => void;
@@ -193,7 +194,7 @@ export const CutoffTimesSettingsScreen: React.FC<CutoffTimesSettingsScreenProps>
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={26} color={colors.white} />
         </TouchableOpacity>
@@ -208,7 +209,7 @@ export const CutoffTimesSettingsScreen: React.FC<CutoffTimesSettingsScreenProps>
             <Text style={styles.unsavedText}>Unsaved</Text>
           </View>
         )}
-      </View>
+      </GradientBox>
 
       <ScrollView
         style={styles.scrollView}
@@ -220,7 +221,7 @@ export const CutoffTimesSettingsScreen: React.FC<CutoffTimesSettingsScreenProps>
           {/* Lunch Section */}
           <View style={styles.mealSection}>
             <View style={styles.mealHeader}>
-              <MaterialIcons name="wb-sunny" size={20} color="#F56B4C" />
+              <MaterialIcons name="wb-sunny" size={20} color="#FE8733" />
               <Text style={styles.mealTitle}>Lunch Ordering Window</Text>
             </View>
             <Text style={styles.mealHelper}>
@@ -574,7 +575,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,

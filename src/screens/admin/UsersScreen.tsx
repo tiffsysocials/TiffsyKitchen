@@ -17,6 +17,7 @@ import { useUsersStore } from '../../stores/useUsersStore';
 import { UserListItem, SearchBar, FilterSheet } from '../../components/users';
 import { StatCard } from '../../components/common';
 import { colors, spacing } from '../../theme';
+import { GradientBox } from '../../components/common/GradientBox';
 
 interface UsersScreenProps {
   onMenuPress: () => void;
@@ -157,7 +158,7 @@ export const UsersScreen: React.FC<UsersScreenProps> = ({
       darkIcon={false}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={26} color={colors.white} />
         </TouchableOpacity>
@@ -167,7 +168,7 @@ export const UsersScreen: React.FC<UsersScreenProps> = ({
             <MaterialIcons name="person-add" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
-      </View>
+      </GradientBox>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
 
         {/* Search Bar */}
@@ -219,7 +220,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

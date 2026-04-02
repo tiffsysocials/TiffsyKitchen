@@ -25,6 +25,7 @@ import {
 } from '../../utils/rbac';
 import { UserRole } from '../../types/user';
 import { kitchenStaffService } from '../../services/kitchen-staff.service';
+import { GradientBox } from './GradientBox';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -60,18 +61,18 @@ const MenuItemRow: React.FC<{
     <Icon
       name={item.icon}
       size={indented ? 20 : 24}
-      color={isActive ? '#F56B4C' : '#6b7280'}
+      color={isActive ? '#FE8733' : '#6b7280'}
       style={{ marginRight: 14 }}
     />
     <Text
       className={`${indented ? 'text-sm' : 'text-base'} ${
-        isActive ? 'text-[#F56B4C] font-semibold' : 'text-gray-700'
+        isActive ? 'text-[#FE8733] font-semibold' : 'text-gray-700'
       }`}
     >
       {item.label}
     </Text>
     {isActive && (
-      <View className="absolute right-0 w-1 h-8 bg-[#F56B4C] rounded-l-full" />
+      <View className="absolute right-0 w-1 h-8 bg-[#FE8733] rounded-l-full" />
     )}
   </TouchableOpacity>
 );
@@ -113,12 +114,12 @@ const CollapsibleGroup: React.FC<{
         <Icon
           name={config.icon}
           size={24}
-          color={hasActiveChild ? '#F56B4C' : '#374151'}
+          color={hasActiveChild ? '#FE8733' : '#374151'}
           style={{ marginRight: 14 }}
         />
         <Text
           className={`text-base flex-1 ${
-            hasActiveChild ? 'text-[#F56B4C] font-semibold' : 'text-gray-800 font-medium'
+            hasActiveChild ? 'text-[#FE8733] font-semibold' : 'text-gray-800 font-medium'
           }`}
         >
           {config.label}
@@ -275,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="bg-white h-full shadow-2xl"
         >
           {/* User Profile Section */}
-          <View className="bg-[#F56B4C] px-4 pb-5" style={{ paddingTop: insets.top + 20 }}>
+          <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 20, paddingTop: insets.top + 20 }}>
             <Text className="text-white font-bold text-lg">
               {user?.fullName || 'User'}
             </Text>
@@ -288,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ? 'Driver'
                 : 'User'}
             </Text>
-          </View>
+          </GradientBox>
 
           {/* Menu Items */}
           <ScrollView className="flex-1">
@@ -329,7 +330,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onPress={handleLogout}
               className="flex-row items-center py-2"
             >
-              <Icon name="logout" size={24} color="#F56B4C" style={{ marginRight: 14 }} />
+              <Icon name="logout" size={24} color="#ef4444" style={{ marginRight: 14 }} />
               <Text className="text-red-500 font-medium text-base">Logout</Text>
             </TouchableOpacity>
           </View>

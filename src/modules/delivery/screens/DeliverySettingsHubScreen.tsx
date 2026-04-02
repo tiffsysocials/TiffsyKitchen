@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { useNavigation } from '../../../context/NavigationContext';
 import { Card } from '../../../components/common/Card';
 
@@ -40,14 +41,14 @@ const DeliverySettingsHubScreen: React.FC<Props> = ({ onMenuPress }) => {
   const { navigate } = useNavigation();
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View className="bg-[#F56B4C] px-4 pb-3 pt-2 flex-row items-center">
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8, flexDirection: 'row', alignItems: 'center' }}>
         <TouchableOpacity onPress={onMenuPress} className="mr-4">
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-semibold">Delivery Settings</Text>
-      </View>
+      </GradientBox>
 
       <ScrollView className="flex-1 p-4">
         {settingsItems.map((item) => (
@@ -59,7 +60,7 @@ const DeliverySettingsHubScreen: React.FC<Props> = ({ onMenuPress }) => {
             <Card className="p-4 mb-4">
               <View className="flex-row items-center">
                 <View className="w-12 h-12 rounded-full bg-orange-100 items-center justify-center mr-4">
-                  <Icon name={item.icon} size={24} color="#F56B4C" />
+                  <Icon name={item.icon} size={24} color="#FE8733" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-lg font-semibold text-gray-800">{item.title}</Text>

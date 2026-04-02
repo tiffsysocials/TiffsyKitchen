@@ -26,7 +26,7 @@ interface SubscriptionDetailModalProps {
   onCancel?: () => void;
 }
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = ({
   visible,

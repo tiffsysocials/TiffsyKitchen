@@ -21,9 +21,10 @@ import { MenuManagementScreen, MenuListScreen, AddEditMenuScreen } from '../../m
 import { UsersListScreen, UserDetailScreen } from '../../modules/users';
 import { CutoffTimesSettingsScreen } from '../../modules/cutoff';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../components/common/GradientBox';
 
 // Constants
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -281,14 +282,14 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ firebaseToken, onLo
   // ============================================================
 
   return (
-    <SafeAreaScreen style={styles.container} backgroundColor="#F56B4C">
+    <SafeAreaScreen style={styles.container} backgroundColor="#FE8733">
       <View style={styles.contentContainer}>
         {/* Login Card */}
         <View style={styles.card}>
           {/* Logo / Brand */}
           <View style={styles.logoContainer}>
             <View style={styles.logoPlaceholder}>
-              <Icon name="restaurant" size={40} color="#F56B4C" />
+              <Icon name="restaurant" size={40} color="#FE8733" />
             </View>
             <Text style={styles.brandText}>Tiffin Platform</Text>
           </View>
@@ -468,12 +469,12 @@ AdminLoginScreen.displayName = 'AdminLoginScreen';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
   },
 
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -614,8 +615,8 @@ const styles = StyleSheet.create({
   },
 
   checkboxChecked: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
 
   rememberMeText: {
@@ -643,14 +644,14 @@ const styles = StyleSheet.create({
 
   // Button styles
   signInButton: {
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     borderRadius: 24,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
     minHeight: 50,
-    shadowColor: '#F56B4C',
+    shadowColor: '#FE8733',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
 
   forgotPasswordText: {
     fontSize: 14,
-    color: '#F56B4C',
+    color: '#FE8733',
     fontWeight: '500',
   },
 
@@ -712,7 +713,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 4,
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   },
 
   menuItemTextActive: {
-    color: '#F56B4C',
+    color: '#FE8733',
     fontWeight: '600',
   },
 

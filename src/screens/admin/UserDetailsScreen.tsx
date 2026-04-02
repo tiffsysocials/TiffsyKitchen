@@ -23,6 +23,7 @@ import {
 import { useUsersStore } from '../../stores/useUsersStore';
 import { Chip } from '../../components/common';
 import { colors, spacing } from '../../theme';
+import { GradientBox } from '../../components/common/GradientBox';
 
 interface UserDetailsScreenProps {
   userId: string;
@@ -277,7 +278,7 @@ export const UserDetailsScreen: React.FC<UserDetailsScreenProps> = ({
   return (
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
@@ -285,7 +286,7 @@ export const UserDetailsScreen: React.FC<UserDetailsScreenProps> = ({
         <TouchableOpacity style={styles.moreButton}>
           <MaterialIcons name="more-vert" size={24} color={colors.white} />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
 
         {/* User Profile Card */}
@@ -526,7 +527,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

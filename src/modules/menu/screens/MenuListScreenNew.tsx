@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { GradientBox } from '../../../components/common/GradientBox';
 import { colors } from '../../../theme/colors';
 import { menuManagementService } from '../../../services/menu-management.service';
 import { MenuItem, MenuType, MealWindow, MenuItemStatus } from '../../../types/api.types';
@@ -267,15 +268,15 @@ export const MenuListScreenNew: React.FC<MenuListScreenNewProps> = ({
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F56B4C" />
+        <ActivityIndicator size="large" color="#FE8733" />
       </View>
     );
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Top Header with Back Button */}
-      <View style={[styles.topHeader, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.topHeader, { paddingTop: 8 }]}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Icon name="arrow-back" size={24} color="#ffffff" />
@@ -283,7 +284,7 @@ export const MenuListScreenNew: React.FC<MenuListScreenNewProps> = ({
         )}
         <Text style={styles.topHeaderTitle}>Menu Management</Text>
         <View style={styles.headerPlaceholder} />
-      </View>
+      </GradientBox>
 
       <FlatList
         ListHeaderComponent={
@@ -311,7 +312,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   topHeader: {
-    backgroundColor: '#F56B4C',
     paddingHorizontal: 16,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     flex: 1,
-    backgroundColor: '#F56B4C',
+    backgroundColor: '#FE8733',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -419,8 +419,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   filterChipActive: {
-    backgroundColor: '#F56B4C',
-    borderColor: '#F56B4C',
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
   },
   filterChipText: {
     fontSize: 14,

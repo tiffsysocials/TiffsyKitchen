@@ -55,7 +55,7 @@ export default function KitchenNavigator() {
           headerShown: true,
           title: 'Order Details',
           headerStyle: {
-            backgroundColor: '#F56B4C',
+            backgroundColor: '#FD9E2F',
           },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: {

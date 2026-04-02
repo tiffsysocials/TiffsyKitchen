@@ -21,6 +21,7 @@ import zoneService from '../../../services/zone.service';
 import { ZoneCard, ZoneFiltersComponent, ZoneFormModal } from '../components';
 import { ZoneFilters, ZoneFormState } from '../models/types';
 import { useAlert } from '../../../hooks/useAlert';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface ZonesManagementScreenProps {
   onMenuPress?: () => void;
@@ -272,12 +273,12 @@ export const ZonesManagementScreen: React.FC<ZonesManagementScreenProps> = ({
       <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
         {/* Header */}
         {onMenuPress && (
-          <View style={styles.header}>
+          <GradientBox style={styles.header}>
             <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
               <MaterialIcon name="menu" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Zone Management</Text>
-          </View>
+          </GradientBox>
         )}
         <ZoneFiltersComponent
           filters={filters}
@@ -328,12 +329,12 @@ export const ZonesManagementScreen: React.FC<ZonesManagementScreenProps> = ({
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
       {/* Header */}
       {onMenuPress && (
-        <View style={styles.header}>
+        <GradientBox style={styles.header}>
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <MaterialIcon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Zone Management</Text>
-        </View>
+        </GradientBox>
       )}
       <ZoneFiltersComponent
         filters={filters}
@@ -386,7 +387,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingBottom: 12,
     flexDirection: 'row',

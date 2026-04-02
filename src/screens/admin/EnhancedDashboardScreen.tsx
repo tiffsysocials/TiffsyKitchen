@@ -13,6 +13,7 @@ import { PieChart, BarChart, ProgressChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import adminDashboardService from '../../services/admin-dashboard.service';
 import { Card } from '../../components/common/Card';
+import { GradientBox } from '../../components/common/GradientBox';
 import { format } from 'date-fns';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
 
@@ -144,11 +145,11 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
       <Card className="p-4 mb-4">
         <TouchableOpacity onPress={() => onNavigate('Orders')} className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center">
-            <Icon name="pending-actions" size={24} color="#F56B4C" />
+            <Icon name="pending-actions" size={24} color="#FE8733" />
             <Text className="text-base text-gray-800 ml-3">Pending Orders</Text>
           </View>
           <View className="flex-row items-center">
-            <Text className="text-lg font-semibold text-[#F56B4C] mr-2">
+            <Text className="text-lg font-semibold text-[#FE8733] mr-2">
               {dashboard?.pendingActions.pendingOrders}
             </Text>
             <Icon name="chevron-right" size={20} color="#9ca3af" />
@@ -188,7 +189,7 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
             >
               <View className="flex-row items-start">
                 <View className="w-8 h-8 rounded-full bg-orange-100 items-center justify-center mr-3">
-                  <Icon name="history" size={16} color="#F56B4C" />
+                  <Icon name="history" size={16} color="#FE8733" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-medium text-gray-800">
@@ -603,9 +604,9 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
 
   if (dashboardLoading && !dashboard) {
     return (
-      <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+      <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
         <View className="flex-1 justify-center items-center bg-gray-50">
-          <ActivityIndicator size="large" color="#F56B4C" />
+          <ActivityIndicator size="large" color="#FE8733" />
           <Text className="text-gray-600 mt-4">Loading dashboard...</Text>
         </View>
       </SafeAreaScreen>
@@ -613,12 +614,9 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
   }
 
   return (
-    <SafeAreaScreen topBackgroundColor="#F56B4C" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
+    <SafeAreaScreen topBackgroundColor="#FE8733" bottomBackgroundColor="#f9fafb" backgroundColor="#f9fafb">
       {/* Header */}
-      <View
-        className="bg-[#F56B4C] px-4 pb-3 flex-row items-center justify-between"
-        style={{ paddingTop: 8 }}
-      >
+      <GradientBox style={{ paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <TouchableOpacity onPress={onMenuPress} className="p-1">
           <Icon name="menu" size={26} color="#ffffff" />
         </TouchableOpacity>
@@ -626,7 +624,7 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
         <TouchableOpacity onPress={() => onNavigate('Reports')} className="p-1">
           <Icon name="insert-chart" size={24} color="#ffffff" />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Tabs */}
       <View className="bg-white border-b border-gray-200">
@@ -636,7 +634,7 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
               <TouchableOpacity
                 key={tab.key}
                 onPress={() => setSelectedTab(tab.key as any)}
-                className={`px-4 py-2 mr-2 rounded-lg flex-row items-center ${selectedTab === tab.key ? 'bg-[#F56B4C]' : 'bg-gray-100'
+                className={`px-4 py-2 mr-2 rounded-lg flex-row items-center ${selectedTab === tab.key ? 'bg-[#FE8733]' : 'bg-gray-100'
                   }`}
               >
                 <Icon
@@ -660,7 +658,7 @@ const EnhancedDashboardScreen: React.FC<EnhancedDashboardScreenProps> = ({
       <ScrollView
         className="flex-1"
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={['#F56B4C']} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={['#FE8733']} />
         }
       >
         {selectedTab === 'overview' && renderOverview()}

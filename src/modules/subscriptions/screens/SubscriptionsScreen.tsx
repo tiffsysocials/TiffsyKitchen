@@ -16,6 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { GradientBox } from '../../../components/common/GradientBox';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAlert } from '../../../hooks/useAlert';
 import { colors } from '../../../theme/colors';
@@ -45,7 +46,7 @@ import {
   cancelSubscription,
 } from '../../../services/subscriptions.service';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 type TabType = 'plans' | 'subscriptions';
 
@@ -410,14 +411,14 @@ export const SubscriptionsScreen: React.FC<SubscriptionsScreenProps> = ({ onMenu
       backgroundColor="#f9fafb"
     >
       {/* Header */}
-      <View style={[styles.header, { paddingTop: 8 }]}>
+      <GradientBox style={[styles.header, { paddingTop: 8 }]}>
         {onMenuPress && (
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle}>Subscription Plans</Text>
-      </View>
+      </GradientBox>
 
       {/* Content - Plans Only */}
       {renderPlansTab()}
@@ -544,7 +545,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PRIMARY_COLOR,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },

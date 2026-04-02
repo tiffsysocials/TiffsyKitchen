@@ -29,6 +29,7 @@ import {
   getPlanStats,
 } from '../utils/planUtils';
 import { colors, spacing } from '../../../theme';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface PlansScreenProps {
   onMenuPress: () => void;
@@ -307,7 +308,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({ onMenuPress }) => {
   return (
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
           <MaterialIcons name="menu" size={26} color={colors.white} />
         </TouchableOpacity>
@@ -318,7 +319,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({ onMenuPress }) => {
         <TouchableOpacity style={styles.addButton} onPress={handleAddPlan}>
           <MaterialIcons name="add" size={24} color={colors.white} />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
 
         {/* Search Bar */}
@@ -394,7 +395,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   header: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,

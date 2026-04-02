@@ -25,6 +25,7 @@ import { spacing } from '../../../theme/spacing';
 import { useAlert } from '../../../hooks/useAlert';
 import { bannerService, Banner, CreateBannerRequest, UpdateBannerRequest } from '../../../services/banner.service';
 import { BannerFormModal } from '../components/BannerFormModal';
+import { GradientBox } from '../../../components/common/GradientBox';
 
 interface BannerManagementScreenProps {
   onMenuPress?: () => void;
@@ -259,14 +260,14 @@ export const BannerManagementScreen: React.FC<BannerManagementScreenProps> = ({ 
   if (loading) {
     return (
       <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
-        <View style={styles.appHeader}>
+        <GradientBox style={styles.appHeader}>
           {onMenuPress && (
             <TouchableOpacity onPress={onMenuPress} style={styles.menuBtn}>
               <Icon name="menu" size={24} color="#fff" />
             </TouchableOpacity>
           )}
           <Text style={styles.appHeaderTitle}>Banner Management</Text>
-        </View>
+        </GradientBox>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading banners…</Text>
@@ -304,7 +305,7 @@ export const BannerManagementScreen: React.FC<BannerManagementScreenProps> = ({ 
   return (
     <SafeAreaScreen style={{ flex: 1 }} topBackgroundColor={colors.primary} bottomBackgroundColor={colors.background}>
       {/* App Header */}
-      <View style={styles.appHeader}>
+      <GradientBox style={styles.appHeader}>
         {onMenuPress && (
           <TouchableOpacity onPress={onMenuPress} style={styles.menuBtn}>
             <Icon name="menu" size={24} color="#fff" />
@@ -315,7 +316,7 @@ export const BannerManagementScreen: React.FC<BannerManagementScreenProps> = ({ 
           <Icon name="add" size={20} color="#fff" />
           <Text style={styles.addBtnText}>Upload</Text>
         </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Stats row */}
       <View style={styles.statsRow}>
@@ -380,7 +381,6 @@ const THUMB_H = 48;
 const styles = StyleSheet.create({
   // App header (orange bar)
   appHeader: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,

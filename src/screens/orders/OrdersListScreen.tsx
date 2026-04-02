@@ -24,8 +24,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useInfiniteScroll } from '../../hooks/useApi';
 import { Order, OrderStatus } from '../../types/api.types';
 import { useAlert } from '../../hooks/useAlert';
+import { GradientBox } from '../../components/common/GradientBox';
 
-const PRIMARY_COLOR = '#F56B4C';
+const PRIMARY_COLOR = '#FE8733';
 
 type TabType = 'all' | 'action_needed';
 
@@ -161,7 +162,7 @@ export default function OrdersListScreen({ onMenuPress, onLogout }: OrdersListSc
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GradientBox style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -169,7 +170,7 @@ export default function OrdersListScreen({ onMenuPress, onLogout }: OrdersListSc
         <TouchableOpacity style={styles.filterButton}>
           <Icon name="filter-list" size={24} color="#ffffff" />
         </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
@@ -262,7 +263,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PRIMARY_COLOR,
     paddingHorizontal: 16,
     paddingVertical: 12,
     elevation: 4,
