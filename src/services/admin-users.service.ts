@@ -67,14 +67,6 @@ class AdminUsersService {
 
     const response = await apiService.get<any>(endpoint);
 
-    // Handle incorrect API response structure where data is in 'error' field
-    // TODO: Backend should fix this to return data in 'data' field
-    if (response.error && response.error.users) {
-      console.log('⚠️  API returning data in error field - using that instead');
-      return response.error as UserListResponse;
-    }
-
-    // Handle correct response structure
     return response.data;
   }
 
@@ -84,11 +76,6 @@ class AdminUsersService {
    */
   async getUserById(userId: string): Promise<UserDetailsResponse> {
     const response = await apiService.get<any>(`/api/admin/users/${userId}`);
-
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error as UserDetailsResponse;
-    }
 
     return response.data;
   }
@@ -100,11 +87,6 @@ class AdminUsersService {
   async createUser(data: CreateUserRequest): Promise<User> {
     const response = await apiService.post<any>('/api/admin/users', data);
 
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error.user;
-    }
-
     return response.data?.user || response.data;
   }
 
@@ -114,11 +96,6 @@ class AdminUsersService {
    */
   async updateUser(userId: string, data: UpdateUserRequest): Promise<User> {
     const response = await apiService.put<any>(`/api/admin/users/${userId}`, data);
-
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error.user;
-    }
 
     return response.data?.user || response.data;
   }
@@ -130,11 +107,6 @@ class AdminUsersService {
   async activateUser(userId: string): Promise<User> {
     const response = await apiService.patch<any>(`/api/admin/users/${userId}/activate`, {});
 
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error.user;
-    }
-
     return response.data?.user || response.data;
   }
 
@@ -145,11 +117,6 @@ class AdminUsersService {
   async deactivateUser(userId: string): Promise<User> {
     const response = await apiService.patch<any>(`/api/admin/users/${userId}/deactivate`, {});
 
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error.user;
-    }
-
     return response.data?.user || response.data;
   }
 
@@ -159,11 +126,6 @@ class AdminUsersService {
    */
   async suspendUser(userId: string, data: SuspendUserRequest): Promise<User> {
     const response = await apiService.patch<any>(`/api/admin/users/${userId}/suspend`, data);
-
-    // Handle incorrect API response structure
-    if (response.error && response.error.user) {
-      return response.error.user;
-    }
 
     return response.data?.user || response.data;
   }
