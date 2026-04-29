@@ -130,6 +130,38 @@ export interface ResubmitKitchenRequest {
   };
 }
 
+export interface KitchenAnalyticsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    period: {
+      from: string;
+      to: string;
+      groupBy: 'day' | 'week' | 'month';
+    };
+    summary: {
+      totalOrders: number;
+      totalRevenue: number;
+      averageOrderValue: number;
+      completionRate: number;
+      cancelRate: number;
+    };
+    timeline: Array<{
+      period: string;
+      orders: number;
+      revenue: number;
+      completed: number;
+      cancelled: number;
+    }>;
+    topItems: Array<{
+      _id: string;
+      name: string;
+      ordersCount: number;
+      revenue: number;
+    }>;
+  };
+}
+
 class KitchenStaffService {
   private readonly AUTH_BASE_PATH = '/api/auth';
   private readonly KITCHEN_BASE_PATH = '/api/kitchens';
@@ -213,7 +245,7 @@ class KitchenStaffService {
     dateFrom: string;
     dateTo: string;
     groupBy?: 'day' | 'week' | 'month';
-  }): Promise<any> {
+  }): Promise<KitchenAnalyticsResponse> {
     try {
       const queryParams = new URLSearchParams();
       queryParams.append('dateFrom', params.dateFrom);
@@ -224,7 +256,7 @@ class KitchenStaffService {
 
       const endpoint = `${this.KITCHEN_BASE_PATH}/analytics?${queryParams}`;
       console.log('📈 Fetching kitchen analytics from:', endpoint);
-      const response = await apiService.get<any>(endpoint);
+      const response = await apiService.get<KitchenAnalyticsResponse>(endpoint);
       console.log('📈 Analytics response:', JSON.stringify(response, null, 2));
       return response;
     } catch (error) {
