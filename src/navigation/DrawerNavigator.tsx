@@ -98,22 +98,22 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       case 'ADMIN':
         return {
           icon: 'admin-panel-settings',
-          title: 'Admin Panel',
+          title: 'Tiffsy Admin',
         };
       case 'KITCHEN_STAFF':
         return {
           icon: 'restaurant',
-          title: 'Kitchen Panel',
+          title: 'Tiffsy Kitchen',
         };
       case 'DRIVER':
         return {
           icon: 'local-shipping',
-          title: 'Driver Panel',
+          title: 'Tiffsy Driver',
         };
       default:
         return {
           icon: 'dashboard',
-          title: 'TiffsyKitchen',
+          title: 'Tiffsy Kitchen',
         };
     }
   };
@@ -126,7 +126,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       <GradientBox style={styles.drawerHeader}>
         <Icon name={headerConfig.icon} size={48} color="#ffffff" />
         <Text style={styles.drawerTitle}>{headerConfig.title}</Text>
-        <Text style={styles.drawerSubtitle}>TiffsyKitchen</Text>
+        <Text style={styles.drawerSubtitle}>Tiffsy Kitchen</Text>
       </GradientBox>
 
       {/* Menu Items */}

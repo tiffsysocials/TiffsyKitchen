@@ -63,6 +63,7 @@ import DeliveryConfigScreen from './src/modules/settings/screens/DeliveryConfigS
 import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
 import { BannerManagementScreen } from './src/modules/banners';
+import { AuditLogsScreen } from './src/modules';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -395,6 +396,9 @@ const MainContent: React.FC<{
 
     case 'Notifications':
       return <NotificationsScreen />;
+
+    case 'AuditLogs':
+      return <AuditLogsScreen />;
 
     case 'SendMenuAnnouncement':
       return (

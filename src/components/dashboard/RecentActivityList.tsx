@@ -54,13 +54,6 @@ export const RecentActivityList: React.FC<RecentActivityListProps> = ({
         </TouchableOpacity>
       ))}
 
-      {activities.length > maxItems && (
-        <TouchableOpacity style={styles.showMoreButton} onPress={onViewAllPress}>
-          <Text style={styles.showMoreText}>
-            +{activities.length - maxItems} more activities
-          </Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
@@ -111,15 +104,6 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     color: '#9ca3af',
-  },
-  showMoreButton: {
-    paddingTop: 12,
-    alignItems: 'center',
-  },
-  showMoreText: {
-    fontSize: 13,
-    color: '#FE8733',
-    fontWeight: '600',
   },
 });
 

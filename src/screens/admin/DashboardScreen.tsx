@@ -24,6 +24,7 @@ import DeliveryOverviewCard from '../../modules/delivery/components/DeliveryOver
 import adminDashboardService from '../../services/admin-dashboard.service';
 import { DashboardData } from '../../types/api.types';
 import { useInAppNotifications } from '../../context/InAppNotificationContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { GradientBox } from '../../components/common/GradientBox';
 
 const DATE_RANGES = [
@@ -47,6 +48,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const [selectedRange, setSelectedRange] = useState(0);
   const { showInfo } = useAlert();
+  const { navigate } = useNavigation();
 
   // Compute date range from selected filter
   const dateRangeParams = DATE_RANGES[selectedRange].getValue();
@@ -81,12 +83,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     showInfo('Order Status', `Viewing orders with status: ${status}`);
   };
 
-  const handleActivityPress = (activityId: string) => {
-    showInfo('Activity Details', `Viewing activity: ${activityId}`);
+  const handleActivityPress = (_activityId: string) => {
+    navigate('AuditLogs');
   };
 
   const handleViewAllActivity = () => {
-    showInfo('Activity', 'Navigating to all activity');
+    navigate('AuditLogs');
   };
 
   // Transform API activity data to match component format

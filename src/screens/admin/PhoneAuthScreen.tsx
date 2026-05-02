@@ -200,14 +200,12 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
             <View style={styles.logoPlaceholder}>
               <Icon name="restaurant" size={40} color={PRIMARY_COLOR} />
             </View>
-            <Text style={styles.brandText}>Tiffin Platform</Text>
+            <Text style={styles.brandText}>Tiffsy Kitchen</Text>
           </View>
 
           {/* Title & Subtitle */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>
-              {showOtpInput ? 'Verify OTP' : 'Admin Verification'}
-            </Text>
+            {showOtpInput && <Text style={styles.title}>Verify OTP</Text>}
             <Text style={styles.subtitle}>
               {showOtpInput
                 ? `Enter the 6-digit code sent to +91 ${phoneNumber}`
@@ -349,7 +347,7 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © Tiffin Platform · Admin Access Only
+            © Tiffsy Kitchen
           </Text>
         </View>
       </View>

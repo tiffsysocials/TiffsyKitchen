@@ -91,7 +91,7 @@ export const NotificationsScreen: React.FC = () => {
   const hasUnreadNotifications = notifications.some((n) => !n.isRead);
 
   return (
-    <SafeAreaScreen>
+    <SafeAreaScreen topBackgroundColor={colors.primary}>
       <Header
         title="Notifications"
         showBack

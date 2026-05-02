@@ -12,12 +12,17 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import adminDashboardService, { AuditLog } from '../../../services/admin-dashboard.service';
 import { Card } from '../../../components/common/Card';
+import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { Header } from '../../../components/common/Header';
+import { useNavigation } from '../../../context/NavigationContext';
+import { colors } from '../../../theme';
 import { format } from 'date-fns';
 
 type ActionType = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | undefined;
 type EntityType = 'ORDER' | 'USER' | 'KITCHEN' | 'MENU' | 'VOUCHER' | 'REFUND' | undefined;
 
 const AuditLogsScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [selectedAction, setSelectedAction] = useState<ActionType>(undefined);
   const [selectedEntity, setSelectedEntity] = useState<EntityType>(undefined);
   const [showFilters, setShowFilters] = useState(false);
@@ -284,18 +289,21 @@ const AuditLogsScreen: React.FC = () => {
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header with Filter Button */}
-      <View className="bg-white border-b border-gray-200 p-4 flex-row justify-between items-center">
-        <Text className="text-lg font-semibold text-gray-800">Audit Logs</Text>
-        <TouchableOpacity
-          onPress={() => setShowFilters(!showFilters)}
-          className="flex-row items-center bg-orange-500 px-4 py-2 rounded-lg"
-        >
-          <Icon name="filter-list" size={20} color="#ffffff" />
-          <Text className="text-white font-medium ml-1">Filters</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaScreen topBackgroundColor={colors.primary}>
+      <Header
+        title="Audit Logs"
+        showBack
+        onBackPress={() => navigation.goBack()}
+        rightComponent={
+          <TouchableOpacity
+            onPress={() => setShowFilters(!showFilters)}
+            accessibilityLabel="Toggle filters"
+          >
+            <Icon name="filter-list" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        }
+      />
+      <View className="flex-1 bg-gray-50">
 
       {/* Filters */}
       {showFilters && renderFilters()}
@@ -362,7 +370,8 @@ const AuditLogsScreen: React.FC = () => {
 
       {/* Detail Modal */}
       {renderDetailModal()}
-    </View>
+      </View>
+    </SafeAreaScreen>
   );
 };
 

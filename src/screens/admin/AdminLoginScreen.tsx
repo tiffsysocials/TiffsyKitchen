@@ -291,12 +291,12 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ firebaseToken, onLo
             <View style={styles.logoPlaceholder}>
               <Icon name="restaurant" size={40} color="#FE8733" />
             </View>
-            <Text style={styles.brandText}>Tiffin Platform</Text>
+            <Text style={styles.brandText}>Tiffsy Kitchen</Text>
           </View>
 
           {/* Title & Subtitle */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Admin Console Login</Text>
+            <Text style={styles.title}>Tiffsy Kitchen</Text>
             <Text style={styles.subtitle}>For internal use only</Text>
           </View>
 
@@ -455,7 +455,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ firebaseToken, onLo
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © Tiffin Platform · Admin Access Only
+            © Tiffsy Kitchen
           </Text>
         </View>
       </View>

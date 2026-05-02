@@ -7,8 +7,8 @@ import {
   Modal,
   Switch,
   ScrollView,
-  Clipboard,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { useAlert } from '../../../hooks/useAlert';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { StaffMember, OperationalContact } from '../models/types';
