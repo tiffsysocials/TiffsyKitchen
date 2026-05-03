@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,42 +10,23 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { kitchenStaffService } from '../../../services/kitchen-staff.service';
 import { useInAppNotifications } from '../../../context/InAppNotificationContext';
 import { useNavigation } from '../../../context/NavigationContext';
-import KitchenOrdersScreen from '../../orders/screens/KitchenOrdersScreen';
-import { MenuManagementExample } from '../../menu/MenuManagementExample';
-import { BatchManagementTab } from '../../kitchen/components/BatchManagementTab';
 
 interface KitchenDashboardScreenProps {
   onMenuPress: () => void;
 }
-
-type TabId = 'overview' | 'orders' | 'menu' | 'batches' | 'profile';
-
-interface Tab {
-  id: TabId;
-  label: string;
-  icon: string;
-}
-
-const TABS: Tab[] = [
-  { id: 'overview', label: 'Dashboard', icon: 'dashboard' },
-  { id: 'orders', label: 'Orders', icon: 'receipt-long' },
-  { id: 'menu', label: 'Menu', icon: 'restaurant-menu' },
-  { id: 'batches', label: 'Batches', icon: 'local-shipping' },
-  { id: 'profile', label: 'Profile', icon: 'store' },
-];
 
 export const KitchenDashboardScreen: React.FC<KitchenDashboardScreenProps> = ({
   onMenuPress,
 }) => {
   const { unreadCount } = useInAppNotifications();
   const { navigate } = useNavigation();
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   const handleNotificationPress = () => {
     navigate('Notifications');
@@ -71,46 +52,8 @@ export const KitchenDashboardScreen: React.FC<KitchenDashboardScreenProps> = ({
         }
       />
 
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBarContent}
-        >
-          {TABS.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tab,
-                activeTab === tab.id && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab(tab.id)}
-            >
-              <MaterialIcons
-                name={tab.icon}
-                size={20}
-                color={activeTab === tab.id ? colors.primary : colors.gray600}
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === tab.id && styles.tabLabelActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
       <View style={styles.container}>
-        {activeTab === 'overview' && <OverviewTab />}
-        {activeTab === 'orders' && <OrdersTab />}
-        {activeTab === 'menu' && <MenuTab />}
-        {activeTab === 'batches' && <BatchesTab />}
-        {activeTab === 'profile' && <ProfileTab />}
+        <OverviewTab />
       </View>
     </SafeAreaScreen>
   );
@@ -160,31 +103,31 @@ const OverviewTab: React.FC = () => {
         <StatCard
           label="Today's Orders"
           value={stats?.ordersCount || 0}
-          icon="receipt-long"
+          icon="receipt"
           color={colors.info}
         />
         <StatCard
           label="Revenue"
           value={`₹${stats?.ordersRevenue || 0}`}
-          icon="currency-rupee"
+          icon="cash-multiple"
           color={colors.success}
         />
         <StatCard
           label="Awaiting Accept"
           value={stats?.pendingAcceptanceOrders || 0}
-          icon="hourglass-top"
+          icon="timer-sand"
           color="#D97706"
         />
         <StatCard
           label="Pending"
           value={stats?.pendingOrders || 0}
-          icon="pending"
+          icon="progress-clock"
           color={colors.warning}
         />
         <StatCard
           label="Completed"
           value={stats?.completedOrders || 0}
-          icon="check-circle"
+          icon="check-decagram"
           color={colors.success}
         />
       </View>
@@ -197,13 +140,15 @@ const OverviewTab: React.FC = () => {
             title="Lunch"
             orders={stats?.lunchOrders || 0}
             revenue={stats?.lunchRevenue || 0}
-            icon="wb-sunny"
+            icon="weather-sunny"
+            color="#F59E0B"
           />
           <MealWindowCard
             title="Dinner"
             orders={stats?.dinnerOrders || 0}
             revenue={stats?.dinnerRevenue || 0}
-            icon="nightlight"
+            icon="weather-night"
+            color="#6366F1"
           />
         </View>
       </View>
@@ -243,17 +188,23 @@ const OverviewTab: React.FC = () => {
           <Text style={styles.sectionTitle}>Menu Overview</Text>
           <View style={styles.menuStatsCard}>
             <View style={styles.menuStatItem}>
-              <MaterialIcons name="restaurant-menu" size={32} color={colors.primary} />
+              <View style={[styles.menuIconBubble, { backgroundColor: colors.primary + '15' }]}>
+                <MaterialCommunityIcons name="silverware-fork-knife" size={24} color={colors.primary} />
+              </View>
               <Text style={styles.menuStatValue}>{menuStats.totalMenuItems}</Text>
               <Text style={styles.menuStatLabel}>Total Items</Text>
             </View>
             <View style={styles.menuStatItem}>
-              <MaterialIcons name="check-circle" size={32} color={colors.success} />
+              <View style={[styles.menuIconBubble, { backgroundColor: colors.success + '15' }]}>
+                <MaterialCommunityIcons name="shield-check" size={24} color={colors.success} />
+              </View>
               <Text style={styles.menuStatValue}>{menuStats.activeMenuItems}</Text>
               <Text style={styles.menuStatLabel}>Active</Text>
             </View>
             <View style={styles.menuStatItem}>
-              <MaterialIcons name="error-outline" size={32} color={colors.gray400} />
+              <View style={[styles.menuIconBubble, { backgroundColor: colors.gray400 + '20' }]}>
+                <MaterialCommunityIcons name="close-circle" size={24} color={colors.gray400} />
+              </View>
               <Text style={styles.menuStatValue}>{menuStats.unavailableItems}</Text>
               <Text style={styles.menuStatLabel}>Unavailable</Text>
             </View>
@@ -288,143 +239,6 @@ const OverviewTab: React.FC = () => {
   );
 };
 
-// Orders Tab Component
-const OrdersTab: React.FC = () => {
-  return <KitchenOrdersScreen />;
-};
-
-// Menu Tab Component
-const MenuTab: React.FC = () => {
-  const { data, isLoading } = useQuery({
-    queryKey: ['myKitchenStatus'],
-    queryFn: () => kitchenStaffService.getMyKitchenStatus(),
-  });
-
-  const kitchenId = data?.data?.kitchen?._id;
-
-  if (isLoading || !kitchenId) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading kitchen info...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <MenuManagementExample
-      kitchenId={kitchenId}
-      userRole="KITCHEN_STAFF"
-    />
-  );
-};
-
-// Batches Tab Component
-const BatchesTab: React.FC = () => {
-  return <BatchManagementTab />;
-};
-
-// Profile Tab Component
-const ProfileTab: React.FC = () => {
-  const { data, isLoading } = useQuery({
-    queryKey: ['myKitchenStatus'],
-    queryFn: () => kitchenStaffService.getMyKitchenStatus(),
-  });
-
-  const kitchen = data?.data?.kitchen;
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView
-      style={styles.tabScrollView}
-      contentContainerStyle={styles.tabScrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.profileHeader}>
-        <MaterialIcons name="store" size={48} color={colors.primary} />
-        <Text style={styles.profileName}>{kitchen?.name || 'N/A'}</Text>
-        <View style={styles.profileStatusBadge}>
-          <Text style={styles.profileStatusText}>{kitchen?.status || 'ACTIVE'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Contact Information</Text>
-        <ProfileDetailRow
-          icon="phone"
-          label="Phone"
-          value={kitchen?.contactPhone || 'N/A'}
-        />
-        <ProfileDetailRow
-          icon="email"
-          label="Email"
-          value={kitchen?.contactEmail || 'N/A'}
-        />
-        <ProfileDetailRow
-          icon="person"
-          label="Owner"
-          value={kitchen?.ownerName || 'N/A'}
-        />
-      </View>
-
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Address</Text>
-        <ProfileDetailRow
-          icon="location-on"
-          label="Address"
-          value={`${kitchen?.address?.addressLine1 || ''}, ${kitchen?.address?.locality || ''}`}
-        />
-        <ProfileDetailRow
-          icon="location-city"
-          label="City"
-          value={`${kitchen?.address?.city || ''}, ${kitchen?.address?.state || ''}`}
-        />
-        <ProfileDetailRow
-          icon="pin-drop"
-          label="Pincode"
-          value={kitchen?.address?.pincode || 'N/A'}
-        />
-      </View>
-
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Cuisine Types</Text>
-        <View style={styles.cuisineChips}>
-          {kitchen?.cuisineTypes?.map((cuisine: string, index: number) => (
-            <View key={index} style={styles.cuisineChip}>
-              <Text style={styles.cuisineChipText}>{cuisine}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.profileSection}>
-        <Text style={styles.profileSectionTitle}>Operating Hours</Text>
-        {kitchen?.operatingHours?.lunch && (
-          <ProfileDetailRow
-            icon="wb-sunny"
-            label="Lunch"
-            value={`${kitchen.operatingHours.lunch.startTime} - ${kitchen.operatingHours.lunch.endTime}`}
-          />
-        )}
-        {kitchen?.operatingHours?.dinner && (
-          <ProfileDetailRow
-            icon="nightlight"
-            label="Dinner"
-            value={`${kitchen.operatingHours.dinner.startTime} - ${kitchen.operatingHours.dinner.endTime}`}
-          />
-        )}
-      </View>
-    </ScrollView>
-  );
-};
-
 // Helper Components
 
 const StatCard: React.FC<{
@@ -434,7 +248,9 @@ const StatCard: React.FC<{
   color: string;
 }> = ({ label, value, icon, color }) => (
   <View style={styles.statCard}>
-    <MaterialIcons name={icon} size={24} color={color} />
+    <View style={[styles.statIconBubble, { backgroundColor: color + '15' }]}>
+      <MaterialCommunityIcons name={icon} size={20} color={color} />
+    </View>
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
@@ -445,12 +261,15 @@ const MealWindowCard: React.FC<{
   orders: number;
   revenue: number;
   icon: string;
-}> = ({ title, orders, revenue, icon }) => (
+  color: string;
+}> = ({ title, orders, revenue, icon, color }) => (
   <View style={styles.mealWindowCard}>
-    <MaterialIcons name={icon} size={32} color={colors.primary} />
+    <View style={[styles.mealIconBubble, { backgroundColor: color + '15' }]}>
+      <MaterialCommunityIcons name={icon} size={26} color={color} />
+    </View>
     <Text style={styles.mealWindowTitle}>{title}</Text>
     <Text style={styles.mealWindowOrders}>{orders} orders</Text>
-    <Text style={styles.mealWindowRevenue}>₹{revenue}</Text>
+    <Text style={[styles.mealWindowRevenue, { color }]}>₹{revenue}</Text>
   </View>
 );
 
@@ -463,20 +282,6 @@ const BatchStatRow: React.FC<{
     <View style={[styles.batchStatDot, { backgroundColor: color }]} />
     <Text style={styles.batchStatLabel}>{label}</Text>
     <Text style={styles.batchStatValue}>{value}</Text>
-  </View>
-);
-
-const ProfileDetailRow: React.FC<{
-  icon: string;
-  label: string;
-  value: string;
-}> = ({ icon, label, value }) => (
-  <View style={styles.profileDetailRow}>
-    <MaterialIcons name={icon} size={20} color={colors.gray600} />
-    <View style={styles.profileDetailContent}>
-      <Text style={styles.profileDetailLabel}>{label}</Text>
-      <Text style={styles.profileDetailValue}>{value}</Text>
-    </View>
   </View>
 );
 
@@ -522,47 +327,20 @@ const styles = StyleSheet.create({
   tabScrollContent: {
     padding: 16,
   },
-  tabBar: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  tabBarContent: {
-    paddingHorizontal: 12,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: colors.primary,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.gray600,
-  },
-  tabLabelActive: {
-    fontWeight: '600',
-    color: colors.primary,
-  },
   welcomeSection: {
     marginBottom: 24,
   },
   welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: colors.gray900,
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   welcomeSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.gray600,
+    fontWeight: '500',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -574,25 +352,37 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F0EE',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  statIconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.gray900,
     marginTop: 8,
+    letterSpacing: -0.3,
   },
   statLabel: {
     fontSize: 12,
     color: colors.gray600,
     marginTop: 4,
+    fontWeight: '500',
   },
   section: {
     marginBottom: 24,
@@ -610,25 +400,37 @@ const styles = StyleSheet.create({
   mealWindowCard: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F0EE',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  mealIconBubble: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   mealWindowTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.gray900,
-    marginTop: 8,
+    marginTop: 10,
+    letterSpacing: -0.2,
   },
   mealWindowOrders: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.gray600,
     marginTop: 4,
+    fontWeight: '500',
   },
   mealWindowRevenue: {
     fontSize: 18,
@@ -638,8 +440,15 @@ const styles = StyleSheet.create({
   },
   batchStatsCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F0EE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   batchStatRow: {
     flexDirection: 'row',
@@ -665,29 +474,53 @@ const styles = StyleSheet.create({
   menuStatsCard: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     justifyContent: 'space-around',
+    borderWidth: 1,
+    borderColor: '#F1F0EE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   menuStatItem: {
     alignItems: 'center',
+  },
+  menuIconBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   menuStatValue: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.gray900,
     marginTop: 8,
+    letterSpacing: -0.3,
   },
   menuStatLabel: {
     fontSize: 12,
     color: colors.gray600,
     marginTop: 4,
+    fontWeight: '500',
   },
   recentOrderCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F1F0EE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   recentOrderHeader: {
     flexDirection: 'row',
@@ -715,72 +548,5 @@ const styles = StyleSheet.create({
   recentOrderTime: {
     fontSize: 12,
     color: colors.gray500,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.gray900,
-    marginTop: 12,
-  },
-  profileStatusBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  profileStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.success,
-  },
-  profileSection: {
-    marginBottom: 24,
-  },
-  profileSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.gray900,
-    marginBottom: 12,
-  },
-  profileDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  profileDetailContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  profileDetailLabel: {
-    fontSize: 12,
-    color: colors.gray600,
-    marginBottom: 2,
-  },
-  profileDetailValue: {
-    fontSize: 14,
-    color: colors.gray900,
-  },
-  cuisineChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  cuisineChip: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  cuisineChipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.primary,
   },
 });
