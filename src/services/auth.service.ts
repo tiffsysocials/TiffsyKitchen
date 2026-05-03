@@ -214,6 +214,7 @@ class AuthService {
         'adminPhone',
         'userPhoneNumber',
         'tokenExpiresIn',
+        'kitchenApprovalStatus',
         '@admin_session_indicator',
         '@admin_remember_me',
       ];

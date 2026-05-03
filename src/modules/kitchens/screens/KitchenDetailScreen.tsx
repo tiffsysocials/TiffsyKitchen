@@ -18,6 +18,7 @@ import { spacing } from '../../../theme/spacing';
 import { Kitchen, Zone, KitchenDetailsResponse } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 
 interface KitchenDetailScreenProps {
   route: {
@@ -201,7 +202,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaScreen topBackgroundColor={colors.primary}>
         <GradientBox style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={24} color="#fff" />
@@ -213,13 +214,13 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading kitchen details...</Text>
         </View>
-      </View>
+      </SafeAreaScreen>
     );
   }
 
   if (error || !kitchen) {
     return (
-      <View style={styles.container}>
+      <SafeAreaScreen topBackgroundColor={colors.primary}>
         <GradientBox style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-left" size={24} color="#fff" />
@@ -238,7 +239,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaScreen>
     );
   }
 
@@ -247,7 +248,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     : [];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen topBackgroundColor={colors.primary}>
       <GradientBox style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={24} color="#fff" />
@@ -528,7 +529,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaScreen>
   );
 };
 

@@ -36,8 +36,25 @@ export const PendingKitchenCard: React.FC<PendingKitchenCardProps> = ({
     return type === 'TIFFSY' ? colors.primary + '15' : '#8b5cf615';
   };
 
+  const wasRejected = !!kitchen.rejectionReason;
+  const rejectedDate = kitchen.rejectedAt ? formatDate(kitchen.rejectedAt) : null;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, wasRejected && styles.cardRejected]}>
+      {wasRejected && (
+        <View style={styles.rejectedBanner}>
+          <View style={styles.rejectedBannerHeader}>
+            <MaterialIcons name="error-outline" size={18} color={colors.error} />
+            <Text style={styles.rejectedBannerTitle}>
+              Previously rejected{rejectedDate ? ` · ${rejectedDate}` : ''}
+            </Text>
+          </View>
+          <Text style={styles.rejectedReasonText} numberOfLines={3}>
+            {kitchen.rejectionReason}
+          </Text>
+        </View>
+      )}
+
       {/* Header with Logo and Type Badge */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
@@ -165,6 +182,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  cardRejected: {
+    borderColor: colors.error + '60',
+    borderWidth: 1.5,
+  },
+  rejectedBanner: {
+    backgroundColor: colors.error + '12',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  rejectedBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  rejectedBannerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.error,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rejectedReasonText: {
+    fontSize: 13,
+    color: colors.gray700,
+    lineHeight: 18,
   },
   header: {
     flexDirection: 'row',

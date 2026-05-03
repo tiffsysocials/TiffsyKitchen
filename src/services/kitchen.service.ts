@@ -1,4 +1,4 @@
-import { apiService } from './api.enhanced.service';
+import { apiService, BASE_URL } from './api.enhanced.service';
 import {
   Kitchen,
   KitchenListResponse,
@@ -73,6 +73,38 @@ export interface SuspendKitchenRequest {
 
 export interface ToggleOrdersRequest {
   isAcceptingOrders: boolean;
+}
+
+export interface RegisterKitchenWithOtpRequest {
+  name: string;
+  cuisineTypes: string[];
+  address: Address;
+  zonesServed: string[];
+  operatingHours: OperatingHours;
+  contactPhone: string;
+  contactEmail?: string;
+  ownerName: string;
+  staffName: string;
+  staffEmail?: string;
+  logo?: string;
+  coverImage?: string;
+}
+
+export interface RegisterKitchenWithOtpResponse {
+  kitchen: Kitchen;
+  user: {
+    _id: string;
+    phone: string;
+    name: string;
+    email?: string;
+    role: 'KITCHEN_STAFF';
+    kitchenId: string;
+    status: string;
+  };
+  approvalStatus: 'PENDING';
+  message: string;
+  token: string;
+  expiresIn: number;
 }
 
 class KitchenService {
@@ -338,6 +370,44 @@ class KitchenService {
       console.error('Error updating delivery radii:', error);
       throw error;
     }
+  }
+
+  /**
+   * Public kitchen self-registration via OTP registration token.
+   * Used by new users (isNewUser=true from verify-otp) to onboard a PARTNER kitchen.
+   * Backend creates Kitchen (status=PENDING_APPROVAL) + KITCHEN_STAFF user atomically.
+   */
+  async registerKitchenWithOtp(
+    registrationToken: string,
+    payload: RegisterKitchenWithOtpRequest,
+  ): Promise<RegisterKitchenWithOtpResponse> {
+    console.log('╔═══════════════════════════════════════════════════════════');
+    console.log('║ [KITCHEN REGISTER REQUEST]');
+    console.log('║ URL:', `${BASE_URL}/api/auth/otp/register-kitchen`);
+    console.log('║ Token:', registrationToken.substring(0, 20) + '...');
+    console.log('║ Body:', JSON.stringify(payload, null, 2));
+    console.log('╚═══════════════════════════════════════════════════════════');
+
+    const response = await fetch(`${BASE_URL}/api/auth/otp/register-kitchen`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${registrationToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await response.json();
+    console.log('╔═══════════════════════════════════════════════════════════');
+    console.log('║ [KITCHEN REGISTER RESPONSE]');
+    console.log('║ Status:', response.status);
+    console.log('║ Body:', JSON.stringify(json, null, 2));
+    console.log('╚═══════════════════════════════════════════════════════════');
+
+    if (!response.ok || json?.success === false) {
+      throw new Error(json?.message || json?.error || `Kitchen registration failed (${response.status})`);
+    }
+    return json.data as RegisterKitchenWithOtpResponse;
   }
 
   /**

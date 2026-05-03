@@ -336,6 +336,9 @@ export interface Kitchen {
   updatedAt?: string;
   suspensionReason?: string;
   suspendedAt?: string;
+  rejectionReason?: string;
+  rejectedBy?: string | User;
+  rejectedAt?: string;
   deliveryConfig?: {
     autoAcceptRadiusKm?: number;
     maxDeliveryRadiusKm?: number;

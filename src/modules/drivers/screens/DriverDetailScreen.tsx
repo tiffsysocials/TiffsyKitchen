@@ -14,6 +14,7 @@ import type { Driver } from '../../../types/driver.types';
 import { ApproveDriverModal } from '../components/ApproveDriverModal';
 import { RejectDriverModal } from '../components/RejectDriverModal';
 import { DriverDocumentViewer } from '../components/DriverDocumentViewer';
+import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 
 interface DriverDetailScreenProps {
   driver: Driver;
@@ -128,7 +129,7 @@ export const DriverDetailScreen: React.FC<DriverDetailScreenProps> = ({
   const hasValidImage = !!(driver.profileImage && driver.profileImage.trim() !== '' && !isPlaceholder);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen topBackgroundColor={colors.white} darkIcon>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -360,7 +361,7 @@ export const DriverDetailScreen: React.FC<DriverDetailScreenProps> = ({
         documentType={viewerTitle}
         onClose={closeImageViewer}
       />
-    </View>
+    </SafeAreaScreen>
   );
 };
 

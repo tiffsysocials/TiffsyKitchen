@@ -298,6 +298,20 @@ export const KitchenDetailModal: React.FC<KitchenDetailModalProps> = ({
           </TouchableOpacity>
         </View>
 
+        {/* Previously rejected banner */}
+        {kitchen.rejectionReason && (
+          <View style={styles.rejectedBanner}>
+            <View style={styles.rejectedBannerHeader}>
+              <MaterialIcons name="error-outline" size={18} color={colors.error} />
+              <Text style={styles.rejectedBannerTitle}>
+                Previously rejected
+                {kitchen.rejectedAt ? ` · ${new Date(kitchen.rejectedAt).toLocaleString()}` : ''}
+              </Text>
+            </View>
+            <Text style={styles.rejectedReasonText}>{kitchen.rejectionReason}</Text>
+          </View>
+        )}
+
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -346,6 +360,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
+  },
+  rejectedBanner: {
+    backgroundColor: colors.error + '12',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.error + '30',
+  },
+  rejectedBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  rejectedBannerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.error,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rejectedReasonText: {
+    fontSize: 13,
+    color: colors.gray700,
+    lineHeight: 18,
   },
   headerContent: {
     flex: 1,

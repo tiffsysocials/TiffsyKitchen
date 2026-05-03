@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 
-const BASE_URL = 'https://d31od4t2t5epcb.cloudfront.net';
+export const BASE_URL = 'https://d31od4t2t5epcb.cloudfront.net';
 
 // API Response wrapper from your backend
 interface ApiResponse<T> {

@@ -13,6 +13,10 @@ interface AuthContextType {
   login: (phone: string) => Promise<void>;
   verifyOTP: (phone: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-read user from AsyncStorage 'userData' — call after App.tsx writes a new profile */
+  refreshUser: () => Promise<void>;
+  /** Clear in-memory user state — call from App.tsx logout */
+  clearUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,15 +32,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkAuth = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      if (token) {
-        const userData = await authService.getProfile();
-        setUser(userData);
+      if (!token) {
+        setUser(null);
+        return;
       }
+      // Fast path: read cached user profile from AsyncStorage (kept in sync by App.tsx)
+      const cached = await AsyncStorage.getItem('userData');
+      if (cached) {
+        setUser(JSON.parse(cached));
+        return;
+      }
+      // Fallback: fetch from API
+      const userData = await authService.getProfile();
+      setUser(userData);
     } catch (error) {
       console.error('Auth check failed:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const cached = await AsyncStorage.getItem('userData');
+      if (cached) {
+        setUser(JSON.parse(cached));
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user from storage:', error);
+    }
+  };
+
+  const clearUser = () => {
+    setUser(null);
   };
 
   const loginWithCredentials = async (username: string, password: string, role: UserRole) => {
@@ -99,6 +129,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         verifyOTP,
         logout,
+        refreshUser,
+        clearUser,
       }}
     >
       {children}

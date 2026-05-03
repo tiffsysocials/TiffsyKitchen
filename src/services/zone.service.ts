@@ -1,4 +1,4 @@
-import { apiService } from './api.enhanced.service';
+import { apiService, BASE_URL } from './api.enhanced.service';
 import {
   Zone,
   ZoneListResponse,
@@ -69,6 +69,24 @@ class ZoneService {
       console.error('Error fetching zones:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get active zones via the public endpoint (no auth required).
+   * Used during kitchen self-registration before the user has an auth token.
+   * Backend returns minimal fields: _id, pincode, name, city.
+   */
+  async getActiveZonesPublic(city?: string): Promise<Pick<Zone, '_id' | 'pincode' | 'name' | 'city'>[]> {
+    const qs = city ? `?city=${encodeURIComponent(city)}` : '';
+    const response = await fetch(`${BASE_URL}/api/zones/active${qs}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const json = await response.json();
+    if (!response.ok || json?.success === false) {
+      throw new Error(json?.message || 'Failed to fetch active zones');
+    }
+    return json.data?.zones || [];
   }
 
   /**

@@ -36,6 +36,7 @@ import {
 } from '../components';
 import { colors, spacing } from '../../../theme';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 
 interface CutoffTimesSettingsScreenProps {
   onMenuPress: () => void;
@@ -192,7 +193,7 @@ export const CutoffTimesSettingsScreen: React.FC<CutoffTimesSettingsScreenProps>
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaScreen topBackgroundColor={colors.primary}>
       {/* Header */}
       <GradientBox style={styles.header}>
         <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
@@ -559,7 +560,7 @@ export const CutoffTimesSettingsScreen: React.FC<CutoffTimesSettingsScreenProps>
           </Text>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaScreen>
   );
 };
 

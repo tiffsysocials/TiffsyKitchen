@@ -3,6 +3,16 @@ import { BackHandler } from 'react-native';
 import { UserRole } from '../types/user';
 import { getDefaultScreenForRole } from '../utils/rbac';
 
+type KitchenApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | null | undefined;
+
+const resolveDefaultScreen = (role: UserRole | null, kitchenApprovalStatus?: KitchenApprovalStatus): ScreenName => {
+  if (role === 'KITCHEN_STAFF') {
+    if (kitchenApprovalStatus === 'PENDING') return 'KitchenPending';
+    if (kitchenApprovalStatus === 'REJECTED') return 'KitchenRejected';
+  }
+  return getDefaultScreenForRole(role);
+};
+
 export type ScreenName =
   | 'Dashboard'
   | 'Orders'
@@ -53,9 +63,9 @@ interface NavigationContextType {
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
-export const NavigationProvider: React.FC<{ children: ReactNode; userRole?: UserRole | null }> = ({ children, userRole }) => {
-  // Initialize with role-based default screen
-  const initialScreen = getDefaultScreenForRole(userRole || null);
+export const NavigationProvider: React.FC<{ children: ReactNode; userRole?: UserRole | null; kitchenApprovalStatus?: KitchenApprovalStatus }> = ({ children, userRole, kitchenApprovalStatus }) => {
+  // Initialize with role-based default screen (kitchen approval status overrides for KITCHEN_STAFF)
+  const initialScreen = resolveDefaultScreen(userRole || null, kitchenApprovalStatus);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(initialScreen);
   const [screenHistory, setScreenHistory] = useState<ScreenName[]>([initialScreen]);
 
@@ -80,12 +90,12 @@ export const NavigationProvider: React.FC<{ children: ReactNode; userRole?: User
     return false;
   };
 
-  // Update default screen when user role changes (e.g., after login)
+  // Update default screen when user role or kitchen approval status changes (e.g., after login)
   useEffect(() => {
-    const defaultScreen = getDefaultScreenForRole(userRole || null);
+    const defaultScreen = resolveDefaultScreen(userRole || null, kitchenApprovalStatus);
     setCurrentScreen(defaultScreen);
     setScreenHistory([defaultScreen]);
-  }, [userRole]);
+  }, [userRole, kitchenApprovalStatus]);
 
   useEffect(() => {
     const backAction = () => {

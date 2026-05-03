@@ -16,7 +16,7 @@ import { authService } from '../../services/auth.service';
 const PRIMARY_COLOR = '#FE8733';
 
 interface PhoneAuthScreenProps {
-  onVerificationComplete: (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string }) => void;
+  onVerificationComplete: (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string; phone: string }) => void;
 }
 
 const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplete }) => {
@@ -166,6 +166,7 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
         role: user?.role || '',
         isNewUser: isNewUser || false,
         kitchenApprovalStatus: response.data?.kitchenApprovalStatus,
+        phone: phoneNumber,
       });
     } catch (error: any) {
       console.error('Error verifying OTP:', error);

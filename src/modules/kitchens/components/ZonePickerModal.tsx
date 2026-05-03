@@ -20,6 +20,11 @@ interface ZonePickerModalProps {
   selectedZoneIds: string[];
   onClose: () => void;
   onSave: (zoneIds: string[]) => void;
+  /**
+   * Use the public /api/zones/active endpoint (no auth required).
+   * Set true when called before the user has logged in (e.g., kitchen self-registration).
+   */
+  publicMode?: boolean;
 }
 
 export const ZonePickerModal: React.FC<ZonePickerModalProps> = ({
@@ -27,6 +32,7 @@ export const ZonePickerModal: React.FC<ZonePickerModalProps> = ({
   selectedZoneIds,
   onClose,
   onSave,
+  publicMode = false,
 }) => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [filteredZones, setFilteredZones] = useState<Zone[]>([]);
@@ -58,9 +64,16 @@ export const ZonePickerModal: React.FC<ZonePickerModalProps> = ({
   const loadZones = async () => {
     setLoading(true);
     try {
-      const response = await zoneService.getZones({ status: 'ACTIVE', limit: 100 });
-      setZones(response.zones);
-      setFilteredZones(response.zones);
+      if (publicMode) {
+        const publicZones = await zoneService.getActiveZonesPublic();
+        const mapped = publicZones as unknown as Zone[];
+        setZones(mapped);
+        setFilteredZones(mapped);
+      } else {
+        const response = await zoneService.getZones({ status: 'ACTIVE', limit: 100 });
+        setZones(response.zones);
+        setFilteredZones(response.zones);
+      }
     } catch (error) {
       console.error('Error loading zones:', error);
     } finally {

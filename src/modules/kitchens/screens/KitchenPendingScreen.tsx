@@ -16,6 +16,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { kitchenStaffService } from '../../../services/kitchen-staff.service';
 import { useNavigation } from '../../../context/NavigationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface KitchenPendingScreenProps {
   onMenuPress: () => void;
@@ -27,32 +28,36 @@ export const KitchenPendingScreen: React.FC<KitchenPendingScreenProps> = ({
   const { navigate } = useNavigation();
 
   // Fetch kitchen status with automatic polling every 30 seconds
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading, refetch, isFetching, error } = useQuery({
     queryKey: ['myKitchenStatus'],
     queryFn: () => kitchenStaffService.getMyKitchenStatus(),
     refetchInterval: 30000, // Poll every 30 seconds
-    onSuccess: (response) => {
-      // Redirect to appropriate screen based on status
-      if (response?.data?.kitchen?.status === 'ACTIVE') {
-        Alert.alert(
-          'Approved!',
-          'Your kitchen application has been approved. Welcome aboard!',
-          [
-            {
-              text: 'Continue',
-              onPress: () => navigate('KitchenDashboard'),
-            },
-          ]
-        );
-      } else if (response?.data?.rejectionReason) {
-        // Kitchen was rejected
-        navigate('KitchenRejected');
-      }
-    },
-    onError: (error: any) => {
-      console.error('Failed to fetch kitchen status:', error);
-    },
   });
+
+  useEffect(() => {
+    if (error) {
+      console.error('Failed to fetch kitchen status:', error);
+    }
+  }, [error]);
+
+  // React to status changes (React Query v5 removed onSuccess callback)
+  useEffect(() => {
+    if (!data?.data) return;
+    const status = data.data.kitchen?.status;
+    const rejectionReason = data.data.rejectionReason;
+
+    if (status === 'ACTIVE') {
+      AsyncStorage.setItem('kitchenApprovalStatus', 'APPROVED').catch(() => {});
+      Alert.alert(
+        'Approved!',
+        'Your kitchen application has been approved. Welcome aboard!',
+        [{ text: 'Continue', onPress: () => navigate('KitchenDashboard') }],
+      );
+    } else if (rejectionReason) {
+      AsyncStorage.setItem('kitchenApprovalStatus', 'REJECTED').catch(() => {});
+      navigate('KitchenRejected');
+    }
+  }, [data, navigate]);
 
   const kitchen = data?.data?.kitchen;
   const submittedDate = kitchen?.createdAt

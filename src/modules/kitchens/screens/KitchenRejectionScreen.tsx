@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -35,16 +35,17 @@ export const KitchenRejectionScreen: React.FC<KitchenRejectionScreenProps> = ({
   const { data, isLoading } = useQuery({
     queryKey: ['myKitchenStatus'],
     queryFn: () => kitchenStaffService.getMyKitchenStatus(),
-    onSuccess: (response) => {
-      // If status changed (no longer rejected), redirect
-      if (response?.data?.kitchen?.status === 'ACTIVE') {
-        navigate('KitchenDashboard');
-      } else if (!response?.data?.rejectionReason) {
-        // No rejection reason means it's just pending
-        navigate('KitchenPending');
-      }
-    },
   });
+
+  // React to status changes (React Query v5 removed onSuccess callback)
+  useEffect(() => {
+    if (!data?.data) return;
+    if (data.data.kitchen?.status === 'ACTIVE') {
+      navigate('KitchenDashboard');
+    } else if (!data.data.rejectionReason) {
+      navigate('KitchenPending');
+    }
+  }, [data, navigate]);
 
   // Resubmit mutation
   const resubmitMutation = useMutation({

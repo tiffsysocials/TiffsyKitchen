@@ -29,7 +29,7 @@ import { SendMenuAnnouncementScreen } from './src/screens/kitchen/SendMenuAnnoun
 import { SendBatchReminderScreen } from './src/screens/admin/SendBatchReminderScreen';
 import { SendPushNotificationScreen } from './src/screens/admin/SendPushNotificationScreen';
 import { Sidebar } from './src/components/common/Sidebar';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { NavigationProvider, useNavigation } from './src/context/NavigationContext';
 import { InAppNotificationProvider } from './src/context/InAppNotificationContext';
 import { AlertProvider } from './src/context/AlertContext';
@@ -64,6 +64,7 @@ import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
 import { BannerManagementScreen } from './src/modules/banners';
 import { AuditLogsScreen } from './src/modules';
+import { KitchenRegistrationScreen } from './src/screens/admin/KitchenRegistrationScreen';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -75,6 +76,20 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Bridges App.tsx auth state into AuthContext: when isAuthenticated/userRole change,
+// re-read 'userData' from AsyncStorage so Sidebar (and others) get the fresh user.
+const AuthSyncBridge: React.FC<{ isAuthenticated: boolean; userRole: UserRole | null }> = ({ isAuthenticated, userRole }) => {
+  const { refreshUser, clearUser } = useAuth();
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshUser();
+    } else {
+      clearUser();
+    }
+  }, [isAuthenticated, userRole]);
+  return null;
+};
 
 // Handle notification tap navigation
 const handleNotificationTapNavigation = (
@@ -549,6 +564,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
+  const [registrationPhone, setRegistrationPhone] = useState<string>('');
+  const [kitchenApprovalStatus, setKitchenApprovalStatus] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -563,6 +581,9 @@ function App() {
 
       const storedRole = await AsyncStorage.getItem('userRole');
       console.log('User Role:', storedRole);
+
+      const storedApprovalStatus = await AsyncStorage.getItem('kitchenApprovalStatus');
+      setKitchenApprovalStatus(storedApprovalStatus);
 
       // Authenticate if token exists and user has a valid role (ADMIN or KITCHEN_STAFF)
       const hasValidRole = storedRole === 'ADMIN' || storedRole === 'KITCHEN_STAFF';
@@ -596,7 +617,7 @@ function App() {
     }
   };
 
-  const handleVerificationComplete = async (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string }) => {
+  const handleVerificationComplete = async (data: { token: string; user: any; role: string; isNewUser: boolean; kitchenApprovalStatus?: string; phone: string }) => {
     console.log('========== APP.TSX: OTP VERIFIED ==========');
     console.log('Token Received:', data.token ? 'YES' : 'NO');
     console.log('Is New User:', data.isNewUser);
@@ -604,10 +625,12 @@ function App() {
     console.log('===========================================');
 
     try {
-      // Check if new user (needs registration)
+      // New user → route to kitchen self-registration
       if (data.isNewUser) {
-        console.log('New user detected - registration required');
+        console.log('New user detected - routing to kitchen registration');
         await authService.clearAdminData();
+        setRegistrationPhone(data.phone);
+        setRegistrationToken(data.token);
         setIsAuthenticated(false);
         return;
       }
@@ -658,15 +681,13 @@ function App() {
         throw new Error('Invalid user role');
       }
 
-      // Check kitchen approval status for KITCHEN_STAFF
-      if (appRole === 'KITCHEN_STAFF' && data.kitchenApprovalStatus && data.kitchenApprovalStatus !== 'APPROVED') {
-        console.log('Kitchen not approved. Status:', data.kitchenApprovalStatus);
-        await authService.clearAdminData();
-        throw new Error(
-          data.kitchenApprovalStatus === 'PENDING'
-            ? 'Your kitchen registration is pending approval.'
-            : 'Your kitchen registration was not approved.'
-        );
+      // Track kitchen approval status for KITCHEN_STAFF (controls default screen routing)
+      if (appRole === 'KITCHEN_STAFF' && data.kitchenApprovalStatus) {
+        await AsyncStorage.setItem('kitchenApprovalStatus', data.kitchenApprovalStatus);
+        setKitchenApprovalStatus(data.kitchenApprovalStatus);
+      } else {
+        await AsyncStorage.removeItem('kitchenApprovalStatus');
+        setKitchenApprovalStatus(null);
       }
 
       // Store user role and data
@@ -694,6 +715,55 @@ function App() {
     }
   };
 
+  const handleRegistrationComplete = async (data: { kitchen: any; user: any; token: string; approvalStatus: string }) => {
+    try {
+      console.log('========== KITCHEN REGISTRATION COMPLETE ==========');
+      console.log('Kitchen Code:', data.kitchen?.code);
+      console.log('Approval Status:', data.approvalStatus);
+      console.log('===================================================');
+
+      await AsyncStorage.setItem('authToken', data.token);
+      await apiService.login(data.token);
+      await AsyncStorage.setItem('userRole', 'KITCHEN_STAFF');
+      await AsyncStorage.setItem('kitchenApprovalStatus', data.approvalStatus);
+      await AsyncStorage.setItem('userPhoneNumber', registrationPhone);
+      await AsyncStorage.setItem('adminPhone', registrationPhone);
+
+      const userProfile = {
+        id: data.user._id,
+        phone: data.user.phone,
+        email: data.user.email || '',
+        firstName: data.user.name?.split(' ')[0] || 'User',
+        lastName: data.user.name?.split(' ').slice(1).join(' ') || '',
+        fullName: data.user.name || 'User',
+        role: data.user.role,
+        status: data.user.status,
+        kitchenId: data.user.kitchenId,
+      };
+      await AsyncStorage.setItem('userData', JSON.stringify(userProfile));
+
+      await fcmService.initialize();
+
+      setUserRole('KITCHEN_STAFF');
+      setKitchenApprovalStatus(data.approvalStatus);
+      setRegistrationToken(null);
+      setRegistrationPhone('');
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Error finalizing kitchen registration:', error);
+      await authService.clearAdminData();
+      setRegistrationToken(null);
+      setIsAuthenticated(false);
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    await authService.clearAdminData();
+    setRegistrationToken(null);
+    setRegistrationPhone('');
+    setIsAuthenticated(false);
+  };
+
   const handleLogout = async () => {
     console.log('========== APP.TSX: LOGOUT ==========');
     console.log('Clearing all admin data...');
@@ -712,6 +782,7 @@ function App() {
 
     setIsAuthenticated(false);
     setUserRole(null);
+    setKitchenApprovalStatus(null);
     setSidebarVisible(false);
   };
 
@@ -737,7 +808,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AlertProvider>
           <AuthProvider>
-            <NavigationProvider userRole={userRole}>
+            <AuthSyncBridge isAuthenticated={isAuthenticated} userRole={userRole} />
+            <NavigationProvider userRole={userRole} kitchenApprovalStatus={kitchenApprovalStatus as any}>
               <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
               {isAuthenticated ? (
                 <AuthenticatedContent
@@ -745,6 +817,13 @@ function App() {
                   onLogout={handleLogout}
                   sidebarVisible={sidebarVisible}
                   onCloseSidebar={handleCloseSidebar}
+                />
+              ) : registrationToken ? (
+                <KitchenRegistrationScreen
+                  registrationToken={registrationToken}
+                  phoneNumber={registrationPhone}
+                  onRegistrationComplete={handleRegistrationComplete}
+                  onCancel={handleCancelRegistration}
                 />
               ) : (
                 <PhoneAuthScreen onVerificationComplete={handleVerificationComplete} />
