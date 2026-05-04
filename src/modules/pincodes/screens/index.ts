@@ -1,0 +1,1 @@
+export { PincodesManagementScreen } from './PincodesManagementScreen';

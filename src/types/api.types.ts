@@ -391,6 +391,70 @@ export interface ZoneListResponse {
 }
 
 // ============================================================================
+// Pincode (master) Types — used during kitchen creation to pick nearby pincodes
+// ============================================================================
+
+export interface NearbyPincode {
+  pincode: string;
+  officeName?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  source?: PincodeSource;
+  distanceKm: number;
+}
+
+export interface NearbyPincodesResponse {
+  count: number;
+  radiusKm: number;
+  pincodes: NearbyPincode[];
+}
+
+export type PincodeSource = 'SEED' | 'INDIA_POST' | 'GOOGLE' | 'MANUAL';
+
+export interface PincodeRecord {
+  _id: string;
+  pincode: string;
+  officeName?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  source: PincodeSource;
+  enrichedAt?: string;
+  latitude?: number;
+  longitude?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PincodeListResponse {
+  pincodes: PincodeRecord[];
+  pagination: PaginationMeta;
+}
+
+export interface WarmedCity {
+  _id: string;
+  cityKey: string;
+  city: string;
+  state?: string;
+  pincodeCount: number;
+  warmedAt: string;
+}
+
+export interface WarmedCitiesResponse {
+  count: number;
+  cities: WarmedCity[];
+}
+
+export interface WarmCityResponse {
+  city: string;
+  state?: string;
+  addedCount: number;
+  alreadyWarmed: boolean;
+  totalForCity: number;
+}
+
+// ============================================================================
 // Coupon Management Types
 // ============================================================================
 
@@ -748,6 +812,7 @@ export interface Addon {
   price: number;
   dietaryType: DietaryType;
   image?: string;
+  image_public_id?: string;
   minQuantity: number;
   maxQuantity: number;
   isAvailable: boolean;
@@ -773,6 +838,9 @@ export interface MenuItem {
   description?: string;
   category: MenuItemCategory;
   menuType: MenuType;
+  /** Active meal windows (LUNCH/DINNER). Empty for ON_DEMAND_MENU items. */
+  mealWindows?: MealWindow[];
+  /** @deprecated Use `mealWindows`. Backend keeps this in sync (first window) for legacy readers. */
   mealWindow?: MealWindow;
   price: number;
   discountedPrice?: number;
@@ -820,7 +888,8 @@ export interface CreateMenuItemRequest {
   description?: string;
   category: MenuItemCategory;
   menuType: MenuType;
-  mealWindow?: MealWindow;
+  /** Required for MEAL_MENU. Pass one or both of LUNCH/DINNER. */
+  mealWindows?: MealWindow[];
   price: number;
   discountedPrice?: number;
   portionSize?: string;
@@ -858,12 +927,21 @@ export interface MealMenuItemResponse {
 }
 
 // Add-on Management Types
+export interface AddonImageFile {
+  uri: string;
+  name: string;
+  type: string;
+}
+
 export interface CreateAddonRequest {
   kitchenId: string;
   name: string;
   description?: string;
   price: number;
   dietaryType: DietaryType;
+  /** New image to upload (multipart) — preferred over `image` URL string */
+  imageFile?: AddonImageFile;
+  /** Pre-existing image URL (backward-compat); ignored when imageFile is provided */
   image?: string;
   minQuantity?: number;
   maxQuantity?: number;

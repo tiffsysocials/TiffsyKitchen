@@ -28,6 +28,7 @@ export type DrawerParamList = {
   Drivers: undefined;
   Kitchens: undefined;
   Zones: undefined;
+  Pincodes: undefined;
   Subscriptions: undefined;
   AutoOrderAddons: undefined;
   CronManagement: undefined;

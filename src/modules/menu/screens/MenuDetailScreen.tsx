@@ -54,7 +54,7 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [menuType, setMenuType] = useState<MenuType>('ON_DEMAND_MENU');
-  const [mealWindow, setMealWindow] = useState<MealWindow>('LUNCH');
+  const [mealWindows, setMealWindows] = useState<MealWindow[]>(['LUNCH']);
   const [category, setCategory] = useState<MenuItemCategory>('MAIN_COURSE');
   const [price, setPrice] = useState('');
   const [discountedPrice, setDiscountedPrice] = useState('');
@@ -83,7 +83,11 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
       setName(loadedItem.name);
       setDescription(loadedItem.description || '');
       setMenuType(loadedItem.menuType);
-      setMealWindow(loadedItem.mealWindow || 'LUNCH');
+      // Prefer the new array; fall back to legacy single-value field for older docs.
+      const loadedWindows = loadedItem.mealWindows && loadedItem.mealWindows.length > 0
+        ? loadedItem.mealWindows
+        : (loadedItem.mealWindow ? [loadedItem.mealWindow] : []);
+      setMealWindows(loadedWindows.length > 0 ? loadedWindows : ['LUNCH']);
       setCategory(loadedItem.category);
       setPrice(String(loadedItem.price));
       setDiscountedPrice(loadedItem.discountedPrice ? String(loadedItem.discountedPrice) : '');
@@ -119,8 +123,8 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
       return false;
     }
 
-    if (menuType === 'MEAL_MENU' && !mealWindow) {
-      showWarning('Validation Error', 'Meal window is required for Meal Menu items');
+    if (menuType === 'MEAL_MENU' && mealWindows.length === 0) {
+      showWarning('Validation Error', 'Select at least one meal window (Lunch or Dinner)');
       return false;
     }
 
@@ -138,7 +142,7 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
         description: description.trim() || undefined,
         category,
         menuType,
-        ...(menuType === 'MEAL_MENU' && { mealWindow }),
+        ...(menuType === 'MEAL_MENU' && { mealWindows }),
         price: Number(price),
         discountedPrice: discountedPrice ? Number(discountedPrice) : undefined,
         portionSize: portionSize.trim() || undefined,
@@ -322,44 +326,43 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
           </View>
         )}
 
-        {/* Meal Window (only for MEAL_MENU) */}
+        {/* Meal Windows (only for MEAL_MENU). Multi-select: pick Lunch, Dinner, or both. */}
         {menuType === 'MEAL_MENU' && (
           <View style={styles.field}>
-            <Text style={styles.label}>Meal Window *</Text>
+            <Text style={styles.label}>Meal Windows *</Text>
             <View style={styles.segmentControl}>
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  mealWindow === 'LUNCH' && styles.segmentButtonActive,
-                ]}
-                onPress={() => setMealWindow('LUNCH')}
-              >
-                <Text
-                  style={[
-                    styles.segmentButtonText,
-                    mealWindow === 'LUNCH' && styles.segmentButtonTextActive,
-                  ]}
-                >
-                  Lunch
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.segmentButton,
-                  mealWindow === 'DINNER' && styles.segmentButtonActive,
-                ]}
-                onPress={() => setMealWindow('DINNER')}
-              >
-                <Text
-                  style={[
-                    styles.segmentButtonText,
-                    mealWindow === 'DINNER' && styles.segmentButtonTextActive,
-                  ]}
-                >
-                  Dinner
-                </Text>
-              </TouchableOpacity>
+              {(['LUNCH', 'DINNER'] as MealWindow[]).map((window) => {
+                const selected = mealWindows.includes(window);
+                return (
+                  <TouchableOpacity
+                    key={window}
+                    style={[
+                      styles.segmentButton,
+                      selected && styles.segmentButtonActive,
+                    ]}
+                    onPress={() => {
+                      setMealWindows(prev =>
+                        prev.includes(window)
+                          ? prev.filter(w => w !== window)
+                          : [...prev, window],
+                      );
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentButtonText,
+                        selected && styles.segmentButtonTextActive,
+                      ]}
+                    >
+                      {window === 'LUNCH' ? 'Lunch' : 'Dinner'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+            <Text style={styles.helperText}>
+              Tap to toggle. Select both to serve the same thali for Lunch and Dinner.
+            </Text>
           </View>
         )}
 
@@ -593,6 +596,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 6,
   },
   input: {
     backgroundColor: '#ffffff',

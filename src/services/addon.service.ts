@@ -70,29 +70,69 @@ class AddonService {
   }
 
   /**
+   * Build multipart FormData from an addon request payload.
+   * Skips undefined fields. Numbers/booleans are serialized to strings as required by multipart.
+   */
+  private buildAddonFormData(data: CreateAddonRequest | UpdateAddonRequest): FormData {
+    const formData = new FormData();
+
+    if (data.imageFile) {
+      formData.append('file', {
+        uri: data.imageFile.uri,
+        name: data.imageFile.name,
+        type: data.imageFile.type,
+      } as any);
+    }
+
+    const appendIfDefined = (key: string, value: unknown) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    };
+
+    appendIfDefined('kitchenId', (data as CreateAddonRequest).kitchenId);
+    appendIfDefined('name', data.name);
+    appendIfDefined('description', data.description);
+    appendIfDefined('price', data.price);
+    appendIfDefined('dietaryType', data.dietaryType);
+    // Allow clearing/keeping an existing URL when no new file is supplied
+    if (!data.imageFile) appendIfDefined('image', data.image);
+    appendIfDefined('minQuantity', data.minQuantity);
+    appendIfDefined('maxQuantity', data.maxQuantity);
+    appendIfDefined('isAvailable', data.isAvailable);
+    appendIfDefined('displayOrder', data.displayOrder);
+
+    return formData;
+  }
+
+  /**
    * Create new add-on
-   * POST /api/addons
+   * POST /api/addons (multipart/form-data)
    */
   async createAddon(data: CreateAddonRequest): Promise<Addon> {
-    const response = await apiService.post<{
+    const formData = this.buildAddonFormData(data);
+
+    const response = await apiService.postMultipart<{
       success: boolean;
       message: string;
       data: { addon: Addon };
-    }>('/api/addons', data);
+    }>('/api/addons', formData);
 
     return response.data.addon;
   }
 
   /**
    * Update add-on
-   * PUT /api/addons/:id
+   * PUT /api/addons/:id (multipart/form-data)
    */
   async updateAddon(addonId: string, data: UpdateAddonRequest): Promise<Addon> {
-    const response = await apiService.put<{
+    const formData = this.buildAddonFormData(data);
+
+    const response = await apiService.putMultipart<{
       success: boolean;
       message: string;
       data: { addon: Addon };
-    }>(`/api/addons/${addonId}`, data);
+    }>(`/api/addons/${addonId}`, formData);
 
     return response.data.addon;
   }

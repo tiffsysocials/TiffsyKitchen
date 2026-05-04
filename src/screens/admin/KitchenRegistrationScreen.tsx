@@ -14,7 +14,6 @@ import { Header } from '../../components/common/Header';
 import { useAlert } from '../../hooks/useAlert';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { ZonePickerModal } from '../../modules/kitchens/components/ZonePickerModal';
 import kitchenService, {
   RegisterKitchenWithOtpRequest,
   RegisterKitchenWithOtpResponse,
@@ -36,7 +35,6 @@ interface FormState {
   city: string;
   state: string;
   pincode: string;
-  zonesServed: string[];
   lunchStartTime: string;
   lunchEndTime: string;
   dinnerStartTime: string;
@@ -59,7 +57,6 @@ const initialState: FormState = {
   city: '',
   state: 'Maharashtra',
   pincode: '',
-  zonesServed: [],
   lunchStartTime: '11:00',
   lunchEndTime: '15:00',
   dinnerStartTime: '19:00',
@@ -88,7 +85,6 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
   const { showError, showSuccess } = useAlert();
   const [form, setForm] = useState<FormState>({ ...initialState, contactPhone: phoneNumber });
   const [submitting, setSubmitting] = useState(false);
-  const [zonePickerVisible, setZonePickerVisible] = useState(false);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -102,7 +98,6 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
     if (!form.locality.trim()) return 'Locality is required';
     if (!form.city.trim()) return 'City is required';
     if (!PINCODE_REGEX.test(form.pincode.trim())) return 'Pincode must be 6 digits';
-    if (form.zonesServed.length === 0) return 'Select at least one zone';
     if (!TIME_REGEX.test(form.lunchStartTime) || !TIME_REGEX.test(form.lunchEndTime)) {
       return 'Lunch times must be in HH:MM (24h) format';
     }
@@ -138,7 +133,9 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
         state: form.state.trim() || undefined,
         pincode: form.pincode.trim(),
       },
-      zonesServed: form.zonesServed,
+      // Default the partner's serviceable area to their own kitchen pincode.
+      // Admin can expand this via the kitchen-management form once approved.
+      serviceablePincodes: [form.pincode.trim()],
       operatingHours: {
         lunch: { startTime: form.lunchStartTime, endTime: form.lunchEndTime },
         dinner: { startTime: form.dinnerStartTime, endTime: form.dinnerEndTime },
@@ -209,18 +206,6 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
             keyboardType="number-pad"
             maxLength={6}
           />
-        </Section>
-
-        <Section title="Zones Served *">
-          <TouchableOpacity style={styles.zonePicker} onPress={() => setZonePickerVisible(true)}>
-            <Icon name="map-marker-radius" size={20} color={colors.primary} />
-            <Text style={styles.zonePickerText}>
-              {form.zonesServed.length === 0
-                ? 'Tap to select zones'
-                : `${form.zonesServed.length} zone${form.zonesServed.length > 1 ? 's' : ''} selected`}
-            </Text>
-            <Icon name="chevron-right" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
         </Section>
 
         <Section title="Operating Hours">
@@ -303,17 +288,6 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
-
-      <ZonePickerModal
-        visible={zonePickerVisible}
-        selectedZoneIds={form.zonesServed}
-        onClose={() => setZonePickerVisible(false)}
-        onSave={ids => {
-          update('zonesServed', ids);
-          setZonePickerVisible(false);
-        }}
-        publicMode
-      />
     </SafeAreaScreen>
   );
 };

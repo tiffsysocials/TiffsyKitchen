@@ -18,7 +18,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Kitchen, KitchenType, Zone } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { ZonePickerModal } from './ZonePickerModal';
+import { PincodePickerModal } from './PincodePickerModal';
 
 export interface KitchenFormState {
   name: string;
@@ -31,7 +31,7 @@ export interface KitchenFormState {
   city: string;
   state: string;
   pincode: string;
-  zonesServed: string[];
+  serviceablePincodes: string[];
   lunchStartTime: string;
   lunchEndTime: string;
   dinnerStartTime: string;
@@ -76,7 +76,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
   const { showError } = useAlert();
   const [loading, setLoading] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
-  const [zonePickerVisible, setZonePickerVisible] = useState(false);
+  const [pincodePickerVisible, setPincodePickerVisible] = useState(false);
   const [formData, setFormData] = useState<KitchenFormState>({
     name: '',
     type: 'PARTNER',
@@ -88,7 +88,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
     city: '',
     state: 'Maharashtra',
     pincode: '',
-    zonesServed: [],
+    serviceablePincodes: [],
     lunchStartTime: '11:00',
     lunchEndTime: '15:00',
     dinnerStartTime: '19:00',
@@ -108,9 +108,13 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
   useEffect(() => {
     if (visible && kitchen) {
-      // Pre-fill form for editing
-      const zones = Array.isArray(kitchen.zonesServed)
-        ? kitchen.zonesServed.map((z) => (typeof z === 'string' ? z : z._id))
+      // Pre-fill form for editing — derive serviceablePincodes from populated zones.
+      // (If zonesServed is just IDs without populate, the picker will start empty
+      // and the admin can re-pick.)
+      const pincodes = Array.isArray(kitchen.zonesServed)
+        ? (kitchen.zonesServed as Zone[])
+            .filter((z): z is Zone => typeof z === 'object' && z !== null && !!z.pincode)
+            .map((z) => z.pincode)
         : [];
 
       setFormData({
@@ -124,7 +128,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         city: kitchen.address.city,
         state: kitchen.address.state || 'Maharashtra',
         pincode: kitchen.address.pincode,
-        zonesServed: zones,
+        serviceablePincodes: pincodes,
         lunchStartTime: kitchen.operatingHours.lunch?.startTime || '11:00',
         lunchEndTime: kitchen.operatingHours.lunch?.endTime || '15:00',
         dinnerStartTime: kitchen.operatingHours.dinner?.startTime || '19:00',
@@ -154,7 +158,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         city: '',
         state: 'Maharashtra',
         pincode: '',
-        zonesServed: [],
+        serviceablePincodes: [],
         lunchStartTime: '11:00',
         lunchEndTime: '15:00',
         dinnerStartTime: '19:00',
@@ -176,6 +180,51 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
   const updateField = (field: keyof KitchenFormState, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  /**
+   * Reverse-geocode lat/lng to a postal address using OpenStreetMap Nominatim
+   * (free, no API key required). Best-effort: silently no-ops on failure.
+   */
+  const reverseGeocodeAndFillAddress = async (latitude: number, longitude: number) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
+      const response = await fetch(url, {
+        headers: {
+          // Nominatim requires an identifying User-Agent
+          'User-Agent': 'TiffsyKitchenAdmin/1.0',
+          'Accept-Language': 'en',
+        },
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      const addr = data?.address;
+      if (!addr) return false;
+
+      const line1Parts = [addr.house_number, addr.road || addr.pedestrian || addr.footway]
+        .filter(Boolean)
+        .join(' ');
+      const line2Parts = [addr.building, addr.residential].filter(Boolean).join(', ');
+      const locality = addr.neighbourhood || addr.suburb || addr.quarter || addr.hamlet || '';
+      const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
+      const state = addr.state || '';
+      const pincode = addr.postcode || '';
+
+      setFormData((prev) => ({
+        ...prev,
+        addressLine1: line1Parts || prev.addressLine1,
+        addressLine2: line2Parts || prev.addressLine2,
+        locality: locality || prev.locality,
+        city: city || prev.city,
+        state: state || prev.state,
+        pincode: pincode && /^\d{6}$/.test(pincode) ? pincode : prev.pincode,
+      }));
+
+      return true;
+    } catch (error) {
+      console.warn('Reverse geocode failed:', error);
+      return false;
+    }
   };
 
   const detectLocation = async () => {
@@ -201,13 +250,19 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       }
 
       Geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
           updateField('latitude', latitude.toFixed(6));
           updateField('longitude', longitude.toFixed(6));
+
+          const filled = await reverseGeocodeAndFillAddress(latitude, longitude);
+
           setDetectingLocation(false);
           if (Platform.OS === 'android') {
-            ToastAndroid.show('Location detected successfully', ToastAndroid.SHORT);
+            ToastAndroid.show(
+              filled ? 'Location & address detected' : 'Location detected (address lookup failed)',
+              ToastAndroid.SHORT,
+            );
           }
         },
         (error) => {
@@ -293,9 +348,14 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       return false;
     }
 
-    // 6. Zones Validation
-    if (!formData.zonesServed || formData.zonesServed.length === 0) {
-      showToast('Please select at least one zone to serve', 'error');
+    // 6. Serviceable Pincodes Validation
+    if (!formData.serviceablePincodes || formData.serviceablePincodes.length === 0) {
+      showToast('Please select at least one serviceable pincode', 'error');
+      return false;
+    }
+    const pincodeFmt = /^\d{6}$/;
+    if (!formData.serviceablePincodes.every((p) => pincodeFmt.test(p))) {
+      showToast('Serviceable pincodes must be 6 digits', 'error');
       return false;
     }
 
@@ -700,26 +760,33 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
                   />
                 </View>
               </View>
-              <Text style={styles.hint}>Used for geofencing-based delivery matching. Use "Detect Location" while at the kitchen.</Text>
+              <Text style={styles.hint}>Used for geofencing-based delivery matching. Tap "Detect Location" while at the kitchen — it will also auto-fill the address fields above.</Text>
             </View>
 
-            {/* Zones Served */}
+            {/* Serviceable Pincodes */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                Zones Served <Text style={styles.required}>*</Text>
+                Serviceable Pincodes <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.zonePicker}
-                onPress={() => setZonePickerVisible(true)}
-                disabled={loading}>
+                onPress={() => setPincodePickerVisible(true)}
+                disabled={loading || !formData.latitude || !formData.longitude}>
                 <Icon name="map-marker-multiple" size={20} color={colors.primary} />
                 <Text style={styles.zonePickerText}>
-                  {formData.zonesServed.length === 0
-                    ? 'Select zones'
-                    : `${formData.zonesServed.length} ${formData.zonesServed.length === 1 ? 'zone' : 'zones'} selected`}
+                  {!formData.latitude || !formData.longitude
+                    ? 'Set kitchen location first'
+                    : formData.serviceablePincodes.length === 0
+                    ? 'Select pincodes'
+                    : `${formData.serviceablePincodes.length} pincode${formData.serviceablePincodes.length === 1 ? '' : 's'} selected`}
                 </Text>
                 <Icon name="chevron-right" size={20} color={colors.textMuted} />
               </TouchableOpacity>
+              {formData.serviceablePincodes.length > 0 && (
+                <Text style={styles.hint}>
+                  {formData.serviceablePincodes.join(', ')}
+                </Text>
+              )}
             </View>
 
             {/* Delivery Radii */}
@@ -930,11 +997,13 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         </View>
       </Modal>
 
-      <ZonePickerModal
-        visible={zonePickerVisible}
-        selectedZoneIds={formData.zonesServed}
-        onClose={() => setZonePickerVisible(false)}
-        onSave={(zoneIds) => updateField('zonesServed', zoneIds)}
+      <PincodePickerModal
+        visible={pincodePickerVisible}
+        selectedPincodes={formData.serviceablePincodes}
+        latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
+        longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
+        onClose={() => setPincodePickerVisible(false)}
+        onSave={(pincodes) => updateField('serviceablePincodes', pincodes)}
       />
     </>
   );

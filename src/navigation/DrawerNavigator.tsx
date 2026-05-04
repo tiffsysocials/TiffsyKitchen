@@ -17,6 +17,7 @@ import OrdersNavigator from './OrdersNavigator';
 import KitchenNavigator from './KitchenNavigator';
 import { KitchensManagementScreen, KitchenDetailScreen, BatchManagementScreen, BatchManagementLandingScreen, KitchenApprovalsScreen, KitchenProfileScreen } from '../modules/kitchens/screens';
 import { ZonesManagementScreen } from '../modules/zones/screens/ZonesManagementScreen';
+import { PincodesManagementScreen } from '../modules/pincodes/screens/PincodesManagementScreen';
 import { SubscriptionsScreen, SubscriptionsScreenSimple } from '../modules/subscriptions';
 import AutoOrderAddonsScreen from '../modules/orders/screens/AutoOrderAddonsScreen';
 import { MenuManagementScreen } from '../modules/menu/screens/MenuManagementScreen';
@@ -242,6 +243,10 @@ export default function DrawerNavigator({ onLogout }: { onLogout: () => void }) 
       <Drawer.Screen name="DriverOrdersBatches" component={DriverOrdersBatchesScreen} />
 
       <Drawer.Screen name="Zones" component={ZonesManagementScreen} />
+
+      <Drawer.Screen name="Pincodes">
+        {(props) => <PincodesManagementScreen onMenuPress={() => props.navigation.toggleDrawer()} />}
+      </Drawer.Screen>
 
       <Drawer.Screen name="Subscriptions" component={SubscriptionsScreenSimple} />
 

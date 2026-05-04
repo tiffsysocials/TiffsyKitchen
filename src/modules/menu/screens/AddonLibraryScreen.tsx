@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   Switch,
+  Image,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -164,16 +165,27 @@ export const AddonLibraryScreen: React.FC<AddonLibraryScreenProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.addonContent}>
-        <View style={styles.addonHeader}>
-          <Text style={styles.addonName}>{item.name}</Text>
-          <DietaryBadge dietaryType={item.dietaryType} size="small" />
-        </View>
+        <View style={styles.addonTopRow}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.addonThumbnail} resizeMode="cover" />
+          ) : (
+            <View style={[styles.addonThumbnail, styles.addonThumbnailPlaceholder]}>
+              <Icon name="restaurant" size={24} color="#9ca3af" />
+            </View>
+          )}
+          <View style={styles.addonTopText}>
+            <View style={styles.addonHeader}>
+              <Text style={styles.addonName}>{item.name}</Text>
+              <DietaryBadge dietaryType={item.dietaryType} size="small" />
+            </View>
 
-        {item.description && (
-          <Text style={styles.addonDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        )}
+            {item.description && (
+              <Text style={styles.addonDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+          </View>
+        </View>
 
         <View style={styles.addonFooter}>
           <View style={styles.priceContainer}>
@@ -386,6 +398,26 @@ const styles = StyleSheet.create({
   },
   addonContent: {
     padding: 12,
+  },
+  addonTopRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  addonTopText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  addonThumbnail: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  addonThumbnailPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   addonHeader: {
     flexDirection: 'row',

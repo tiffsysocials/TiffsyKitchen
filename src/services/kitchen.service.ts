@@ -35,7 +35,7 @@ export interface CreateKitchenRequest {
   description?: string;
   cuisineTypes: string[];
   address: Address;
-  zonesServed: string[];
+  serviceablePincodes: string[];
   operatingHours: OperatingHours;
   contactPhone?: string;
   contactEmail?: string;
@@ -63,8 +63,8 @@ export interface UpdateFlagsRequest {
   gourmetFlag?: boolean;
 }
 
-export interface UpdateZonesRequest {
-  zonesServed: string[];
+export interface UpdateServiceablePincodesRequest {
+  serviceablePincodes: string[];
 }
 
 export interface SuspendKitchenRequest {
@@ -79,7 +79,7 @@ export interface RegisterKitchenWithOtpRequest {
   name: string;
   cuisineTypes: string[];
   address: Address;
-  zonesServed: string[];
+  serviceablePincodes: string[];
   operatingHours: OperatingHours;
   contactPhone: string;
   contactEmail?: string;
@@ -230,17 +230,22 @@ class KitchenService {
   }
 
   /**
-   * Update zones served by kitchen
+   * Update serviceable pincodes for a kitchen.
+   * Backend resolves each pincode to a Zone (auto-creates any missing) and
+   * stores the resulting ObjectIds on kitchen.zonesServed.
    */
-  async updateZones(kitchenId: string, data: UpdateZonesRequest): Promise<Kitchen> {
+  async updateServiceablePincodes(
+    kitchenId: string,
+    data: UpdateServiceablePincodesRequest
+  ): Promise<Kitchen> {
     try {
       const response = await apiService.patch<ApiResponse<{ kitchen: Kitchen }>>(
-        `/api/kitchens/${kitchenId}/zones`,
+        `/api/kitchens/${kitchenId}/pincodes`,
         data
       );
       return response.data.kitchen;
     } catch (error) {
-      console.error('Error updating kitchen zones:', error);
+      console.error('Error updating kitchen serviceable pincodes:', error);
       throw error;
     }
   }

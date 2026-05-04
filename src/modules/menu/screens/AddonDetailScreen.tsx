@@ -7,13 +7,26 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
 import { addonService } from '../../../services/addon.service';
-import { Addon, DietaryType, CreateAddonRequest } from '../../../types/api.types';
+import { Addon, DietaryType, CreateAddonRequest, AddonImageFile } from '../../../types/api.types';
+
+// Lazy-load react-native-image-picker (matches BannerFormModal pattern)
+let launchImageLibrary: any = null;
+try {
+  const picker = require('react-native-image-picker');
+  launchImageLibrary = picker.launchImageLibrary;
+} catch {
+  // Library not installed — user will see install prompt on tap
+}
+
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 interface AddonDetailScreenProps {
   addonId?: string;
@@ -43,6 +56,9 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
   const [minQuantity, setMinQuantity] = useState('0');
   const [maxQuantity, setMaxQuantity] = useState('10');
   const [displayOrder, setDisplayOrder] = useState('1');
+  const [selectedImage, setSelectedImage] = useState<AddonImageFile | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | undefined>(undefined);
+  const [imageSizeWarning, setImageSizeWarning] = useState(false);
 
   useEffect(() => {
     if (isEditMode && addonId) {
@@ -63,12 +79,42 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
       setMinQuantity(String(loadedAddon.minQuantity));
       setMaxQuantity(String(loadedAddon.maxQuantity));
       setDisplayOrder(String(loadedAddon.displayOrder));
+      setExistingImageUrl(loadedAddon.image);
     } catch (error) {
       console.error('Error loading addon:', error);
       showError('Error', 'Failed to load add-on');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePickImage = () => {
+    if (!launchImageLibrary) {
+      Alert.alert(
+        'Library Required',
+        'Install react-native-image-picker to enable image uploads:\n\nnpm install react-native-image-picker',
+      );
+      return;
+    }
+
+    launchImageLibrary(
+      { mediaType: 'photo', quality: 0.9, includeBase64: false },
+      (response: any) => {
+        if (response.didCancel || response.errorCode) return;
+
+        const asset = response.assets?.[0];
+        if (!asset) return;
+
+        const oversized = (asset.fileSize ?? 0) > MAX_IMAGE_SIZE_BYTES;
+        setImageSizeWarning(oversized);
+
+        setSelectedImage({
+          uri: asset.uri ?? '',
+          name: asset.fileName ?? `addon_${Date.now()}.jpg`,
+          type: asset.type ?? 'image/jpeg',
+        });
+      },
+    );
   };
 
   const validateForm = (): boolean => {
@@ -100,6 +146,11 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
       return false;
     }
 
+    if (imageSizeWarning) {
+      showWarning('Validation Error', 'Image exceeds 2 MB limit. Please choose a smaller file.');
+      return false;
+    }
+
     return true;
   };
 
@@ -118,6 +169,7 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
         maxQuantity: Number(maxQuantity),
         isAvailable: true,
         displayOrder: Number(displayOrder),
+        imageFile: selectedImage ?? undefined,
       };
 
       if (isEditMode && addonId) {
@@ -188,6 +240,39 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
       </GradientBox>
 
       <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
+        {/* Image Picker */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Photo</Text>
+          <TouchableOpacity style={styles.imagePicker} onPress={handlePickImage} activeOpacity={0.8}>
+            {selectedImage?.uri || existingImageUrl ? (
+              <Image
+                source={{ uri: selectedImage?.uri || existingImageUrl! }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Icon name="add-photo-alternate" size={40} color="#FE8733" />
+                <Text style={styles.imagePlaceholderText}>Tap to add a photo</Text>
+                <Text style={styles.imageDimHint}>Recommended: square image (1:1)</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {(selectedImage?.uri || existingImageUrl) && (
+            <TouchableOpacity style={styles.changeImageBtn} onPress={handlePickImage}>
+              <Icon name="swap-horiz" size={16} color="#FE8733" />
+              <Text style={styles.changeImageText}>
+                {existingImageUrl && !selectedImage ? 'Replace photo' : 'Change photo'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text style={[styles.hint, imageSizeWarning && styles.hintWarning]}>
+            {imageSizeWarning
+              ? '⚠️ File exceeds 2 MB limit — please choose a smaller image.'
+              : 'Max file size: 2 MB · Images only'}
+          </Text>
+        </View>
+
         {/* Name */}
         <View style={styles.field}>
           <Text style={styles.label}>Name *</Text>
@@ -408,6 +493,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginTop: 4,
+  },
+  hintWarning: {
+    color: '#d97706',
+    fontWeight: '500',
+  },
+  imagePicker: {
+    borderWidth: 2,
+    borderColor: 'rgba(254, 135, 51, 0.35)',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fff7ed',
+  },
+  previewImage: {
+    width: '100%',
+    aspectRatio: 1,
+  },
+  imagePlaceholder: {
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#FE8733',
+    fontWeight: '600',
+  },
+  imageDimHint: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  changeImageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+  },
+  changeImageText: {
+    fontSize: 13,
+    color: '#FE8733',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   radioGroup: {
     flexDirection: 'row',
