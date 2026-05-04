@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -30,7 +29,7 @@ import {
 const PRIMARY_COLOR = '#FE8733';
 
 export const CronJobsTab: React.FC = () => {
-  const { showSuccess, showError } = useAlert();
+  const { showSuccess, showError, showConfirm } = useAlert();
   const [selectedMealWindow, setSelectedMealWindow] = useState<'LUNCH' | 'DINNER'>('LUNCH');
   const [promoteMealWindow, setPromoteMealWindow] = useState<'LUNCH' | 'DINNER'>('LUNCH');
   const [dryRun, setDryRun] = useState(false);
@@ -123,10 +122,10 @@ export const CronJobsTab: React.FC = () => {
     message: string,
     onConfirm: () => void,
   ) => {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', style: 'destructive', onPress: onConfirm },
-    ]);
+    showConfirm(title, message, onConfirm, undefined, {
+      confirmText: 'Confirm',
+      isDestructive: true,
+    });
   };
 
   const renderMealWindowSelector = (

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -17,6 +16,7 @@ import kitchenService from '../../../services/kitchen.service';
 import { ordersService } from '../../../services/orders.service';
 import { Batch, BatchStatus, MealWindow, Kitchen } from '../../../types/api.types';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface BatchManagementScreenProps {
   route: {
@@ -118,6 +118,7 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
   navigation,
 }) => {
   const { kitchenId, kitchenName } = route.params;
+  const { showError, showSuccess, showConfirm, showWarning } = useAlert();
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -139,7 +140,7 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
       setKitchen(kitchenData);
     } catch (error) {
       console.error('Error loading kitchen data:', error);
-      Alert.alert('Error', 'Failed to load kitchen data');
+      showError('Error', 'Failed to load kitchen data');
     }
   };
 
@@ -181,7 +182,7 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
       setBatches([]);
     } catch (error) {
       console.error('Error loading batches:', error);
-      Alert.alert('Error', 'Failed to load batches');
+      showError('Error', 'Failed to load batches');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -189,86 +190,78 @@ export const BatchManagementScreen: React.FC<BatchManagementScreenProps> = ({
   };
 
   const handleAutoBatch = async () => {
-    Alert.alert(
+    showConfirm(
       'Auto-Batch Orders',
       `Create batches for ${selectedMealWindow} orders?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Batch Orders',
-          onPress: async () => {
-            setIsBatching(true);
-            try {
-              const result = await deliveryService.autoBatchOrders({
-                mealWindow: selectedMealWindow,
-                kitchenId,
-              });
+      async () => {
+        setIsBatching(true);
+        try {
+          const result = await deliveryService.autoBatchOrders({
+            mealWindow: selectedMealWindow,
+            kitchenId,
+          });
 
-              // Backend quirk: actual data is in result.error (same as orders endpoint)
-              const responseData = result.error || result.data || result;
-              const batchesCreated = responseData?.batchesCreated ?? 0;
-              const ordersProcessed = responseData?.ordersProcessed ?? 0;
+          // Backend quirk: actual data is in result.error (same as orders endpoint)
+          const responseData = result.error || result.data || result;
+          const batchesCreated = responseData?.batchesCreated ?? 0;
+          const ordersProcessed = responseData?.ordersProcessed ?? 0;
 
-              Alert.alert(
-                'Success',
-                `Created ${batchesCreated} batch(es) with ${ordersProcessed} order(s)`
-              );
+          showSuccess(
+            'Success',
+            `Created ${batchesCreated} batch(es) with ${ordersProcessed} order(s)`
+          );
 
-              await loadBatches();
-              await loadOrderCount();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to create batches');
-            } finally {
-              setIsBatching(false);
-            }
-          },
-        },
-      ]
+          await loadBatches();
+          await loadOrderCount();
+        } catch (error: any) {
+          showError('Error', error.message || 'Failed to create batches');
+        } finally {
+          setIsBatching(false);
+        }
+      },
+      undefined,
+      { confirmText: 'Batch Orders' }
     );
   };
 
   const handleDispatch = async () => {
     if (!canDispatchMealWindow(kitchen, selectedMealWindow)) {
-      Alert.alert(
+      showWarning(
         'Cannot Dispatch Yet',
         `${selectedMealWindow} meal window ends in ${getTimeUntilDispatch(kitchen, selectedMealWindow)}. Dispatch is only allowed after the meal window ends.`
       );
       return;
     }
 
-    Alert.alert(
+    showConfirm(
       'Dispatch Batches',
       `Dispatch all ${selectedMealWindow} batches to drivers?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Dispatch',
-          onPress: async () => {
-            setIsDispatching(true);
-            try {
-              const result = await deliveryService.dispatchBatches({
-                mealWindow: selectedMealWindow,
-                kitchenId,
-              });
+      async () => {
+        setIsDispatching(true);
+        try {
+          const result = await deliveryService.dispatchBatches({
+            mealWindow: selectedMealWindow,
+            kitchenId,
+          });
 
-              // Backend quirk: actual data is in result.error (same as orders endpoint)
-              const responseData = result.error || result.data || result;
-              const batchesDispatched = responseData?.batchesDispatched ?? 0;
+          // Backend quirk: actual data is in result.error (same as orders endpoint)
+          const responseData = result.error || result.data || result;
+          const batchesDispatched = responseData?.batchesDispatched ?? 0;
 
-              Alert.alert(
-                'Success',
-                `Dispatched ${batchesDispatched} batch(es) to drivers`
-              );
+          showSuccess(
+            'Success',
+            `Dispatched ${batchesDispatched} batch(es) to drivers`
+          );
 
-              await loadBatches();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to dispatch batches');
-            } finally {
-              setIsDispatching(false);
-            }
-          },
-        },
-      ]
+          await loadBatches();
+        } catch (error: any) {
+          showError('Error', error.message || 'Failed to dispatch batches');
+        } finally {
+          setIsDispatching(false);
+        }
+      },
+      undefined,
+      { confirmText: 'Dispatch' }
     );
   };
 

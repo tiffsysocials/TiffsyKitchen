@@ -13,13 +13,16 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NearbyPincode } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import pincodeService from '../../../services/pincode.service';
+import pincodeService, { NearbyPincodesMeta } from '../../../services/pincode.service';
 
 interface PincodePickerModalProps {
   visible: boolean;
   selectedPincodes: string[];
   latitude?: number;
   longitude?: number;
+  /** Hints from the kitchen form. Used as fallback if Google reverse-geocode fails. */
+  cityHint?: string;
+  stateHint?: string;
   onClose: () => void;
   onSave: (pincodes: string[]) => void;
 }
@@ -31,6 +34,8 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
   selectedPincodes,
   latitude,
   longitude,
+  cityHint,
+  stateHint,
   onClose,
   onSave,
 }) => {
@@ -38,6 +43,7 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
   const [filtered, setFiltered] = useState<NearbyPincode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<NearbyPincodesMeta | undefined>(undefined);
   const [searchText, setSearchText] = useState('');
   const [radiusKm, setRadiusKm] = useState(10);
   const [tempSelected, setTempSelected] = useState<string[]>(selectedPincodes);
@@ -46,27 +52,32 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
     if (latitude == null || longitude == null) {
       setPincodes([]);
       setFiltered([]);
+      setMeta(undefined);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const list = await pincodeService.getNearbyPincodes({
+      const result = await pincodeService.getNearbyPincodes({
         latitude,
         longitude,
         radiusKm,
+        cityHint,
+        stateHint,
       });
-      setPincodes(list);
-      setFiltered(list);
+      setPincodes(result.pincodes);
+      setFiltered(result.pincodes);
+      setMeta(result.meta);
     } catch (err: any) {
       console.error('Error loading nearby pincodes:', err);
       setError(err?.message || 'Failed to load pincodes');
       setPincodes([]);
       setFiltered([]);
+      setMeta(undefined);
     } finally {
       setLoading(false);
     }
-  }, [latitude, longitude, radiusKm]);
+  }, [latitude, longitude, radiusKm, cityHint, stateHint]);
 
   useEffect(() => {
     if (visible) {
@@ -226,6 +237,37 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
                       ? 'No matching pincodes'
                       : `No pincodes within ${radiusKm} km. Try a larger radius.`}
                   </Text>
+                  {meta && !searchText && (
+                    <View style={styles.metaBox}>
+                      {meta.geocodeFailed && !meta.usedHint && (
+                        <Text style={styles.metaWarn}>
+                          Backend couldn't reverse-geocode this location and no city hint
+                          was provided. Check that the kitchen address has city + state filled
+                          in, and that the backend has GOOGLE_MAPS_API_KEY set (restart required
+                          after .env changes).
+                        </Text>
+                      )}
+                      {meta.geocodeFailed && meta.usedHint && (
+                        <Text style={styles.metaWarn}>
+                          Reverse-geocode failed; tried "{meta.enrichmentCity}" via India Post —
+                          got {meta.enrichmentAddedCount} new pincodes. They may not be in radius;
+                          try a larger one.
+                        </Text>
+                      )}
+                      {!meta.geocodeFailed && meta.triggeredEnrichment && !meta.enrichmentRan && (
+                        <Text style={styles.metaWarn}>
+                          City "{meta.enrichmentCity}" was already cached but has no pincodes in
+                          this radius. Try a larger radius, or unwarm the city to refetch.
+                        </Text>
+                      )}
+                      {!meta.triggeredEnrichment && meta.initialLocalCount === 0 && (
+                        <Text style={styles.metaWarn}>
+                          Local DB is empty for this area but enrichment did not trigger.
+                          This is unexpected — please check backend logs.
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               }
             />
@@ -410,6 +452,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  metaBox: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  metaWarn: {
+    fontSize: 11,
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+    padding: spacing.sm,
+    borderRadius: spacing.borderRadiusSm,
+    lineHeight: 16,
+    textAlign: 'left',
   },
   retryButton: {
     marginTop: spacing.md,

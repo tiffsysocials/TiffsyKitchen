@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -17,6 +16,7 @@ import { colors } from '../../../theme/colors';
 import { menuManagementService } from '../../../services/menu-management.service';
 import { MenuItem, MenuType, MealWindow, MenuItemStatus } from '../../../types/api.types';
 import { MenuItemCard } from '../components/MenuItemCard';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface MenuListScreenNewProps {
   kitchenId: string;
@@ -35,6 +35,7 @@ export const MenuListScreenNew: React.FC<MenuListScreenNewProps> = ({
   onBack,
   userRole,
 }) => {
+  const { showError } = useAlert();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -54,12 +55,12 @@ export const MenuListScreenNew: React.FC<MenuListScreenNewProps> = ({
       setFilteredItems(response.menuItems);
     } catch (error) {
       console.error('Error fetching menu items:', error);
-      Alert.alert('Error', 'Failed to load menu items');
+      showError('Error', 'Failed to load menu items');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [kitchenId]);
+  }, [kitchenId, showError]);
 
   useEffect(() => {
     fetchMenuItems();
@@ -108,7 +109,7 @@ export const MenuListScreenNew: React.FC<MenuListScreenNewProps> = ({
       );
     } catch (error) {
       console.error('Error toggling availability:', error);
-      Alert.alert('Error', 'Failed to update availability');
+      showError('Error', 'Failed to update availability');
     }
   };
 

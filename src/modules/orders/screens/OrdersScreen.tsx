@@ -8,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +17,7 @@ import OrderCardAdmin from '../components/OrderCardAdmin';
 import OrderStatsCard from '../components/OrderStatsCard';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { useAlert } from '../../../hooks/useAlert';
 
 const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -36,6 +36,7 @@ interface OrdersScreenProps {
 }
 
 const OrdersScreen = ({ onMenuPress, navigation }: OrdersScreenProps) => {
+  const { showInfo } = useAlert();
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
 
@@ -80,7 +81,7 @@ const OrdersScreen = ({ onMenuPress, navigation }: OrdersScreenProps) => {
       navigation.navigate('OrderDetail', { orderId });
     } else {
       // Fallback: show alert if navigation is not available
-      Alert.alert(
+      showInfo(
         'Order Details',
         `Order ID: ${orderId}\n\nNote: Order detail screen requires React Navigation to be configured.`,
       );

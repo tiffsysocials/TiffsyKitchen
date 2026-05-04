@@ -9,15 +9,16 @@ import {
   StyleSheet,
   ActivityIndicator,
   Switch,
-  FlatList,
   Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import pincodeDirectory from 'india-pincode-lookup';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { ZoneFormState, ZoneFormErrors, INDIAN_STATES, TIMEZONES } from '../models/types';
+import { ZoneFormState, ZoneFormErrors, TIMEZONES } from '../models/types';
 import { Zone } from '../../../types/api.types';
+import { SearchableSelect } from '../../../components/common/SearchableSelect';
+import { INDIAN_STATES, getCitiesForState } from '../../../utils/indiaLocations';
 
 // Type for pincode lookup result
 interface PincodeData {
@@ -53,8 +54,6 @@ export const ZoneFormModal: React.FC<ZoneFormModalProps> = ({
   });
   const [errors, setErrors] = useState<ZoneFormErrors>({});
   const [saving, setSaving] = useState(false);
-  const [stateModalVisible, setStateModalVisible] = useState(false);
-  const [timezoneModalVisible, setTimezoneModalVisible] = useState(false);
 
   // Pincode autocomplete states
   const [pincodeSuggestions, setPincodeSuggestions] = useState<PincodeData[]>([]);
@@ -399,87 +398,54 @@ export const ZoneFormModal: React.FC<ZoneFormModalProps> = ({
               ) : null}
             </View>
 
-            {/* City */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                City <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.inputWrapper}>
-                <Icon
-                  name="city"
-                  size={20}
-                  color={colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={[
-                    styles.inputWithIcon,
-                    errors.city && styles.inputError,
-                  ]}
-                  value={formData.city}
-                  onChangeText={(text) => handleChange('city', text)}
-                  placeholder="Enter city"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              {errors.city ? (
-                <Text style={styles.errorText}>{errors.city}</Text>
-              ) : null}
-            </View>
-
             {/* State */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                State <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.pickerButton,
-                  errors.state && styles.inputError,
-                ]}
-                onPress={() => setStateModalVisible(true)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Icon
-                    name="map"
-                    size={20}
-                    color={colors.textMuted}
-                    style={styles.inputIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.pickerButtonText,
-                      !formData.state && styles.pickerPlaceholder,
-                    ]}>
-                    {formData.state || 'Select State'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              {errors.state ? (
-                <Text style={styles.errorText}>{errors.state}</Text>
-              ) : null}
+              <SearchableSelect
+                label="State"
+                required
+                iconName="map"
+                placeholder="Select state"
+                value={formData.state}
+                options={INDIAN_STATES}
+                error={errors.state}
+                onChange={(v) => {
+                  const newCities = getCitiesForState(v);
+                  setFormData((prev) => ({
+                    ...prev,
+                    state: v,
+                    city: newCities.includes(prev.city) ? prev.city : prev.city, // keep existing city even if not in new list (auto-filled from pincode)
+                  }));
+                  if (errors.state) setErrors((p) => ({ ...p, state: undefined }));
+                }}
+              />
+            </View>
+
+            {/* City */}
+            <View style={styles.formGroup}>
+              <SearchableSelect
+                label="City"
+                required
+                iconName="city"
+                placeholder="Select city"
+                value={formData.city}
+                options={getCitiesForState(formData.state)}
+                error={errors.city}
+                searchPlaceholder="Search cities…"
+                onChange={(v) => handleChange('city', v)}
+              />
             </View>
 
             {/* Timezone */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Timezone</Text>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setTimezoneModalVisible(true)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Icon
-                    name="clock-time-four"
-                    size={20}
-                    color={colors.textMuted}
-                    style={styles.inputIcon}
-                  />
-                  <Text style={styles.pickerButtonText}>
-                    {TIMEZONES.find((tz) => tz.value === formData.timezone)
-                      ?.label || 'Select Timezone'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
+              <SearchableSelect
+                label="Timezone"
+                iconName="clock-time-four"
+                placeholder="Select timezone"
+                value={formData.timezone}
+                options={TIMEZONES}
+                allowOther={false}
+                onChange={(v) => handleChange('timezone', v)}
+              />
             </View>
 
             {/* Display Order */}
@@ -626,79 +592,6 @@ export const ZoneFormModal: React.FC<ZoneFormModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* State Selection Modal */}
-        <Modal
-          visible={stateModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setStateModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select State</Text>
-                <TouchableOpacity onPress={() => setStateModalVisible(false)}>
-                  <Icon name="close" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={INDIAN_STATES}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      handleChange('state', item);
-                      setStateModalVisible(false);
-                    }}>
-                    <Text style={styles.modalItemText}>{item}</Text>
-                    {formData.state === item ? (
-                      <Icon name="check" size={20} color={colors.primary} />
-                    ) : null}
-                  </TouchableOpacity>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        {/* Timezone Selection Modal */}
-        <Modal
-          visible={timezoneModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setTimezoneModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Timezone</Text>
-                <TouchableOpacity
-                  onPress={() => setTimezoneModalVisible(false)}>
-                  <Icon name="close" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={TIMEZONES}
-                keyExtractor={(item) => item.value}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      handleChange('timezone', item.value);
-                      setTimezoneModalVisible(false);
-                    }}>
-                    <Text style={styles.modalItemText}>{item.label}</Text>
-                    {formData.timezone === item.value ? (
-                      <Icon name="check" size={20} color={colors.primary} />
-                    ) : null}
-                  </TouchableOpacity>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-              />
-            </View>
-          </View>
-        </Modal>
       </View>
     </Modal>
   );

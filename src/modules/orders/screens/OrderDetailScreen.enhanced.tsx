@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Order as APIOrder, OrderStatus } from '../../../types/api.types';
@@ -46,6 +47,9 @@ export const OrderDetailScreenEnhanced: React.FC<OrderDetailScreenProps> = ({
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showSuccess, showError, showWarning, showConfirm } = useAlert();
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
 
   /**
    * Fetch order details
@@ -108,36 +112,29 @@ export const OrderDetailScreenEnhanced: React.FC<OrderDetailScreenProps> = ({
    * Cancel order
    */
   const handleCancelOrder = () => {
-    // Alert.prompt is iOS-specific for text input, keeping it for cancellation reason
-    Alert.prompt(
-      'Cancel Order',
-      'Please provide a reason for cancellation:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async (reason) => {
-            if (!reason || !reason.trim()) {
-              showWarning('Error', 'Please provide a cancellation reason');
-              return;
-            }
+    setCancelReason('');
+    setCancelError('');
+    setCancelModalVisible(true);
+  };
 
-            try {
-              setUpdating(true);
-              const updatedOrder = await ordersService.cancelOrder(orderId, reason);
-              setOrder(updatedOrder);
-              showSuccess('Success', 'Order cancelled successfully');
-            } catch (err: any) {
-              console.error('Error cancelling order:', err);
-              showError('Error', err.message || 'Failed to cancel order');
-            } finally {
-              setUpdating(false);
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+  const handleConfirmCancel = async () => {
+    const trimmed = cancelReason.trim();
+    if (!trimmed) {
+      setCancelError('Please provide a cancellation reason');
+      return;
+    }
+    try {
+      setUpdating(true);
+      const updatedOrder = await ordersService.cancelOrder(orderId, trimmed);
+      setOrder(updatedOrder);
+      setCancelModalVisible(false);
+      showSuccess('Success', 'Order cancelled successfully');
+    } catch (err: any) {
+      console.error('Error cancelling order:', err);
+      showError('Error', err.message || 'Failed to cancel order');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   /**
@@ -510,6 +507,62 @@ export const OrderDetailScreenEnhanced: React.FC<OrderDetailScreenProps> = ({
           </TouchableOpacity>
         )}
       </View>
+
+      <Modal
+        visible={cancelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !updating && setCancelModalVisible(false)}
+      >
+        <View style={styles.cancelOverlay}>
+          <View style={styles.cancelContainer}>
+            <Text style={styles.cancelTitle}>Cancel Order</Text>
+            <Text style={styles.cancelMessage}>
+              Please provide a reason for cancellation:
+            </Text>
+            <TextInput
+              style={[styles.cancelInput, cancelError ? styles.cancelInputError : null]}
+              value={cancelReason}
+              onChangeText={(text) => {
+                setCancelReason(text);
+                if (cancelError) setCancelError('');
+              }}
+              placeholder="Enter cancellation reason..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              editable={!updating}
+              autoFocus
+            />
+            {!!cancelError && <Text style={styles.cancelErrorText}>{cancelError}</Text>}
+            <View style={styles.cancelActions}>
+              <TouchableOpacity
+                style={[styles.cancelDialogButton, styles.cancelCancelButton]}
+                onPress={() => setCancelModalVisible(false)}
+                disabled={updating}
+              >
+                <Text style={styles.cancelCancelText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.cancelDialogButton,
+                  styles.cancelConfirmButton,
+                  updating && { opacity: 0.6 },
+                ]}
+                onPress={handleConfirmCancel}
+                disabled={updating}
+              >
+                {updating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.cancelConfirmText}>Confirm</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -740,5 +793,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: spacing.sm,
+  },
+  cancelOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  cancelContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+  },
+  cancelTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  cancelMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  cancelInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#111827',
+    minHeight: 100,
+  },
+  cancelInputError: {
+    borderColor: '#ef4444',
+  },
+  cancelErrorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: 4,
+  },
+  cancelActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 16,
+  },
+  cancelDialogButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  cancelCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  cancelConfirmButton: {
+    backgroundColor: '#ef4444',
+  },
+  cancelConfirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

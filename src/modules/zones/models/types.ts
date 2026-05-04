@@ -55,29 +55,9 @@ export interface ZoneFormErrors {
   displayOrder?: string;
 }
 
-export const INDIAN_STATES = [
-  'Andhra Pradesh',
-  'Arunachal Pradesh',
-  'Assam',
-  'Bihar',
-  'Chhattisgarh',
-  'Goa',
-  'Gujarat',
-  'Haryana',
-  'Himachal Pradesh',
-  'Jharkhand',
-  'Karnataka',
-  'Kerala',
-  'Madhya Pradesh',
-  'Maharashtra',
-  'Rajasthan',
-  'Tamil Nadu',
-  'Telangana',
-  'Uttar Pradesh',
-  'West Bengal',
-  'Delhi',
-  'Other',
-];
+// Canonical list lives in src/utils/indiaLocations.ts; re-exported here for any
+// consumers still importing INDIAN_STATES from the zones module.
+export { INDIAN_STATES } from '../../../utils/indiaLocations';
 
 export const TIMEZONES = [
   { label: 'Asia/Kolkata (IST)', value: 'Asia/Kolkata' },

@@ -8,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {useQuery} from '@tanstack/react-query';
 import {ordersService} from '../../../services/orders.service';
@@ -17,6 +16,7 @@ import OrderCardAdminImproved from '../components/OrderCardAdminImproved';
 import OrderStatsCardImproved from '../components/OrderStatsCardImproved';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { useAlert } from '../../../hooks/useAlert';
 
 const STATUS_FILTERS: {label: string; value: OrderStatus | 'ALL'; icon: string}[] = [
   {label: 'All', value: 'ALL', icon: 'apps'},
@@ -35,6 +35,7 @@ interface OrdersScreenProps {
 }
 
 const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
+  const { showInfo } = useAlert();
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
 
@@ -76,7 +77,7 @@ const OrdersScreenImproved = ({onMenuPress, navigation}: OrdersScreenProps) => {
     if (navigation) {
       navigation.navigate('OrderDetail', {orderId});
     } else {
-      Alert.alert(
+      showInfo(
         'Order Details',
         `Order ID: ${orderId}\n\nNote: Order detail screen requires React Navigation to be configured.`,
       );

@@ -13,7 +13,6 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,6 +22,7 @@ import { colors } from '../../../theme/colors';
 import { Kitchen } from '../../../types/api.types';
 import { MenuManagementExample } from '../MenuManagementExample';
 import kitchenService from '../../../services/kitchen.service';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface MenuManagementMainProps {
   onMenuPress: () => void;
@@ -36,6 +36,7 @@ interface MenuManagementMainProps {
 export const MenuManagementMain: React.FC<MenuManagementMainProps> = ({
   onMenuPress,
 }) => {
+  const { showError } = useAlert();
   const [selectedKitchen, setSelectedKitchen] = useState<Kitchen | null>(null);
   const [kitchens, setKitchens] = useState<Kitchen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export const MenuManagementMain: React.FC<MenuManagementMainProps> = ({
       setKitchens(response.kitchens);
     } catch (error) {
       console.error('Error loading kitchens:', error);
-      Alert.alert('Error', 'Failed to load kitchens. Please try again.');
+      showError('Error', 'Failed to load kitchens. Please try again.');
     } finally {
       setLoading(false);
     }

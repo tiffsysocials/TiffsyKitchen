@@ -19,13 +19,13 @@ import {
   ActivityIndicator,
   Image,
   Switch,
-  Alert,
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { Banner, CreateBannerRequest, UpdateBannerRequest } from '../../../services/banner.service';
+import { useAlert } from '../../../hooks/useAlert';
 
 // ─── react-native-image-picker (install if not present) ──────────────────────
 // npm install react-native-image-picker
@@ -61,6 +61,7 @@ export const BannerFormModal: React.FC<BannerFormModalProps> = ({
   onSave,
 }) => {
   const isEdit = banner !== null;
+  const { showInfo } = useAlert();
 
   // Form state
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(null);
@@ -97,7 +98,7 @@ export const BannerFormModal: React.FC<BannerFormModalProps> = ({
 
   const handlePickImage = () => {
     if (!launchImageLibrary) {
-      Alert.alert(
+      showInfo(
         'Library Required',
         'Install react-native-image-picker to enable image uploads:\n\nnpm install react-native-image-picker',
       );

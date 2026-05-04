@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
@@ -19,6 +18,7 @@ import { Kitchen, MealWindow, Order } from '../../../types/api.types';
 import { BatchHistoryScreen } from './BatchHistoryScreen';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface BatchManagementLandingScreenProps {
   navigation?: any;
@@ -29,6 +29,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   navigation,
   onMenuPress,
 }) => {
+  const { showError, showSuccess, showConfirm } = useAlert();
   const [kitchens, setKitchens] = useState<Kitchen[]>([]);
   const [filteredKitchens, setFilteredKitchens] = useState<Kitchen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +126,7 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
       setOrders(result.orders);
     } catch (error) {
       console.error('Error loading kitchen orders:', error);
-      Alert.alert('Error', 'Failed to load orders');
+      showError('Error', 'Failed to load orders');
     } finally {
       setLoadingOrders(false);
     }
@@ -306,90 +307,77 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   const handleAutoBatch = async () => {
     if (!selectedKitchen) return;
 
-    Alert.alert(
+    showConfirm(
       'Batch Orders',
       `Create batches for ${selectedMealWindow} from ${selectedKitchen.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Batch',
-          onPress: async () => {
-            setIsProcessing(true);
-            try {
-              const result = await deliveryService.autoBatchOrders({
-                mealWindow: selectedMealWindow,
-                kitchenId: selectedKitchen._id,
-              });
+      async () => {
+        setIsProcessing(true);
+        try {
+          const result = await deliveryService.autoBatchOrders({
+            mealWindow: selectedMealWindow,
+            kitchenId: selectedKitchen._id,
+          });
 
-              console.log('====== AUTO BATCH RESPONSE ======');
-              console.log('Full Result:', JSON.stringify(result, null, 2));
-              console.log('result.success:', result.success);
-              console.log('result.data:', result.data);
-              console.log('=================================');
+          console.log('====== AUTO BATCH RESPONSE ======');
+          console.log('Full Result:', JSON.stringify(result, null, 2));
+          console.log('result.success:', result.success);
+          console.log('result.data:', result.data);
+          console.log('=================================');
 
-              // Backend now consistently returns data in 'data' field
-              const batchesCreated = result.data?.batchesCreated ?? 0;
-              const batchesUpdated = result.data?.batchesUpdated ?? 0;
-              const ordersProcessed = result.data?.ordersProcessed ?? 0;
+          // Backend now consistently returns data in 'data' field
+          const batchesCreated = result.data?.batchesCreated ?? 0;
+          const batchesUpdated = result.data?.batchesUpdated ?? 0;
+          const ordersProcessed = result.data?.ordersProcessed ?? 0;
 
-              const message = batchesUpdated > 0
-                ? `${batchesCreated} new batches created, ${batchesUpdated} batches updated with ${ordersProcessed} orders`
-                : `${batchesCreated} batches created with ${ordersProcessed} orders`;
+          const message = batchesUpdated > 0
+            ? `${batchesCreated} new batches created, ${batchesUpdated} batches updated with ${ordersProcessed} orders`
+            : `${batchesCreated} batches created with ${ordersProcessed} orders`;
 
-              Alert.alert('Success', message, [{ text: 'OK' }]);
+          showSuccess('Success', message);
 
-              // Reload data to reflect changes
-              if (selectedKitchen) {
-                await Promise.all([
-                  loadKitchenOrders(selectedKitchen._id),
-                  loadBatchData(selectedKitchen._id), // Load all batches
-                  loadDeliveryStats(selectedKitchen._id),
-                ]);
-              }
-            } catch (error: any) {
-              console.error('====== AUTO BATCH ERROR ======');
-              console.error('Error:', error);
-              console.error('Error Response:', error.response);
-              console.error('==============================');
+          // Reload data to reflect changes
+          if (selectedKitchen) {
+            await Promise.all([
+              loadKitchenOrders(selectedKitchen._id),
+              loadBatchData(selectedKitchen._id), // Load all batches
+              loadDeliveryStats(selectedKitchen._id),
+            ]);
+          }
+        } catch (error: any) {
+          console.error('====== AUTO BATCH ERROR ======');
+          console.error('Error:', error);
+          console.error('Error Response:', error.response);
+          console.error('==============================');
 
-              // Use consistent error message from response
-              const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to create batches';
-              Alert.alert('Error', errorMessage);
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
+          // Use consistent error message from response
+          const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to create batches';
+          showError('Error', errorMessage);
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+      undefined,
+      { confirmText: 'Batch' }
     );
   };
 
   const handleDispatchBatches = async (forceDispatch: boolean = false) => {
     if (!forceDispatch && !canDispatchMealWindow(selectedMealWindow)) {
       const endTime = getMealWindowEndTimeFormatted(selectedMealWindow);
-      Alert.alert(
+      showConfirm(
         'Cannot Dispatch Yet',
         `Batches can only be dispatched after ${endTime} (${selectedMealWindow.toLowerCase()} window end time).\nTime remaining: ${getTimeUntilDispatch(selectedMealWindow)}\n\nWould you like to force dispatch anyway?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Force Dispatch',
-            style: 'destructive',
-            onPress: () => handleDispatchBatches(true),
-          },
-        ]
+        () => handleDispatchBatches(true),
+        undefined,
+        { confirmText: 'Force Dispatch', isDestructive: true }
       );
       return;
     }
 
-    Alert.alert(
+    showConfirm(
       forceDispatch ? 'Force Dispatch Batches' : 'Dispatch Batches',
       `${forceDispatch ? 'Force dispatch' : 'Dispatch'} ${selectedMealWindow} batches to drivers?${forceDispatch ? '\n\nWarning: This will bypass the meal window time check.' : ''}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Dispatch',
-          onPress: async () => {
+      async () => {
             setIsProcessing(true);
 
             // 🔍 FRONTEND LOGS - Before Dispatch API Call
@@ -467,10 +455,9 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
                 console.log('✅ Data reloaded successfully');
               }
 
-              Alert.alert(
+              showSuccess(
                 'Success',
-                `${batchesDispatched} batches dispatched to drivers`,
-                [{ text: 'OK' }]
+                `${batchesDispatched} batches dispatched to drivers`
               );
             } catch (error: any) {
               console.error('===============================================');
@@ -490,27 +477,22 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
 
               // Check if this is a timing error that can be force-dispatched
               if (error.status === 400 && errorMessage.includes('Meal window ends in') && errorMessage.includes('forceDispatch')) {
-                Alert.alert(
+                showConfirm(
                   'Cannot Dispatch Yet',
                   errorMessage,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Force Dispatch',
-                      style: 'destructive',
-                      onPress: () => handleDispatchBatches(true),
-                    },
-                  ]
+                  () => handleDispatchBatches(true),
+                  undefined,
+                  { confirmText: 'Force Dispatch', isDestructive: true }
                 );
               } else {
-                Alert.alert('Error', errorMessage);
+                showError('Error', errorMessage);
               }
             } finally {
               setIsProcessing(false);
             }
           },
-        },
-      ]
+      undefined,
+      { confirmText: 'Dispatch', isDestructive: forceDispatch }
     );
   };
 

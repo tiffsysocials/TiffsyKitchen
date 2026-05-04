@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Switch,
   ActivityIndicator,
-  Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -48,6 +48,10 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
 
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [disableModalVisible, setDisableModalVisible] = useState(false);
+  const [disableReason, setDisableReason] = useState('');
+  const [disableError, setDisableError] = useState('');
+  const [disabling, setDisabling] = useState(false);
   const [item, setItem] = useState<MenuItem | null>(null);
 
   // Form state
@@ -136,13 +140,13 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
 
     setSaving(true);
     try {
-      const data: CreateMenuItemRequest | UpdateMenuItemRequest = {
+      // Base payload — meal window is added per-call below.
+      const basePayload: Omit<CreateMenuItemRequest, 'mealWindow' | 'mealWindows'> = {
         kitchenId,
         name: name.trim(),
         description: description.trim() || undefined,
         category,
         menuType,
-        ...(menuType === 'MEAL_MENU' && { mealWindows }),
         price: Number(price),
         discountedPrice: discountedPrice ? Number(discountedPrice) : undefined,
         portionSize: portionSize.trim() || undefined,
@@ -158,13 +162,126 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
       };
 
       if (isEditMode && itemId) {
-        await menuManagementService.updateMenuItem(itemId, data);
-        showSuccess('Success', 'Menu item updated successfully', () => {
+        // ------ EDIT FLOW ------
+        // One MenuItem in DB == one mealWindow. The current item keeps its window if still
+        // selected; any newly-toggled window spawns a new MenuItem alongside it.
+        if (menuType !== 'MEAL_MENU') {
+          await menuManagementService.updateMenuItem(itemId, basePayload as UpdateMenuItemRequest);
+          showSuccess('Success', 'Menu item updated successfully', () => {
+            onSaved();
+            onBack();
+          });
+        } else {
+          const currentWindow = item?.mealWindow ||
+            (item?.mealWindows && item.mealWindows[0]) ||
+            mealWindows[0];
+
+          // Window the existing item keeps: prefer the current one if still selected,
+          // else fall back to the first selected (= user is switching windows).
+          const targetWindow = mealWindows.includes(currentWindow as MealWindow)
+            ? currentWindow
+            : mealWindows[0];
+          const additionalWindows = mealWindows.filter(w => w !== targetWindow);
+
+          // 1. Update the existing item to its target window.
+          // 2. In parallel, create one new MenuItem for each additional window.
+          const updatePromise = menuManagementService.updateMenuItem(itemId, {
+            ...basePayload,
+            mealWindow: targetWindow,
+            mealWindows: targetWindow ? [targetWindow as MealWindow] : undefined,
+          } as UpdateMenuItemRequest);
+
+          const createPromises = additionalWindows.map(window =>
+            menuManagementService.createMenuItem({
+              ...basePayload,
+              mealWindow: window,
+              mealWindows: [window],
+            } as CreateMenuItemRequest),
+          );
+
+          const results = await Promise.allSettled([updatePromise, ...createPromises]);
+
+          const updateResult = results[0];
+          const createResults = results.slice(1);
+          const failedCreates = createResults.filter(r => r.status === 'rejected');
+
+          if (updateResult.status === 'rejected') {
+            // The primary update failed — propagate.
+            throw (updateResult as PromiseRejectedResult).reason;
+          }
+
+          if (additionalWindows.length === 0) {
+            showSuccess('Success', 'Menu item updated successfully', () => {
+              onSaved();
+              onBack();
+            });
+          } else if (failedCreates.length === 0) {
+            showSuccess(
+              'Success',
+              `Updated and added ${additionalWindows.length} new meal-window item(s).`,
+              () => {
+                onSaved();
+                onBack();
+              },
+            );
+          } else {
+            const failedWindows = additionalWindows.filter(
+              (_, i) => createResults[i].status === 'rejected',
+            );
+            const firstError = (failedCreates[0] as PromiseRejectedResult).reason;
+            showError(
+              'Partially saved',
+              `Updated the existing item, but failed to add: ${failedWindows.join(', ')}.\n${firstError?.message || ''}`,
+            );
+            onSaved();
+          }
+        }
+      } else if (menuType === 'MEAL_MENU' && mealWindows.length > 1) {
+        // Both Lunch + Dinner selected: create one MenuItem per meal window (parallel API calls).
+        const results = await Promise.allSettled(
+          mealWindows.map(window =>
+            menuManagementService.createMenuItem({
+              ...basePayload,
+              mealWindow: window,
+              mealWindows: [window],
+            } as CreateMenuItemRequest),
+          ),
+        );
+
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length === 0) {
+          showSuccess(
+            'Success',
+            `Created ${mealWindows.length} menu items (one per meal window).`,
+            () => {
+              onSaved();
+              onBack();
+            },
+          );
+        } else if (failed.length < mealWindows.length) {
+          // Partial success — surface the failed window(s) so admin can retry that one.
+          const failedWindows = mealWindows.filter((_, i) => results[i].status === 'rejected');
+          const firstError = (failed[0] as PromiseRejectedResult).reason;
+          showError(
+            'Partially saved',
+            `Created the other meal-window item but failed for: ${failedWindows.join(', ')}.\n${firstError?.message || ''}`,
+          );
           onSaved();
-          onBack();
-        });
+        } else {
+          // All failed.
+          const firstError = (failed[0] as PromiseRejectedResult).reason;
+          throw firstError;
+        }
       } else {
-        const newItem = await menuManagementService.createMenuItem(data as CreateMenuItemRequest);
+        // Single meal window (or ON_DEMAND_MENU).
+        const createPayload: CreateMenuItemRequest = {
+          ...basePayload,
+          ...(menuType === 'MEAL_MENU' && {
+            mealWindow: mealWindows[0],
+            mealWindows: [mealWindows[0]],
+          }),
+        } as CreateMenuItemRequest;
+        await menuManagementService.createMenuItem(createPayload);
         showSuccess('Success', 'Menu item created successfully', () => {
           onSaved();
           onBack();
@@ -199,24 +316,30 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
   };
 
   const handleDisable = () => {
-    // Alert.prompt is iOS-only, kept for the prompt functionality
-    Alert.prompt(
-      'Disable Menu Item',
-      'Please provide a reason for disabling this item:',
-      async (reason) => {
-        if (reason && reason.trim()) {
-          try {
-            await menuManagementService.disableMenuItem(itemId!, reason.trim());
-            showSuccess('Success', 'Menu item disabled', () => {
-              onSaved();
-              loadMenuItem();
-            });
-          } catch (error) {
-            showError('Error', 'Failed to disable menu item');
-          }
-        }
-      }
-    );
+    setDisableReason('');
+    setDisableError('');
+    setDisableModalVisible(true);
+  };
+
+  const handleConfirmDisable = async () => {
+    const trimmed = disableReason.trim();
+    if (!trimmed) {
+      setDisableError('Reason is required');
+      return;
+    }
+    setDisabling(true);
+    try {
+      await menuManagementService.disableMenuItem(itemId!, trimmed);
+      setDisableModalVisible(false);
+      showSuccess('Success', 'Menu item disabled', () => {
+        onSaved();
+        loadMenuItem();
+      });
+    } catch (error) {
+      showError('Error', 'Failed to disable menu item');
+    } finally {
+      setDisabling(false);
+    }
   };
 
   const handleEnable = async () => {
@@ -361,7 +484,7 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
               })}
             </View>
             <Text style={styles.helperText}>
-              Tap to toggle. Select both to serve the same thali for Lunch and Dinner.
+              Tap to toggle. Selecting both creates two menu items — one for Lunch, one for Dinner.
             </Text>
           </View>
         )}
@@ -533,6 +656,62 @@ export const MenuDetailScreen: React.FC<MenuDetailScreenProps> = ({
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={disableModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !disabling && setDisableModalVisible(false)}
+      >
+        <View style={styles.disableOverlay}>
+          <View style={styles.disableContainer}>
+            <Text style={styles.disableTitle}>Disable Menu Item</Text>
+            <Text style={styles.disableMessage}>
+              Please provide a reason for disabling this item:
+            </Text>
+            <TextInput
+              style={[styles.disableInput, disableError ? styles.disableInputError : null]}
+              value={disableReason}
+              onChangeText={(text) => {
+                setDisableReason(text);
+                if (disableError) setDisableError('');
+              }}
+              placeholder="Enter reason..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              editable={!disabling}
+              autoFocus
+            />
+            {!!disableError && <Text style={styles.disableErrorText}>{disableError}</Text>}
+            <View style={styles.disableActions}>
+              <TouchableOpacity
+                style={[styles.disableButton, styles.disableCancelButton]}
+                onPress={() => setDisableModalVisible(false)}
+                disabled={disabling}
+              >
+                <Text style={styles.disableCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.disableButton,
+                  styles.disableConfirmButton,
+                  disabling && { opacity: 0.6 },
+                ]}
+                onPress={handleConfirmDisable}
+                disabled={disabling}
+              >
+                {disabling ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.disableConfirmText}>Disable</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaScreen>
   );
 };
@@ -773,5 +952,81 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  disableOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  disableContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+  },
+  disableTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  disableMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  disableInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#111827',
+    minHeight: 100,
+  },
+  disableInputError: {
+    borderColor: '#ef4444',
+  },
+  disableErrorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: 4,
+  },
+  disableActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 16,
+  },
+  disableButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disableCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  disableCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  disableConfirmButton: {
+    backgroundColor: '#ef4444',
+  },
+  disableConfirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

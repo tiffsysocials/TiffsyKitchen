@@ -8,7 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   ScrollView,
-  Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme/colors';
@@ -84,6 +85,55 @@ export const DriverOrderManagementScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
+
+  type PromptConfig = {
+    title: string;
+    message: string;
+    placeholder: string;
+    confirmText: string;
+    keyboardType?: 'default' | 'number-pad';
+    maxLength?: number;
+    multiline?: boolean;
+    isDestructive?: boolean;
+    validate: (value: string) => string | null;
+    onSubmit: (value: string) => Promise<void> | void;
+  };
+
+  const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null);
+  const [promptValue, setPromptValue] = useState('');
+  const [promptError, setPromptError] = useState('');
+  const [promptSubmitting, setPromptSubmitting] = useState(false);
+
+  const openPrompt = (config: PromptConfig) => {
+    setPromptValue('');
+    setPromptError('');
+    setPromptConfig(config);
+  };
+
+  const closePrompt = () => {
+    if (promptSubmitting) return;
+    setPromptConfig(null);
+    setPromptValue('');
+    setPromptError('');
+  };
+
+  const handlePromptSubmit = async () => {
+    if (!promptConfig) return;
+    const error = promptConfig.validate(promptValue);
+    if (error) {
+      setPromptError(error);
+      return;
+    }
+    setPromptSubmitting(true);
+    try {
+      await promptConfig.onSubmit(promptValue);
+      setPromptConfig(null);
+      setPromptValue('');
+      setPromptError('');
+    } finally {
+      setPromptSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -195,72 +245,57 @@ export const DriverOrderManagementScreen: React.FC = () => {
   };
 
   const handleMarkDelivered = async (orderId: string, orderNumber: string) => {
-    // Note: Alert.prompt is iOS-only. Consider using a custom modal for cross-platform support.
-    Alert.prompt(
-      'Delivery OTP',
-      `Enter the 4-digit OTP from customer to confirm delivery of ${orderNumber}:`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async (otp?: string) => {
-            if (!otp || otp.length !== 4) {
-              showError('Error', 'Please enter a valid 4-digit OTP');
-              return;
-            }
-
-            try {
-              await deliveryService.updateOrderDeliveryStatus(orderId, {
-                status: 'DELIVERED',
-                proofOfDelivery: {
-                  type: 'OTP',
-                  value: otp,
-                },
-              });
-              showSuccess('Success', 'Order marked as delivered!');
-              loadActiveBatch();
-            } catch (error: any) {
-              showError('Error', error.message || 'Failed to mark order as delivered');
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'number-pad'
-    );
+    openPrompt({
+      title: 'Delivery OTP',
+      message: `Enter the 4-digit OTP from customer to confirm delivery of ${orderNumber}:`,
+      placeholder: 'Enter 4-digit OTP',
+      confirmText: 'Confirm',
+      keyboardType: 'number-pad',
+      maxLength: 4,
+      validate: (otp) => (!otp || otp.length !== 4 ? 'Please enter a valid 4-digit OTP' : null),
+      onSubmit: async (otp) => {
+        try {
+          await deliveryService.updateOrderDeliveryStatus(orderId, {
+            status: 'DELIVERED',
+            proofOfDelivery: {
+              type: 'OTP',
+              value: otp,
+            },
+          });
+          showSuccess('Success', 'Order marked as delivered!');
+          loadActiveBatch();
+        } catch (error: any) {
+          showError('Error', error.message || 'Failed to mark order as delivered');
+        }
+      },
+    });
   };
 
   const handleMarkFailed = async (orderId: string, orderNumber: string) => {
-    // Note: Alert.prompt is iOS-only. Consider using a custom modal for cross-platform support.
-    Alert.prompt(
-      'Order Failed',
-      `Why couldn't you deliver ${orderNumber}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          onPress: async (reason?: string) => {
-            if (!reason || reason.trim().length < 10) {
-              showError('Error', 'Please provide a detailed reason (min 10 characters)');
-              return;
-            }
-
-            try {
-              await deliveryService.updateOrderDeliveryStatus(orderId, {
-                status: 'FAILED',
-                failureReason: reason.trim(),
-              });
-              showSuccess('Order Marked Failed', 'The order has been marked as failed.');
-              loadActiveBatch();
-            } catch (error: any) {
-              showError('Error', error.message || 'Failed to mark order as failed');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    openPrompt({
+      title: 'Order Failed',
+      message: `Why couldn't you deliver ${orderNumber}?`,
+      placeholder: 'Provide a detailed reason...',
+      confirmText: 'Submit',
+      multiline: true,
+      isDestructive: true,
+      validate: (reason) =>
+        !reason || reason.trim().length < 10
+          ? 'Please provide a detailed reason (min 10 characters)'
+          : null,
+      onSubmit: async (reason) => {
+        try {
+          await deliveryService.updateOrderDeliveryStatus(orderId, {
+            status: 'FAILED',
+            failureReason: reason.trim(),
+          });
+          showSuccess('Order Marked Failed', 'The order has been marked as failed.');
+          loadActiveBatch();
+        } catch (error: any) {
+          showError('Error', error.message || 'Failed to mark order as failed');
+        }
+      },
+    });
   };
 
   const handleRefresh = useCallback(() => {
@@ -635,6 +670,70 @@ export const DriverOrderManagementScreen: React.FC = () => {
           />
         )}
       </View>
+
+      <Modal
+        visible={!!promptConfig}
+        transparent
+        animationType="fade"
+        onRequestClose={closePrompt}
+      >
+        <View style={styles.promptOverlay}>
+          <View style={styles.promptContainer}>
+            <Text style={styles.promptTitle}>{promptConfig?.title}</Text>
+            <Text style={styles.promptMessage}>{promptConfig?.message}</Text>
+            <TextInput
+              style={[
+                styles.promptInput,
+                promptConfig?.multiline && styles.promptInputMultiline,
+                promptError ? styles.promptInputError : null,
+              ]}
+              value={promptValue}
+              onChangeText={(text) => {
+                setPromptValue(text);
+                if (promptError) setPromptError('');
+              }}
+              placeholder={promptConfig?.placeholder}
+              placeholderTextColor={colors.textMuted}
+              keyboardType={promptConfig?.keyboardType ?? 'default'}
+              maxLength={promptConfig?.maxLength}
+              multiline={promptConfig?.multiline}
+              numberOfLines={promptConfig?.multiline ? 4 : 1}
+              textAlignVertical={promptConfig?.multiline ? 'top' : 'center'}
+              editable={!promptSubmitting}
+              autoFocus
+            />
+            {!!promptError && <Text style={styles.promptErrorText}>{promptError}</Text>}
+            <View style={styles.promptActions}>
+              <TouchableOpacity
+                style={[styles.promptButton, styles.promptCancelButton]}
+                onPress={closePrompt}
+                disabled={promptSubmitting}
+              >
+                <Text style={styles.promptCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.promptButton,
+                  promptConfig?.isDestructive
+                    ? styles.promptDestructiveButton
+                    : styles.promptConfirmButton,
+                  promptSubmitting && { opacity: 0.6 },
+                ]}
+                onPress={handlePromptSubmit}
+                disabled={promptSubmitting}
+              >
+                {promptSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.promptConfirmText}>
+                    {promptConfig?.confirmText ?? 'Confirm'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaScreen>
   );
 };
@@ -1039,5 +1138,87 @@ const styles = StyleSheet.create({
   historyStatText: {
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  promptOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  promptContainer: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+  },
+  promptTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  promptMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  promptInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.white,
+  },
+  promptInputMultiline: {
+    minHeight: 100,
+  },
+  promptInputError: {
+    borderColor: colors.error,
+  },
+  promptErrorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
+  },
+  promptActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 16,
+  },
+  promptButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promptCancelButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  promptCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  promptConfirmButton: {
+    backgroundColor: colors.primary,
+  },
+  promptDestructiveButton: {
+    backgroundColor: colors.error,
+  },
+  promptConfirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
   },
 });

@@ -19,6 +19,9 @@ import { Kitchen, KitchenType, Zone } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { PincodePickerModal } from './PincodePickerModal';
+import { SearchableSelect } from '../../../components/common/SearchableSelect';
+import { TimePickerField } from '../../../components/common/TimePickerField';
+import { INDIAN_STATES, getCitiesForState } from '../../../utils/indiaLocations';
 
 export interface KitchenFormState {
   name: string;
@@ -686,25 +689,38 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
-                  <Text style={styles.label}>
-                    City <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="City"
-                    value={formData.city}
-                    onChangeText={(text) => updateField('city', text)}
-                    editable={!loading}
+                  <SearchableSelect
+                    label="State"
+                    required
+                    iconName="map"
+                    placeholder="Select state"
+                    value={formData.state}
+                    options={INDIAN_STATES}
+                    onChange={(v) => {
+                      // If the picked state's city list doesn't include the
+                      // currently selected city, reset city so the user picks
+                      // a valid one for the new state.
+                      const newCities = getCitiesForState(v);
+                      setFormData((prev) => ({
+                        ...prev,
+                        state: v,
+                        city: newCities.includes(prev.city) ? prev.city : '',
+                      }));
+                    }}
+                    disabled={loading}
                   />
                 </View>
                 <View style={styles.halfWidth}>
-                  <Text style={styles.label}>State</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="State"
-                    value={formData.state}
-                    onChangeText={(text) => updateField('state', text)}
-                    editable={!loading}
+                  <SearchableSelect
+                    label="City"
+                    required
+                    iconName="city"
+                    placeholder="Select city"
+                    value={formData.city}
+                    options={getCitiesForState(formData.state)}
+                    onChange={(v) => updateField('city', v)}
+                    disabled={loading}
+                    searchPlaceholder="Search cities…"
                   />
                 </View>
               </View>
@@ -826,46 +842,42 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Operating Hours</Text>
 
-              <Text style={styles.label}>Lunch</Text>
+              <Text style={[styles.label, styles.mealLabel]}>Lunch</Text>
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Start (HH:MM)"
+                  <TimePickerField
+                    label="Start"
                     value={formData.lunchStartTime}
-                    onChangeText={(text) => updateField('lunchStartTime', text)}
-                    editable={!loading}
+                    onChange={(v) => updateField('lunchStartTime', v)}
+                    disabled={loading}
                   />
                 </View>
                 <View style={styles.halfWidth}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="End (HH:MM)"
+                  <TimePickerField
+                    label="End"
                     value={formData.lunchEndTime}
-                    onChangeText={(text) => updateField('lunchEndTime', text)}
-                    editable={!loading}
+                    onChange={(v) => updateField('lunchEndTime', v)}
+                    disabled={loading}
                   />
                 </View>
               </View>
 
-              <Text style={styles.label}>Dinner</Text>
+              <Text style={[styles.label, styles.mealLabel]}>Dinner</Text>
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Start (HH:MM)"
+                  <TimePickerField
+                    label="Start"
                     value={formData.dinnerStartTime}
-                    onChangeText={(text) => updateField('dinnerStartTime', text)}
-                    editable={!loading}
+                    onChange={(v) => updateField('dinnerStartTime', v)}
+                    disabled={loading}
                   />
                 </View>
                 <View style={styles.halfWidth}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="End (HH:MM)"
+                  <TimePickerField
+                    label="End"
                     value={formData.dinnerEndTime}
-                    onChangeText={(text) => updateField('dinnerEndTime', text)}
-                    editable={!loading}
+                    onChange={(v) => updateField('dinnerEndTime', v)}
+                    disabled={loading}
                   />
                 </View>
               </View>
@@ -874,28 +886,27 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
             {/* On-Demand Operating Hours */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>On-Demand Operating Hours</Text>
-              <View style={styles.row}>
-                <View style={styles.halfWidth}>
-                  <Text style={styles.label}>Start Time</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Start (HH:MM)"
-                    value={formData.onDemandStartTime}
-                    onChangeText={(text) => updateField('onDemandStartTime', text)}
-                    editable={!loading}
-                  />
+
+              {!formData.isAlwaysOpen && (
+                <View style={styles.row}>
+                  <View style={styles.halfWidth}>
+                    <TimePickerField
+                      label="Start Time"
+                      value={formData.onDemandStartTime}
+                      onChange={(v) => updateField('onDemandStartTime', v)}
+                      disabled={loading}
+                    />
+                  </View>
+                  <View style={styles.halfWidth}>
+                    <TimePickerField
+                      label="End Time"
+                      value={formData.onDemandEndTime}
+                      onChange={(v) => updateField('onDemandEndTime', v)}
+                      disabled={loading}
+                    />
+                  </View>
                 </View>
-                <View style={styles.halfWidth}>
-                  <Text style={styles.label}>End Time</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="End (HH:MM)"
-                    value={formData.onDemandEndTime}
-                    onChangeText={(text) => updateField('onDemandEndTime', text)}
-                    editable={!loading}
-                  />
-                </View>
-              </View>
+              )}
 
               {/* Always Open Toggle */}
               <TouchableOpacity
@@ -1002,6 +1013,8 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         selectedPincodes={formData.serviceablePincodes}
         latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
         longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
+        cityHint={formData.city || undefined}
+        stateHint={formData.state || undefined}
         onClose={() => setPincodePickerVisible(false)}
         onSave={(pincodes) => updateField('serviceablePincodes', pincodes)}
       />
@@ -1053,6 +1066,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
+  },
+  mealLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+    marginBottom: 4,
   },
   required: {
     color: colors.error,

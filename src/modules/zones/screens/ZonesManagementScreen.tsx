@@ -127,12 +127,26 @@ export const ZonesManagementScreen: React.FC<ZonesManagementScreenProps> = ({
   const handleSaveZone = async (formData: ZoneFormState) => {
     try {
       if (editingZone) {
-        // Update existing zone
-        const { pincode, ...updateData } = formData;
+        // Update text/numeric fields via PUT (backend rejects status/orderingEnabled here)
+        const { pincode, status, orderingEnabled, ...updateData } = formData;
         await zoneService.updateZone(editingZone._id, updateData);
+
+        // Status and orderingEnabled have dedicated endpoints — call them only
+        // when they actually changed so we don't waste a request per save.
+        if (status !== editingZone.status) {
+          if (status === 'ACTIVE') {
+            await zoneService.activateZone(editingZone._id);
+          } else {
+            await zoneService.deactivateZone(editingZone._id);
+          }
+        }
+        if (orderingEnabled !== editingZone.orderingEnabled) {
+          await zoneService.toggleOrdering(editingZone._id, orderingEnabled);
+        }
+
         showToast('Zone updated successfully', 'success');
       } else {
-        // Create new zone
+        // Create new zone (backend createZone accepts status & orderingEnabled directly)
         await zoneService.createZone(formData);
         showToast('Zone created successfully', 'success');
       }

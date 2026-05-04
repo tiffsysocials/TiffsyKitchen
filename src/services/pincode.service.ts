@@ -21,6 +21,27 @@ export interface GetNearbyPincodesParams {
   latitude: number;
   longitude: number;
   radiusKm?: number;
+  /** Optional city/state hint used as a fallback when the backend's Google
+   * reverse-geocode is unavailable. Lets enrichment still proceed via India Post. */
+  cityHint?: string;
+  stateHint?: string;
+}
+
+export interface NearbyPincodesMeta {
+  initialLocalCount: number;
+  triggeredEnrichment: boolean;
+  enrichmentRan: boolean;
+  enrichmentAddedCount: number;
+  enrichmentCity?: string;
+  enrichmentState?: string;
+  enrichmentAlreadyWarmed: boolean;
+  geocodeFailed: boolean;
+  usedHint: boolean;
+}
+
+export interface NearbyPincodesResult {
+  pincodes: NearbyPincode[];
+  meta?: NearbyPincodesMeta;
 }
 
 export interface ListPincodesParams {
@@ -59,19 +80,22 @@ class PincodeService {
   /**
    * Fetch pincodes within `radiusKm` of (latitude, longitude), sorted by distance.
    * Backend auto-enriches if the local DB is sparse for the area.
+   * Returns the meta object so callers can show enrichment diagnostics.
    */
-  async getNearbyPincodes(params: GetNearbyPincodesParams): Promise<NearbyPincode[]> {
+  async getNearbyPincodes(params: GetNearbyPincodesParams): Promise<NearbyPincodesResult> {
     const query = new URLSearchParams({
       latitude: params.latitude.toString(),
       longitude: params.longitude.toString(),
       radiusKm: (params.radiusKm ?? 10).toString(),
     });
+    if (params.cityHint) query.append('cityHint', params.cityHint);
+    if (params.stateHint) query.append('stateHint', params.stateHint);
 
     try {
-      const response = await apiService.get<ApiResponse<NearbyPincodesResponse>>(
-        `/api/pincodes/nearby?${query.toString()}`
-      );
-      return response.data.pincodes;
+      const response = await apiService.get<
+        ApiResponse<NearbyPincodesResponse & { meta?: NearbyPincodesMeta }>
+      >(`/api/pincodes/nearby?${query.toString()}`);
+      return { pincodes: response.data.pincodes, meta: response.data.meta };
     } catch (error) {
       console.error('Error fetching nearby pincodes:', error);
       throw error;

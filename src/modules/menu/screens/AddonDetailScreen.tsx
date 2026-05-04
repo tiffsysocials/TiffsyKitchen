@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Alert,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -90,7 +89,7 @@ export const AddonDetailScreen: React.FC<AddonDetailScreenProps> = ({
 
   const handlePickImage = () => {
     if (!launchImageLibrary) {
-      Alert.alert(
+      showInfo(
         'Library Required',
         'Install react-native-image-picker to enable image uploads:\n\nnpm install react-native-image-picker',
       );

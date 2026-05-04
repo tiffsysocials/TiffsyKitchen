@@ -1,40 +1,15 @@
-// Time format utilities
-export interface TimeValue {
-  hours: number; // 0-23
-  minutes: number; // 0-59
-}
+// Time format utilities live in src/utils/time.ts; re-exported here for
+// backward compatibility with existing cutoff-module imports.
+export type { TimeValue } from '../../../utils/time';
+export {
+  parseTimeString,
+  formatTimeToString,
+  formatTimeToDisplay,
+  timeToMinutes,
+  compareTimes,
+} from '../../../utils/time';
 
-// Parse time string "HH:MM" to TimeValue
-export const parseTimeString = (timeStr: string): TimeValue => {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return { hours: hours || 0, minutes: minutes || 0 };
-};
-
-// Format TimeValue to "HH:MM"
-export const formatTimeToString = (time: TimeValue): string => {
-  return `${time.hours.toString().padStart(2, '0')}:${time.minutes.toString().padStart(2, '0')}`;
-};
-
-// Format TimeValue to display format "07:00 AM"
-export const formatTimeToDisplay = (time: TimeValue): string => {
-  const hours12 = time.hours % 12 || 12;
-  const period = time.hours >= 12 ? 'PM' : 'AM';
-  return `${hours12.toString().padStart(2, '0')}:${time.minutes.toString().padStart(2, '0')} ${period}`;
-};
-
-// Convert TimeValue to minutes from midnight for comparison
-export const timeToMinutes = (time: TimeValue): number => {
-  return time.hours * 60 + time.minutes;
-};
-
-// Compare two times: returns -1 if a < b, 0 if equal, 1 if a > b
-export const compareTimes = (a: TimeValue, b: TimeValue): number => {
-  const aMinutes = timeToMinutes(a);
-  const bMinutes = timeToMinutes(b);
-  if (aMinutes < bMinutes) return -1;
-  if (aMinutes > bMinutes) return 1;
-  return 0;
-};
+import { parseTimeString, compareTimes } from '../../../utils/time';
 
 // Ordering window for a meal
 export interface OrderingWindow {

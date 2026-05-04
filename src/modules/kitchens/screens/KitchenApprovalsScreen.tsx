@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -20,6 +19,7 @@ import { PendingKitchenCard } from '../components/PendingKitchenCard';
 import { KitchenDetailModal } from '../components/KitchenDetailModal';
 import { ApproveKitchenDialog } from '../components/ApproveKitchenDialog';
 import { RejectKitchenDialog } from '../components/RejectKitchenDialog';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface KitchenApprovalsScreenProps {
   onMenuPress: () => void;
@@ -28,6 +28,7 @@ interface KitchenApprovalsScreenProps {
 export const KitchenApprovalsScreen: React.FC<KitchenApprovalsScreenProps> = ({
   onMenuPress,
 }) => {
+  const { showError } = useAlert();
   const [kitchens, setKitchens] = useState<Kitchen[]>([]);
   const [selectedKitchen, setSelectedKitchen] = useState<Kitchen | null>(null);
   const [kitchenForApproval, setKitchenForApproval] = useState<Kitchen | null>(null);
@@ -59,12 +60,12 @@ export const KitchenApprovalsScreen: React.FC<KitchenApprovalsScreenProps> = ({
       setTotalPages(response.data?.pagination?.pages || 1);
     } catch (error: any) {
       console.error('❌ Error fetching pending kitchens:', error);
-      Alert.alert('Error', error.message || 'Failed to fetch pending kitchens');
+      showError('Error', error.message || 'Failed to fetch pending kitchens');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [showError]);
 
   const fetchStats = useCallback(async () => {
     try {

@@ -7,11 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Platform,
   ToastAndroid,
 } from 'react-native';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { useAlert } from '../../../hooks/useAlert';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme/colors';
@@ -36,6 +36,7 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   onMenuPress,
   navigation,
 }) => {
+  const { showConfirm, showError, showSuccess } = useAlert();
   const [kitchens, setKitchens] = useState<Kitchen[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -319,26 +320,21 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   };
 
   const handleDeleteKitchen = async (kitchen: Kitchen) => {
-    Alert.alert(
+    showConfirm(
       'Delete Kitchen',
       `Are you sure you want to delete "${kitchen.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await kitchenService.deleteKitchen(kitchen._id);
-              showToast('Kitchen deleted successfully', 'success');
-              loadKitchens(true);
-            } catch (err: any) {
-              const errorMessage = err?.message || 'Failed to delete kitchen';
-              showToast(errorMessage, 'error');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await kitchenService.deleteKitchen(kitchen._id);
+          showToast('Kitchen deleted successfully', 'success');
+          loadKitchens(true);
+        } catch (err: any) {
+          const errorMessage = err?.message || 'Failed to delete kitchen';
+          showToast(errorMessage, 'error');
+        }
+      },
+      undefined,
+      { confirmText: 'Delete', isDestructive: true }
     );
   };
 
@@ -363,34 +359,31 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   };
 
   const handleActivateKitchen = async (kitchen: Kitchen) => {
-    Alert.alert(
+    showConfirm(
       'Activate Kitchen',
       `Are you sure you want to activate "${kitchen.name}"? This will allow the kitchen to start accepting orders.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Activate',
-          style: 'default',
-          onPress: async () => {
-            try {
-              await kitchenService.activateKitchen(kitchen._id);
-              showToast('Kitchen activated successfully', 'success');
-              loadKitchens(true);
-            } catch (err: any) {
-              const errorMessage = err?.message || 'Failed to activate kitchen';
-              showToast(errorMessage, 'error');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await kitchenService.activateKitchen(kitchen._id);
+          showToast('Kitchen activated successfully', 'success');
+          loadKitchens(true);
+        } catch (err: any) {
+          const errorMessage = err?.message || 'Failed to activate kitchen';
+          showToast(errorMessage, 'error');
+        }
+      },
+      undefined,
+      { confirmText: 'Activate' }
     );
   };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     if (Platform.OS === 'android') {
       ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else if (type === 'success') {
+      showSuccess('Success', message);
     } else {
-      Alert.alert(type === 'success' ? 'Success' : 'Error', message);
+      showError('Error', message);
     }
   };
 

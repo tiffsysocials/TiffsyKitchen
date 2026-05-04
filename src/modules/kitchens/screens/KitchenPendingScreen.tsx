@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
-  Alert,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -16,6 +15,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { kitchenStaffService } from '../../../services/kitchen-staff.service';
 import { useNavigation } from '../../../context/NavigationContext';
+import { useAlert } from '../../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface KitchenPendingScreenProps {
@@ -26,6 +26,7 @@ export const KitchenPendingScreen: React.FC<KitchenPendingScreenProps> = ({
   onMenuPress,
 }) => {
   const { navigate } = useNavigation();
+  const { showSuccess } = useAlert();
 
   // Fetch kitchen status with automatic polling every 30 seconds
   const { data, isLoading, refetch, isFetching, error } = useQuery({
@@ -48,10 +49,10 @@ export const KitchenPendingScreen: React.FC<KitchenPendingScreenProps> = ({
 
     if (status === 'ACTIVE') {
       AsyncStorage.setItem('kitchenApprovalStatus', 'APPROVED').catch(() => {});
-      Alert.alert(
+      showSuccess(
         'Approved!',
         'Your kitchen application has been approved. Welcome aboard!',
-        [{ text: 'Continue', onPress: () => navigate('KitchenDashboard') }],
+        () => navigate('KitchenDashboard'),
       );
     } else if (rejectionReason) {
       AsyncStorage.setItem('kitchenApprovalStatus', 'REJECTED').catch(() => {});

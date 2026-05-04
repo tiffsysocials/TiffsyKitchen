@@ -14,6 +14,8 @@ import { PincodeRecord } from '../../../types/api.types';
 import { PincodeFormState, PincodeFormErrors } from '../models/types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
+import { SearchableSelect } from '../../../components/common/SearchableSelect';
+import { INDIAN_STATES, getCitiesForState } from '../../../utils/indiaLocations';
 
 interface Props {
   visible: boolean;
@@ -118,16 +120,41 @@ export const PincodeFormModal: React.FC<Props> = ({ visible, pincode, onClose, o
             editable={!saving}
           />
 
-          <Text style={styles.label}>
-            City <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={form.city}
-            onChangeText={(t) => set('city', t)}
-            editable={!saving}
-          />
-          {errors.city && <Text style={styles.err}>{errors.city}</Text>}
+          <View style={{ marginTop: spacing.md }}>
+            <SearchableSelect
+              label="State"
+              required
+              iconName="map"
+              placeholder="Select state"
+              value={form.state}
+              options={INDIAN_STATES}
+              error={errors.state}
+              disabled={saving}
+              onChange={(v) => {
+                const newCities = getCitiesForState(v);
+                setForm((prev) => ({
+                  ...prev,
+                  state: v,
+                  city: newCities.includes(prev.city) ? prev.city : '',
+                }));
+              }}
+            />
+          </View>
+
+          <View style={{ marginTop: spacing.md }}>
+            <SearchableSelect
+              label="City"
+              required
+              iconName="city"
+              placeholder="Select city"
+              value={form.city}
+              options={getCitiesForState(form.state)}
+              error={errors.city}
+              disabled={saving}
+              searchPlaceholder="Search cities…"
+              onChange={(v) => set('city', v)}
+            />
+          </View>
 
           <Text style={styles.label}>District</Text>
           <TextInput
@@ -137,17 +164,6 @@ export const PincodeFormModal: React.FC<Props> = ({ visible, pincode, onClose, o
             placeholder="(optional)"
             editable={!saving}
           />
-
-          <Text style={styles.label}>
-            State <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={form.state}
-            onChangeText={(t) => set('state', t)}
-            editable={!saving}
-          />
-          {errors.state && <Text style={styles.err}>{errors.state}</Text>}
 
           <View style={styles.row}>
             <View style={styles.half}>

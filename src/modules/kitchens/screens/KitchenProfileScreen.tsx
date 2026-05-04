@@ -17,7 +17,6 @@ import {
   TextInput,
   Platform,
   ToastAndroid,
-  Alert,
   Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -29,6 +28,7 @@ import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { Kitchen, Zone, OperatingHours } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
+import { useAlert } from '../../../hooks/useAlert';
 
 // Form interfaces
 interface BasicInfoForm {
@@ -59,6 +59,7 @@ interface KitchenProfileScreenProps {
 export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
   onMenuPress,
 }) => {
+  const { showError, showSuccess } = useAlert();
   const [kitchenId, setKitchenId] = React.useState<string | null>(null);
   const [userRole, setUserRole] = React.useState<'ADMIN' | 'KITCHEN_STAFF'>('KITCHEN_STAFF');
 
@@ -337,7 +338,7 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           const basicErrors = validateBasicInfo(basicInfoForm);
           if (Object.keys(basicErrors).length > 0) {
             setErrors(basicErrors);
-            Alert.alert('Validation Error', 'Please fix the errors before saving');
+            showError('Validation Error', 'Please fix the errors before saving');
             setSavingSection(null);
             return;
           }
@@ -363,7 +364,7 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           const contactErrors = validateContact(contactForm);
           if (Object.keys(contactErrors).length > 0) {
             setErrors(contactErrors);
-            Alert.alert('Validation Error', 'Please fix the errors before saving');
+            showError('Validation Error', 'Please fix the errors before saving');
             setSavingSection(null);
             return;
           }
@@ -387,7 +388,7 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           const hoursErrors = validateOperatingHours(hoursForm);
           if (Object.keys(hoursErrors).length > 0) {
             setErrors(hoursErrors);
-            Alert.alert('Validation Error', 'Please fix the errors before saving');
+            showError('Validation Error', 'Please fix the errors before saving');
             setSavingSection(null);
             return;
           }
@@ -439,12 +440,12 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
       if (Platform.OS === 'android') {
         ToastAndroid.show('Updated successfully', ToastAndroid.SHORT);
       } else {
-        Alert.alert('Success', 'Updated successfully');
+        showSuccess('Success', 'Updated successfully');
       }
 
     } catch (error) {
       console.error('❌ [KitchenProfile] Error saving section:', error);
-      Alert.alert('Error', 'Failed to update. Please try again.');
+      showError('Error', 'Failed to update. Please try again.');
     } finally {
       setSavingSection(null);
     }

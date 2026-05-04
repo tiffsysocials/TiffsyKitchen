@@ -18,7 +18,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Switch,
-  Alert,
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -33,6 +32,7 @@ import {
   ReferralStatus,
 } from '../../../types/api.types';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface Props {
   onMenuPress: () => void;
@@ -49,6 +49,7 @@ const FILTER_TABS: { id: FilterTab; label: string }[] = [
 ];
 
 export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
+  const { showSuccess, showError } = useAlert();
   // Data state
   const [analytics, setAnalytics] = useState<ReferralAnalytics | null>(null);
   const [config, setConfig] = useState<ReferralConfig | null>(null);
@@ -160,13 +161,13 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
     try {
       const updated = await referralService.updateConfig({ enabled: newValue });
       if (updated) setConfig(updated);
-      Alert.alert('Success', `Referral program ${newValue ? 'enabled' : 'disabled'}`);
+      showSuccess('Success', `Referral program ${newValue ? 'enabled' : 'disabled'}`);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to update config');
+      showError('Error', err.message || 'Failed to update config');
     } finally {
       setConfigLoading(false);
     }
-  }, []);
+  }, [showSuccess, showError]);
 
   const getStatusColor = (status: ReferralStatus) => {
     switch (status) {

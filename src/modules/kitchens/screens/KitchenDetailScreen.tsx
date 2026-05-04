@@ -6,11 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Platform,
   ToastAndroid,
   Image,
   Switch,
+  Modal,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
@@ -19,6 +20,7 @@ import { Kitchen, Zone, KitchenDetailsResponse } from '../../../types/api.types'
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface KitchenDetailScreenProps {
   route: {
@@ -34,9 +36,14 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   navigation,
 }) => {
   const { kitchenId } = route.params;
+  const { showConfirm, showError, showSuccess } = useAlert();
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [suspendModalVisible, setSuspendModalVisible] = useState(false);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendError, setSuspendError] = useState('');
+  const [suspending, setSuspending] = useState(false);
 
   useEffect(() => {
     loadKitchenDetails();
@@ -60,24 +67,20 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   const handleActivate = async () => {
     if (!kitchen) return;
 
-    Alert.alert(
+    showConfirm(
       'Activate Kitchen',
       `Are you sure you want to activate "${kitchen.name}"? This will allow the kitchen to start accepting orders.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Activate',
-          onPress: async () => {
-            try {
-              await kitchenService.activateKitchen(kitchen._id);
-              showToast('Kitchen activated successfully', 'success');
-              loadKitchenDetails();
-            } catch (err: any) {
-              showToast(err?.message || 'Failed to activate kitchen', 'error');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await kitchenService.activateKitchen(kitchen._id);
+          showToast('Kitchen activated successfully', 'success');
+          loadKitchenDetails();
+        } catch (err: any) {
+          showToast(err?.message || 'Failed to activate kitchen', 'error');
+        }
+      },
+      undefined,
+      { confirmText: 'Activate' }
     );
   };
 
@@ -85,60 +88,53 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     if (!kitchen) return;
 
     const action = kitchen.status === 'ACTIVE' ? 'Deactivate' : 'Activate';
-    Alert.alert(
+    showConfirm(
       `${action} Kitchen`,
       `Are you sure you want to ${action.toLowerCase()} "${kitchen.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: action,
-          onPress: async () => {
-            try {
-              if (kitchen.status === 'ACTIVE') {
-                await kitchenService.deactivateKitchen(kitchen._id);
-                showToast('Kitchen deactivated', 'success');
-              } else {
-                await kitchenService.activateKitchen(kitchen._id);
-                showToast('Kitchen activated', 'success');
-              }
-              loadKitchenDetails();
-            } catch (err: any) {
-              showToast(err?.message || 'Failed to update status', 'error');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          if (kitchen.status === 'ACTIVE') {
+            await kitchenService.deactivateKitchen(kitchen._id);
+            showToast('Kitchen deactivated', 'success');
+          } else {
+            await kitchenService.activateKitchen(kitchen._id);
+            showToast('Kitchen activated', 'success');
+          }
+          loadKitchenDetails();
+        } catch (err: any) {
+          showToast(err?.message || 'Failed to update status', 'error');
+        }
+      },
+      undefined,
+      { confirmText: action, isDestructive: action === 'Deactivate' }
     );
   };
 
   const handleSuspend = () => {
     if (!kitchen) return;
+    setSuspendReason('');
+    setSuspendError('');
+    setSuspendModalVisible(true);
+  };
 
-    Alert.prompt(
-      'Suspend Kitchen',
-      'Please provide a reason for suspension:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: async (reason) => {
-            if (!reason?.trim()) {
-              showToast('Reason is required', 'error');
-              return;
-            }
-            try {
-              await kitchenService.suspendKitchen(kitchen._id, { reason });
-              showToast('Kitchen suspended', 'success');
-              loadKitchenDetails();
-            } catch (err: any) {
-              showToast(err?.message || 'Failed to suspend kitchen', 'error');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+  const handleConfirmSuspend = async () => {
+    if (!kitchen) return;
+    const trimmed = suspendReason.trim();
+    if (!trimmed) {
+      setSuspendError('Reason is required');
+      return;
+    }
+    setSuspending(true);
+    try {
+      await kitchenService.suspendKitchen(kitchen._id, { reason: trimmed });
+      setSuspendModalVisible(false);
+      showToast('Kitchen suspended', 'success');
+      loadKitchenDetails();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to suspend kitchen', 'error');
+    } finally {
+      setSuspending(false);
+    }
   };
 
   const handleToggleFlags = async (
@@ -174,8 +170,10 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   const showToast = (message: string, type: 'success' | 'error') => {
     if (Platform.OS === 'android') {
       ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else if (type === 'success') {
+      showSuccess('Success', message);
     } else {
-      Alert.alert(type === 'success' ? 'Success' : 'Error', message);
+      showError('Error', message);
     }
   };
 
@@ -529,6 +527,65 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           )}
         </View>
       </ScrollView>
+
+      {/* Suspend Kitchen Modal */}
+      <Modal
+        visible={suspendModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !suspending && setSuspendModalVisible(false)}
+      >
+        <View style={styles.suspendOverlay}>
+          <View style={styles.suspendModal}>
+            <View style={styles.suspendHeader}>
+              <Icon name="block-helper" size={24} color={colors.error} />
+              <Text style={styles.suspendTitle}>Suspend Kitchen</Text>
+            </View>
+            <Text style={styles.suspendMessage}>
+              Please provide a reason for suspending "{kitchen.name}":
+            </Text>
+            <TextInput
+              style={[styles.suspendInput, suspendError ? styles.suspendInputError : null]}
+              value={suspendReason}
+              onChangeText={(text) => {
+                setSuspendReason(text);
+                if (suspendError) setSuspendError('');
+              }}
+              placeholder="Enter suspension reason..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              editable={!suspending}
+            />
+            {!!suspendError && <Text style={styles.suspendErrorText}>{suspendError}</Text>}
+            <View style={styles.suspendActions}>
+              <TouchableOpacity
+                style={[styles.suspendButton, styles.suspendCancelButton]}
+                onPress={() => setSuspendModalVisible(false)}
+                disabled={suspending}
+              >
+                <Text style={styles.suspendCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.suspendButton,
+                  styles.suspendConfirmButton,
+                  suspending && { opacity: 0.6 },
+                ]}
+                onPress={handleConfirmSuspend}
+                disabled={suspending}
+              >
+                {suspending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.suspendConfirmText}>Suspend</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaScreen>
   );
 };
@@ -791,6 +848,87 @@ const styles = StyleSheet.create({
   },
   activateButtonLargeText: {
     fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  suspendOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  suspendModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+  },
+  suspendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  suspendTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  suspendMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  suspendInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: colors.textPrimary,
+    minHeight: 100,
+    backgroundColor: '#fff',
+  },
+  suspendInputError: {
+    borderColor: colors.error,
+  },
+  suspendErrorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
+  },
+  suspendActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  suspendButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suspendCancelButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  suspendCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  suspendConfirmButton: {
+    backgroundColor: colors.error,
+  },
+  suspendConfirmText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
   },

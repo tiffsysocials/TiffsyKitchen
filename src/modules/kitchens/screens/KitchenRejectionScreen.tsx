@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
-  Alert,
   Modal,
   TextInput,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { kitchenStaffService } from '../../../services/kitchen-staff.service';
 import { useNavigation } from '../../../context/NavigationContext';
+import { useAlert } from '../../../hooks/useAlert';
 
 interface KitchenRejectionScreenProps {
   onMenuPress: () => void;
@@ -28,6 +28,7 @@ export const KitchenRejectionScreen: React.FC<KitchenRejectionScreenProps> = ({
 }) => {
   const { navigate } = useNavigation();
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useAlert();
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [resubmitNotes, setResubmitNotes] = useState('');
 
@@ -52,23 +53,18 @@ export const KitchenRejectionScreen: React.FC<KitchenRejectionScreenProps> = ({
     mutationFn: (updates: any) => kitchenStaffService.resubmitKitchen(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myKitchenStatus'] });
-      Alert.alert(
+      showSuccess(
         'Application Resubmitted',
         'Your kitchen application has been resubmitted for review. We\'ll notify you once the review is complete.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowResubmitModal(false);
-              setResubmitNotes('');
-              navigate('KitchenPending');
-            },
-          },
-        ]
+        () => {
+          setShowResubmitModal(false);
+          setResubmitNotes('');
+          navigate('KitchenPending');
+        }
       );
     },
     onError: (error: any) => {
-      Alert.alert(
+      showError(
         'Resubmission Failed',
         error?.response?.data?.message || error?.message || 'Failed to resubmit application. Please try again.'
       );
