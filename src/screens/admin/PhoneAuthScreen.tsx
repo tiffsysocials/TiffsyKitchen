@@ -6,6 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAlert } from '../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -107,15 +111,29 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
       newOtp[index] = cleaned;
       setOtp(newOtp);
 
-      // Move to next input
+      // Move to next input, or dismiss keyboard if all 6 entered
       if (index < 5) {
         otpInputRefs.current[index + 1]?.focus();
+      } else if (newOtp.every((d) => d !== '')) {
+        otpInputRefs.current[index]?.blur();
+        Keyboard.dismiss();
       }
-    } else if (cleaned.length === 6 && index === 0) {
-      // Handle paste of complete OTP
-      const otpArray = cleaned.split('').slice(0, 6);
-      setOtp(otpArray);
-      otpInputRefs.current[5]?.focus();
+    } else if (cleaned.length >= 2) {
+      // iOS SMS autofill / paste — distribute digits starting at this box
+      const newOtp = [...otp];
+      const digits = cleaned.split('');
+      let lastFilled = index;
+      for (let i = 0; i < digits.length && index + i < 6; i++) {
+        newOtp[index + i] = digits[i];
+        lastFilled = index + i;
+      }
+      setOtp(newOtp);
+      if (newOtp.every((d) => d !== '')) {
+        otpInputRefs.current[lastFilled]?.blur();
+        Keyboard.dismiss();
+      } else {
+        otpInputRefs.current[Math.min(lastFilled + 1, 5)]?.focus();
+      }
     }
 
     // Clear error when user types
@@ -193,9 +211,33 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
 
   return (
     <SafeAreaScreen style={styles.container} backgroundColor={PRIMARY_COLOR}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.contentContainer}>
         {/* Login Card */}
         <View style={styles.card}>
+          {/* Back chevron (when on OTP step) */}
+          {showOtpInput && (
+            <TouchableOpacity
+              style={styles.headerBackButton}
+              onPress={() => {
+                setShowOtpInput(false);
+                setOtp(['', '', '', '', '', '']);
+                setOtpError(undefined);
+              }}
+              disabled={isSubmitting}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Go back to phone number"
+              accessibilityRole="button"
+            >
+              <Icon name="arrow-back-ios" size={22} color={PRIMARY_COLOR} />
+            </TouchableOpacity>
+          )}
+
           {/* Logo / Brand */}
           <View style={styles.logoContainer}>
             <View style={styles.logoPlaceholder}>
@@ -269,7 +311,10 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
                       onChangeText={(text) => handleOtpChange(text, index)}
                       onKeyPress={(e) => handleOtpKeyPress(e, index)}
                       keyboardType="number-pad"
-                      maxLength={1}
+                      textContentType="oneTimeCode"
+                      autoComplete="sms-otp"
+                      importantForAutofill="yes"
+                      maxLength={6}
                       selectTextOnFocus
                       editable={!isSubmitting}
                       accessibilityLabel={`OTP digit ${index + 1}`}
@@ -352,6 +397,8 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
           </Text>
         </View>
       </View>
+      </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaScreen>
   );
 };
@@ -362,6 +409,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: PRIMARY_COLOR,
+  },
+
+  flex: {
+    flex: 1,
   },
 
   contentContainer: {
@@ -578,6 +629,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     minHeight: 44,
+  },
+
+  headerBackButton: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 
   backButtonText: {
