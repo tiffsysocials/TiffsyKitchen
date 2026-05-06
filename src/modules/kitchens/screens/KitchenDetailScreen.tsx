@@ -16,7 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { Kitchen, Zone, KitchenDetailsResponse } from '../../../types/api.types';
+import { Kitchen, Zone, Area, KitchenDetailsResponse } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
@@ -241,7 +241,10 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     );
   }
 
-  const zones = Array.isArray(kitchen.zonesServed)
+  const areas = Array.isArray(kitchen.areasServed)
+    ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
+    : [];
+  const legacyZones = Array.isArray(kitchen.zonesServed)
     ? kitchen.zonesServed.filter((z): z is Zone => typeof z !== 'string')
     : [];
 
@@ -407,11 +410,25 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           </View>
         </View>
 
-        {/* Zones Served */}
+        {/* Areas Served */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Zones Served ({zones.length})</Text>
-          {zones.length > 0 ? (
-            zones.map((zone) => (
+          <Text style={styles.sectionTitle}>
+            Areas Served ({areas.length > 0 ? areas.length : legacyZones.length})
+          </Text>
+          {areas.length > 0 ? (
+            areas.map((area) => (
+              <View key={area._id} style={styles.zoneItem}>
+                <View style={styles.zoneInfo}>
+                  <Text style={styles.zonePincode}>{area.name}</Text>
+                  <Text style={styles.zoneName}>
+                    {[area.city, area.state].filter(Boolean).join(', ') || '—'}
+                  </Text>
+                </View>
+                <Icon name="check-circle" size={16} color={colors.success} />
+              </View>
+            ))
+          ) : legacyZones.length > 0 ? (
+            legacyZones.map((zone) => (
               <View key={zone._id} style={styles.zoneItem}>
                 <View style={styles.zoneInfo}>
                   <Text style={styles.zonePincode}>{zone.pincode}</Text>
@@ -425,7 +442,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
               </View>
             ))
           ) : (
-            <Text style={styles.emptyText}>No zones assigned</Text>
+            <Text style={styles.emptyText}>No areas assigned</Text>
           )}
         </View>
 

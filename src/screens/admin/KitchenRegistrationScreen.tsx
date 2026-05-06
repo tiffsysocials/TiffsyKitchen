@@ -133,9 +133,8 @@ export const KitchenRegistrationScreen: React.FC<KitchenRegistrationScreenProps>
         state: form.state.trim() || undefined,
         pincode: form.pincode.trim(),
       },
-      // Default the partner's serviceable area to their own kitchen pincode.
-      // Admin can expand this via the kitchen-management form once approved.
-      serviceablePincodes: [form.pincode.trim()],
+      // Partner has no area selection in this flow — admin sets coverage after approval.
+      serviceableAreas: [],
       operatingHours: {
         lunch: { startTime: form.lunchStartTime, endTime: form.lunchEndTime },
         dinner: { startTime: form.dinnerStartTime, endTime: form.dinnerEndTime },

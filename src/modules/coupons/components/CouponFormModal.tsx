@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { format } from 'date-fns';
-import { Coupon, DiscountType, TargetUserType, CreateCouponRequest, UpdateCouponRequest } from '../../../types/api.types';
+import { Coupon, CreateCouponRequest, UpdateCouponRequest } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { DatePickerModal } from '../../../components/dashboard/DatePickerModal';
@@ -94,7 +94,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
           isFirstOrderOnly: coupon.isFirstOrderOnly,
           validFrom: coupon.validFrom ? new Date(coupon.validFrom) : null,
           validTill: coupon.validTill ? new Date(coupon.validTill) : null,
-          status: coupon.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+          status: coupon.status === 'ACTIVE' || coupon.status === 'EXPIRED' ? 'ACTIVE' : 'INACTIVE',
           isVisible: coupon.isVisible,
           displayOrder: coupon.displayOrder?.toString() || '0',
           bannerImage: coupon.bannerImage || '',
@@ -159,8 +159,21 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  const toStartOfDayIso = (date: Date): string => {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized.toISOString();
+  };
+
+  const toEndOfDayIso = (date: Date): string => {
+    const normalized = new Date(date);
+    normalized.setHours(23, 59, 59, 999);
+    return normalized.toISOString();
+  };
+
   const buildRequestData = (): CreateCouponRequest | UpdateCouponRequest => {
     const data: any = {
+      code: formData.code.trim().toUpperCase(),
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       discountType: formData.discountType,
@@ -174,8 +187,8 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
       perUserLimit: parseInt(formData.perUserLimit) || 1,
       targetUserType: formData.targetUserType,
       isFirstOrderOnly: formData.isFirstOrderOnly,
-      validFrom: formData.validFrom?.toISOString(),
-      validTill: formData.validTill?.toISOString(),
+      validFrom: formData.validFrom ? toStartOfDayIso(formData.validFrom) : undefined,
+      validTill: formData.validTill ? toEndOfDayIso(formData.validTill) : undefined,
       status: formData.status,
       isVisible: formData.isVisible,
       displayOrder: parseInt(formData.displayOrder) || 0,
@@ -203,10 +216,6 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
     if (formData.targetUserType === 'SPECIFIC_USERS') {
       data.specificUserIds = formData.specificUserIds.split(',').map((id: string) => id.trim()).filter(Boolean);
-    }
-
-    if (!isEditMode) {
-      data.code = formData.code.trim().toUpperCase();
     }
 
     return data;
@@ -284,14 +293,13 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
               <View style={styles.sectionContent}>
                 <Text style={styles.label}>Coupon Code *</Text>
                 <TextInput
-                  style={[styles.input, errors.code && styles.inputError, isEditMode && styles.inputDisabled]}
+                  style={[styles.input, errors.code && styles.inputError]}
                   value={formData.code}
                   onChangeText={(text) => handleChange('code', text.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   placeholder="e.g. SUMMER20"
                   placeholderTextColor={colors.textMuted}
                   maxLength={20}
                   autoCapitalize="characters"
-                  editable={!isEditMode}
                 />
                 {renderError('code')}
 

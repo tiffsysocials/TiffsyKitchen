@@ -321,6 +321,7 @@ export interface Kitchen {
   cuisineTypes: string[];
   address: Address;
   zonesServed: Zone[] | string[];
+  areasServed?: Area[] | string[];
   operatingHours: OperatingHours;
   contactPhone?: string;
   contactEmail?: string;
@@ -391,7 +392,69 @@ export interface ZoneListResponse {
 }
 
 // ============================================================================
-// Pincode (master) Types — used during kitchen creation to pick nearby pincodes
+// Area (locality) Types — kitchen coverage is picked as nearby areas
+// ============================================================================
+
+export interface NearbyArea {
+  id: string;
+  name: string;
+  city?: string;
+  state?: string;
+  distanceKm: number;
+  pincodeCount?: number;
+}
+
+export interface NearbyAreasMeta {
+  initialLocalCount: number;
+  triggeredEnrichment: boolean;
+  enrichmentRan: boolean;
+  enrichmentAddedCount: number;
+  enrichmentCity?: string;
+  enrichmentState?: string;
+  enrichmentAlreadyWarmed: boolean;
+  geocodeFailed: boolean;
+  usedHint: boolean;
+}
+
+export interface NearbyAreasResponse {
+  count: number;
+  radiusKm: number;
+  areas: NearbyArea[];
+  meta?: NearbyAreasMeta;
+}
+
+export interface Area {
+  _id: string;
+  id?: string;
+  name: string;
+  city?: string;
+  state?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING_REVIEW';
+  source?: 'SEED' | 'GOOGLE' | 'NOMINATIM' | 'MANUAL';
+  sources?: string[];
+  placeId?: string;
+  osmId?: string;
+  hasBoundary?: boolean;
+  pincodes?: string[];
+  pincodeCount?: number;
+  viewport?: {
+    northeast: { latitude: number; longitude: number };
+    southwest: { latitude: number; longitude: number };
+  };
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  enrichedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ============================================================================
+// Pincode (master) Types — used by the standalone pincode admin module
 // ============================================================================
 
 export interface NearbyPincode {
@@ -562,7 +625,7 @@ export interface CreateCouponRequest {
   termsAndConditions?: string;
 }
 
-export type UpdateCouponRequest = Partial<Omit<CreateCouponRequest, 'code'>>;
+export type UpdateCouponRequest = Partial<CreateCouponRequest>;
 
 // ============================================================================
 // Voucher Management Types

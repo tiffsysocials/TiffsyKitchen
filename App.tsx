@@ -63,6 +63,7 @@ import DeliveryConfigScreen from './src/modules/settings/screens/DeliveryConfigS
 import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
 import { BannerManagementScreen } from './src/modules/banners';
+import { AreasReviewScreen } from './src/modules/areas';
 import { AuditLogsScreen } from './src/modules';
 import { KitchenRegistrationScreen } from './src/screens/admin/KitchenRegistrationScreen';
 
@@ -550,6 +551,13 @@ const MainContent: React.FC<{
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="Banners" onMenuPress={onMenuPress}>
           <BannerManagementScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
+    case 'AreasReview':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN']} screenName="AreasReview" onMenuPress={onMenuPress}>
+          <AreasReviewScreen onMenuPress={onMenuPress} />
         </PermissionGuard>
       );
 

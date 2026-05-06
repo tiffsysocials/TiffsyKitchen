@@ -35,7 +35,7 @@ export interface CreateKitchenRequest {
   description?: string;
   cuisineTypes: string[];
   address: Address;
-  serviceablePincodes: string[];
+  serviceableAreas: string[];
   operatingHours: OperatingHours;
   contactPhone?: string;
   contactEmail?: string;
@@ -63,8 +63,8 @@ export interface UpdateFlagsRequest {
   gourmetFlag?: boolean;
 }
 
-export interface UpdateServiceablePincodesRequest {
-  serviceablePincodes: string[];
+export interface UpdateServiceableAreasRequest {
+  serviceableAreas: string[];
 }
 
 export interface SuspendKitchenRequest {
@@ -79,7 +79,7 @@ export interface RegisterKitchenWithOtpRequest {
   name: string;
   cuisineTypes: string[];
   address: Address;
-  serviceablePincodes: string[];
+  serviceableAreas: string[];
   operatingHours: OperatingHours;
   contactPhone: string;
   contactEmail?: string;
@@ -139,7 +139,7 @@ class KitchenService {
   async getKitchenById(kitchenId: string): Promise<KitchenDetailsResponse> {
     try {
       const response = await apiService.get<ApiResponse<KitchenDetailsResponse>>(
-        `/api/kitchens/${kitchenId}?populate=zonesServed`
+        `/api/kitchens/${kitchenId}?populate=zonesServed,areasServed`
       );
       return response.data;
     } catch (error) {
@@ -229,23 +229,18 @@ class KitchenService {
     }
   }
 
-  /**
-   * Update serviceable pincodes for a kitchen.
-   * Backend resolves each pincode to a Zone (auto-creates any missing) and
-   * stores the resulting ObjectIds on kitchen.zonesServed.
-   */
-  async updateServiceablePincodes(
+  async updateServiceableAreas(
     kitchenId: string,
-    data: UpdateServiceablePincodesRequest
+    data: UpdateServiceableAreasRequest
   ): Promise<Kitchen> {
     try {
       const response = await apiService.patch<ApiResponse<{ kitchen: Kitchen }>>(
-        `/api/kitchens/${kitchenId}/pincodes`,
+        `/api/kitchens/${kitchenId}/areas`,
         data
       );
       return response.data.kitchen;
     } catch (error) {
-      console.error('Error updating kitchen serviceable pincodes:', error);
+      console.error('Error updating kitchen serviceable areas:', error);
       throw error;
     }
   }

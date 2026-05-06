@@ -15,10 +15,11 @@ import {
 import Geolocation from 'react-native-geolocation-service';
 import { useAlert } from '../../../hooks/useAlert';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Kitchen, KitchenType, Zone } from '../../../types/api.types';
+import { Area, Kitchen, KitchenType, NearbyArea, Zone } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { PincodePickerModal } from './PincodePickerModal';
+import { AreaPickerModal } from './AreaPickerModal';
+import areaService from '../../../services/area.service';
 import { SearchableSelect } from '../../../components/common/SearchableSelect';
 import { TimePickerField } from '../../../components/common/TimePickerField';
 import { INDIAN_STATES, getCitiesForState } from '../../../utils/indiaLocations';
@@ -34,7 +35,7 @@ export interface KitchenFormState {
   city: string;
   state: string;
   pincode: string;
-  serviceablePincodes: string[];
+  serviceableAreas: string[];
   lunchStartTime: string;
   lunchEndTime: string;
   dinnerStartTime: string;
@@ -76,10 +77,11 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const { showError } = useAlert();
+  const { showError, showSuccess } = useAlert();
   const [loading, setLoading] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
-  const [pincodePickerVisible, setPincodePickerVisible] = useState(false);
+  const [areaPickerVisible, setAreaPickerVisible] = useState(false);
+  const [selectedAreas, setSelectedAreas] = useState<Array<NearbyArea | Area>>([]);
   const [formData, setFormData] = useState<KitchenFormState>({
     name: '',
     type: 'PARTNER',
@@ -91,7 +93,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
     city: '',
     state: 'Maharashtra',
     pincode: '',
-    serviceablePincodes: [],
+    serviceableAreas: [],
     lunchStartTime: '11:00',
     lunchEndTime: '15:00',
     dinnerStartTime: '19:00',
@@ -111,14 +113,15 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
   useEffect(() => {
     if (visible && kitchen) {
-      // Pre-fill form for editing — derive serviceablePincodes from populated zones.
-      // (If zonesServed is just IDs without populate, the picker will start empty
-      // and the admin can re-pick.)
-      const pincodes = Array.isArray(kitchen.zonesServed)
-        ? (kitchen.zonesServed as Zone[])
-            .filter((z): z is Zone => typeof z === 'object' && z !== null && !!z.pincode)
-            .map((z) => z.pincode)
+      // Pre-fill from populated areasServed; fall back to legacy zonesServed pincodes
+      // (reverse-map handled in a separate effect below).
+      const populatedAreas = Array.isArray(kitchen.areasServed)
+        ? (kitchen.areasServed as Area[]).filter(
+            (a): a is Area => typeof a === 'object' && a !== null && !!a._id,
+          )
         : [];
+      const areaIds = populatedAreas.map((a) => a._id);
+      setSelectedAreas(populatedAreas);
 
       setFormData({
         name: kitchen.name,
@@ -131,7 +134,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         city: kitchen.address.city,
         state: kitchen.address.state || 'Maharashtra',
         pincode: kitchen.address.pincode,
-        serviceablePincodes: pincodes,
+        serviceableAreas: areaIds,
         lunchStartTime: kitchen.operatingHours.lunch?.startTime || '11:00',
         lunchEndTime: kitchen.operatingHours.lunch?.endTime || '15:00',
         dinnerStartTime: kitchen.operatingHours.dinner?.startTime || '19:00',
@@ -150,6 +153,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       });
     } else if (visible && !kitchen) {
       // Reset for creating new kitchen
+      setSelectedAreas([]);
       setFormData({
         name: '',
         type: 'PARTNER',
@@ -161,7 +165,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         city: '',
         state: 'Maharashtra',
         pincode: '',
-        serviceablePincodes: [],
+        serviceableAreas: [],
         lunchStartTime: '11:00',
         lunchEndTime: '15:00',
         dinnerStartTime: '19:00',
@@ -180,6 +184,43 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       });
     }
   }, [visible, kitchen]);
+
+  // Legacy reverse-map: kitchens created before the areas pivot only have
+  // zonesServed (pincode-based). On open, map those pincodes to areas so the
+  // admin can see and confirm the migrated coverage.
+  useEffect(() => {
+    if (!visible || !kitchen) return;
+    const hasAreas = Array.isArray(kitchen.areasServed) && kitchen.areasServed.length > 0;
+    if (hasAreas) return;
+    const legacyPincodes = Array.isArray(kitchen.zonesServed)
+      ? (kitchen.zonesServed as Zone[])
+          .filter((z): z is Zone => typeof z === 'object' && z !== null && !!z.pincode)
+          .map((z) => z.pincode)
+      : [];
+    if (legacyPincodes.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const areas = await areaService.mapPincodesToAreas(legacyPincodes);
+        if (cancelled || areas.length === 0) return;
+        setSelectedAreas(areas);
+        setFormData((prev) => ({
+          ...prev,
+          serviceableAreas: areas.map((a) => a._id),
+        }));
+        showSuccess(
+          'Coverage migrated',
+          `Mapped ${legacyPincodes.length} legacy pincode${legacyPincodes.length === 1 ? '' : 's'} to ${areas.length} area${areas.length === 1 ? '' : 's'}. Review and save.`,
+        );
+      } catch (err) {
+        console.error('Pincode→area reverse-map failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, kitchen, showSuccess]);
 
   const updateField = (field: keyof KitchenFormState, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -351,14 +392,9 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       return false;
     }
 
-    // 6. Serviceable Pincodes Validation
-    if (!formData.serviceablePincodes || formData.serviceablePincodes.length === 0) {
-      showToast('Please select at least one serviceable pincode', 'error');
-      return false;
-    }
-    const pincodeFmt = /^\d{6}$/;
-    if (!formData.serviceablePincodes.every((p) => pincodeFmt.test(p))) {
-      showToast('Serviceable pincodes must be 6 digits', 'error');
+    // 6. Serviceable Areas Validation
+    if (!formData.serviceableAreas || formData.serviceableAreas.length === 0) {
+      showToast('Please select at least one serviceable area', 'error');
       return false;
     }
 
@@ -779,28 +815,28 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
               <Text style={styles.hint}>Used for geofencing-based delivery matching. Tap "Detect Location" while at the kitchen — it will also auto-fill the address fields above.</Text>
             </View>
 
-            {/* Serviceable Pincodes */}
+            {/* Serviceable Areas */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                Serviceable Pincodes <Text style={styles.required}>*</Text>
+                Serviceable Areas <Text style={styles.required}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.zonePicker}
-                onPress={() => setPincodePickerVisible(true)}
+                onPress={() => setAreaPickerVisible(true)}
                 disabled={loading || !formData.latitude || !formData.longitude}>
                 <Icon name="map-marker-multiple" size={20} color={colors.primary} />
                 <Text style={styles.zonePickerText}>
                   {!formData.latitude || !formData.longitude
                     ? 'Set kitchen location first'
-                    : formData.serviceablePincodes.length === 0
-                    ? 'Select pincodes'
-                    : `${formData.serviceablePincodes.length} pincode${formData.serviceablePincodes.length === 1 ? '' : 's'} selected`}
+                    : formData.serviceableAreas.length === 0
+                    ? 'Select areas'
+                    : `${formData.serviceableAreas.length} area${formData.serviceableAreas.length === 1 ? '' : 's'} selected`}
                 </Text>
                 <Icon name="chevron-right" size={20} color={colors.textMuted} />
               </TouchableOpacity>
-              {formData.serviceablePincodes.length > 0 && (
+              {selectedAreas.length > 0 && (
                 <Text style={styles.hint}>
-                  {formData.serviceablePincodes.join(', ')}
+                  {selectedAreas.map((a) => a.name).join(', ')}
                 </Text>
               )}
             </View>
@@ -1008,15 +1044,18 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         </View>
       </Modal>
 
-      <PincodePickerModal
-        visible={pincodePickerVisible}
-        selectedPincodes={formData.serviceablePincodes}
+      <AreaPickerModal
+        visible={areaPickerVisible}
+        selectedAreaIds={formData.serviceableAreas}
         latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
         longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
         cityHint={formData.city || undefined}
         stateHint={formData.state || undefined}
-        onClose={() => setPincodePickerVisible(false)}
-        onSave={(pincodes) => updateField('serviceablePincodes', pincodes)}
+        onClose={() => setAreaPickerVisible(false)}
+        onSave={(areaIds, areas) => {
+          updateField('serviceableAreas', areaIds);
+          setSelectedAreas(areas);
+        }}
       />
     </>
   );

@@ -207,19 +207,19 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
 
         await kitchenService.updateKitchen(editingKitchen._id, updatePayload);
 
-        // Update serviceable pincodes if changed
-        const currentPincodes = Array.isArray(editingKitchen.zonesServed)
-          ? editingKitchen.zonesServed
-              .map((z) => (typeof z === 'string' ? null : z.pincode))
-              .filter((p): p is string => !!p)
+        // Update serviceable areas if changed
+        const currentAreaIds = Array.isArray(editingKitchen.areasServed)
+          ? editingKitchen.areasServed
+              .map((a) => (typeof a === 'string' ? a : a._id))
+              .filter((id): id is string => !!id)
           : [];
-        const pincodesChanged =
-          JSON.stringify([...currentPincodes].sort()) !==
-          JSON.stringify([...formData.serviceablePincodes].sort());
+        const areasChanged =
+          JSON.stringify([...currentAreaIds].sort()) !==
+          JSON.stringify([...formData.serviceableAreas].sort());
 
-        if (pincodesChanged) {
-          await kitchenService.updateServiceablePincodes(editingKitchen._id, {
-            serviceablePincodes: formData.serviceablePincodes,
+        if (areasChanged) {
+          await kitchenService.updateServiceableAreas(editingKitchen._id, {
+            serviceableAreas: formData.serviceableAreas,
           });
         }
 
@@ -239,7 +239,7 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
           type: formData.type,
           cuisineTypes: cuisineTypesArray,
           address,
-          serviceablePincodes: formData.serviceablePincodes,
+          serviceableAreas: formData.serviceableAreas,
           operatingHours,
           // Add default flags for new kitchens
           authorizedFlag: false,

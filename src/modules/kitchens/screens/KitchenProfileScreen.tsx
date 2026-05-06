@@ -26,7 +26,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { Kitchen, Zone, OperatingHours } from '../../../types/api.types';
+import { Kitchen, Zone, Area, OperatingHours } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { useAlert } from '../../../hooks/useAlert';
 
@@ -147,23 +147,16 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
     return kitchen.type === 'TIFFSY' ? colors.info : colors.secondary;
   };
 
-  const zones = kitchen?.zonesServed
+  const areas = kitchen?.areasServed
+    ? Array.isArray(kitchen.areasServed)
+      ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
+      : []
+    : [];
+  const legacyZones = kitchen?.zonesServed
     ? Array.isArray(kitchen.zonesServed)
       ? kitchen.zonesServed.filter((z): z is Zone => typeof z !== 'string')
       : []
     : [];
-
-  // Debug: Log zones to check pincode data
-  React.useEffect(() => {
-    if (kitchen) {
-      console.log('🔍 [KitchenProfile] Raw kitchen.zonesServed:', kitchen.zonesServed);
-      console.log('🔍 [KitchenProfile] Type of first zone:', typeof kitchen.zonesServed?.[0]);
-      console.log('🔍 [KitchenProfile] Filtered zones count:', zones.length);
-      if (zones.length > 0) {
-        console.log('🔍 [KitchenProfile] First zone data:', JSON.stringify(zones[0], null, 2));
-      }
-    }
-  }, [kitchen, zones]);
 
   // Get initials from kitchen name
   const getInitials = (name: string) => {
@@ -729,11 +722,25 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           </View>
         </View>
 
-        {/* Zones Served */}
+        {/* Areas Served */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Zones Served ({zones.length})</Text>
-          {zones.length > 0 ? (
-            zones.map((zone) => (
+          <Text style={styles.sectionTitle}>
+            Areas Served ({areas.length > 0 ? areas.length : legacyZones.length})
+          </Text>
+          {areas.length > 0 ? (
+            areas.map((area) => (
+              <View key={area._id} style={styles.zoneItem}>
+                <View style={styles.zoneInfo}>
+                  <Text style={styles.zonePincode}>{area.name}</Text>
+                  <Text style={styles.zoneName}>
+                    {[area.city, area.state].filter(Boolean).join(', ') || '—'}
+                  </Text>
+                </View>
+                <Icon name="check-circle" size={16} color={colors.success} />
+              </View>
+            ))
+          ) : legacyZones.length > 0 ? (
+            legacyZones.map((zone) => (
               <View key={zone._id} style={styles.zoneItem}>
                 <View style={styles.zoneInfo}>
                   {zone.pincode && (
@@ -753,7 +760,7 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
               </View>
             ))
           ) : (
-            <Text style={styles.emptyText}>No zones assigned</Text>
+            <Text style={styles.emptyText}>No areas assigned</Text>
           )}
         </View>
 

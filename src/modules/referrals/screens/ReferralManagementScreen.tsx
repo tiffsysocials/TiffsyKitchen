@@ -33,6 +33,7 @@ import {
 } from '../../../types/api.types';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { useAlert } from '../../../hooks/useAlert';
+import { ReferralConfigEditModal } from '../components/ReferralConfigEditModal';
 
 interface Props {
   onMenuPress: () => void;
@@ -60,6 +61,8 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [configLoading, setConfigLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -169,6 +172,21 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
     }
   }, [showSuccess, showError]);
 
+  const handleSaveConfig = useCallback(async (payload: ReferralConfig) => {
+    setSavingConfig(true);
+    try {
+      const updated = await referralService.updateConfig(payload);
+      if (updated) setConfig(updated);
+      setEditModalVisible(false);
+      showSuccess('Success', 'Referral program updated');
+    } catch (err: any) {
+      // Re-throw so the modal can display the error inline
+      throw err;
+    } finally {
+      setSavingConfig(false);
+    }
+  }, [showSuccess]);
+
   const getStatusColor = (status: ReferralStatus) => {
     switch (status) {
       case 'CONVERTED': return colors.success;
@@ -242,24 +260,54 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
         )}
       </View>
       {config && (
-        <View style={styles.configDetails}>
-          <View style={styles.configDetailItem}>
-            <Text style={styles.configDetailLabel}>Referrer Reward</Text>
-            <Text style={styles.configDetailValue}>{config.referrerReward?.voucherCount || 0} meals</Text>
+        <>
+          <View style={styles.configDetails}>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Referrer Reward</Text>
+              <Text style={styles.configDetailValue}>
+                {config.referrerReward?.voucherCount || 0} {config.referrerReward?.voucherMealType || 'ANY'}
+              </Text>
+              <Text style={styles.configDetailSub}>
+                {config.referrerReward?.voucherValidityDays || 0}d validity
+              </Text>
+            </View>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Referee Reward</Text>
+              <Text style={styles.configDetailValue}>
+                {config.refereeReward?.voucherCount || 0} {config.refereeReward?.voucherMealType || 'ANY'}
+              </Text>
+              <Text style={styles.configDetailSub}>
+                {config.refereeReward?.voucherValidityDays || 0}d validity
+              </Text>
+            </View>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Window</Text>
+              <Text style={styles.configDetailValue}>{config.conversionWindowDays || 0} days</Text>
+            </View>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Max/User</Text>
+              <Text style={styles.configDetailValue}>{config.maxReferralsPerUser || 0}</Text>
+            </View>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Milestones</Text>
+              <Text style={styles.configDetailValue}>{config.milestones?.length || 0} tiers</Text>
+            </View>
+            <View style={styles.configDetailItem}>
+              <Text style={styles.configDetailLabel}>Same Address</Text>
+              <Text style={styles.configDetailValue}>
+                {config.antiAbuse?.sameAddressLimit ?? 0} limit
+              </Text>
+            </View>
           </View>
-          <View style={styles.configDetailItem}>
-            <Text style={styles.configDetailLabel}>Referee Reward</Text>
-            <Text style={styles.configDetailValue}>{config.refereeReward?.voucherCount || 0} meals</Text>
-          </View>
-          <View style={styles.configDetailItem}>
-            <Text style={styles.configDetailLabel}>Window</Text>
-            <Text style={styles.configDetailValue}>{config.conversionWindowDays || 0} days</Text>
-          </View>
-          <View style={styles.configDetailItem}>
-            <Text style={styles.configDetailLabel}>Max/User</Text>
-            <Text style={styles.configDetailValue}>{config.maxReferralsPerUser || 0}</Text>
-          </View>
-        </View>
+          <TouchableOpacity
+            style={styles.editConfigButton}
+            onPress={() => setEditModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Icon name="edit" size={16} color={colors.primary} />
+            <Text style={styles.editConfigButtonText}>Edit Configuration</Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -418,6 +466,14 @@ export const ReferralManagementScreen: React.FC<Props> = ({ onMenuPress }) => {
           }
         />
       )}
+
+      <ReferralConfigEditModal
+        visible={editModalVisible}
+        config={config}
+        saving={savingConfig}
+        onClose={() => setEditModalVisible(false)}
+        onSave={handleSaveConfig}
+      />
     </SafeAreaScreen>
   );
 };
@@ -546,6 +602,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginTop: 2,
+  },
+  configDetailSub: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  editConfigButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    borderRadius: spacing.borderRadiusMd,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  editConfigButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    marginLeft: 4,
   },
 
   // Top referrers

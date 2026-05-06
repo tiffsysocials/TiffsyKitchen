@@ -51,7 +51,10 @@ export const KitchenCard: React.FC<KitchenCardProps> = ({
     return kitchen.type === 'TIFFSY' ? colors.info : colors.secondary;
   };
 
-  const getZonesCount = () => {
+  const getCoverageCount = () => {
+    if (Array.isArray(kitchen.areasServed) && kitchen.areasServed.length > 0) {
+      return kitchen.areasServed.length;
+    }
     if (Array.isArray(kitchen.zonesServed)) {
       return kitchen.zonesServed.length;
     }
@@ -159,7 +162,7 @@ export const KitchenCard: React.FC<KitchenCardProps> = ({
         <View style={styles.infoRow}>
           <Icon name="map-marker-multiple" size={16} color={colors.textSecondary} />
           <Text style={styles.infoText}>
-            Serves {getZonesCount()} {getZonesCount() === 1 ? 'zone' : 'zones'}
+            Serves {getCoverageCount()} {getCoverageCount() === 1 ? 'area' : 'areas'}
           </Text>
         </View>
 

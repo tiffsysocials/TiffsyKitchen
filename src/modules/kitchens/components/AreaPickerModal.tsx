@@ -10,28 +10,28 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { NearbyPincode } from '../../../types/api.types';
+import { NearbyArea } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import pincodeService, { NearbyPincodesMeta } from '../../../services/pincode.service';
+import areaService, { NearbyAreasResult } from '../../../services/area.service';
+import { NearbyAreasMeta } from '../../../types/api.types';
 
-interface PincodePickerModalProps {
+interface AreaPickerModalProps {
   visible: boolean;
-  selectedPincodes: string[];
+  selectedAreaIds: string[];
   latitude?: number;
   longitude?: number;
-  /** Hints from the kitchen form. Used as fallback if Google reverse-geocode fails. */
   cityHint?: string;
   stateHint?: string;
   onClose: () => void;
-  onSave: (pincodes: string[]) => void;
+  onSave: (areaIds: string[], areas: NearbyArea[]) => void;
 }
 
 const RADIUS_OPTIONS = [5, 10, 15, 25];
 
-export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
+export const AreaPickerModal: React.FC<AreaPickerModalProps> = ({
   visible,
-  selectedPincodes,
+  selectedAreaIds,
   latitude,
   longitude,
   cityHint,
@@ -39,18 +39,18 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [pincodes, setPincodes] = useState<NearbyPincode[]>([]);
-  const [filtered, setFiltered] = useState<NearbyPincode[]>([]);
+  const [areas, setAreas] = useState<NearbyArea[]>([]);
+  const [filtered, setFiltered] = useState<NearbyArea[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [meta, setMeta] = useState<NearbyPincodesMeta | undefined>(undefined);
+  const [meta, setMeta] = useState<NearbyAreasMeta | undefined>(undefined);
   const [searchText, setSearchText] = useState('');
   const [radiusKm, setRadiusKm] = useState(10);
-  const [tempSelected, setTempSelected] = useState<string[]>(selectedPincodes);
+  const [tempSelected, setTempSelected] = useState<string[]>(selectedAreaIds);
 
-  const loadPincodes = useCallback(async () => {
+  const loadAreas = useCallback(async () => {
     if (latitude == null || longitude == null) {
-      setPincodes([]);
+      setAreas([]);
       setFiltered([]);
       setMeta(undefined);
       return;
@@ -58,20 +58,20 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const result = await pincodeService.getNearbyPincodes({
+      const result: NearbyAreasResult = await areaService.getNearbyAreas({
         latitude,
         longitude,
         radiusKm,
         cityHint,
         stateHint,
       });
-      setPincodes(result.pincodes);
-      setFiltered(result.pincodes);
+      setAreas(result.areas);
+      setFiltered(result.areas);
       setMeta(result.meta);
     } catch (err: any) {
-      console.error('Error loading nearby pincodes:', err);
-      setError(err?.message || 'Failed to load pincodes');
-      setPincodes([]);
+      console.error('Error loading nearby areas:', err);
+      setError(err?.message || 'Failed to load areas');
+      setAreas([]);
       setFiltered([]);
       setMeta(undefined);
     } finally {
@@ -81,59 +81,63 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      setTempSelected(selectedPincodes);
-      loadPincodes();
+      setTempSelected(selectedAreaIds);
+      loadAreas();
     }
-  }, [visible, selectedPincodes, loadPincodes]);
+  }, [visible, selectedAreaIds, loadAreas]);
 
   useEffect(() => {
     if (searchText === '') {
-      setFiltered(pincodes);
+      setFiltered(areas);
     } else {
       const q = searchText.toLowerCase();
       setFiltered(
-        pincodes.filter(
-          (p) =>
-            p.pincode.includes(searchText) ||
-            (p.city || '').toLowerCase().includes(q) ||
-            (p.district || '').toLowerCase().includes(q),
+        areas.filter(
+          (a) =>
+            a.name.toLowerCase().includes(q) ||
+            (a.city || '').toLowerCase().includes(q) ||
+            (a.state || '').toLowerCase().includes(q),
         ),
       );
     }
-  }, [searchText, pincodes]);
+  }, [searchText, areas]);
 
-  const togglePincode = (pincode: string) => {
+  const toggleArea = (id: string) => {
     setTempSelected((prev) =>
-      prev.includes(pincode) ? prev.filter((p) => p !== pincode) : [...prev, pincode],
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   };
 
   const handleSave = () => {
-    onSave(tempSelected);
+    const selectedObjects = areas.filter((a) => tempSelected.includes(a.id));
+    onSave(tempSelected, selectedObjects);
     onClose();
   };
 
   const handleCancel = () => {
-    setTempSelected(selectedPincodes);
+    setTempSelected(selectedAreaIds);
     setSearchText('');
     onClose();
   };
 
-  const renderItem = ({ item }: { item: NearbyPincode }) => {
-    const isSelected = tempSelected.includes(item.pincode);
+  const renderItem = ({ item }: { item: NearbyArea }) => {
+    const isSelected = tempSelected.includes(item.id);
+    const subtitle = [item.city, item.state].filter(Boolean).join(', ');
     return (
       <TouchableOpacity
         style={[styles.row, isSelected && styles.rowSelected]}
-        onPress={() => togglePincode(item.pincode)}>
+        onPress={() => toggleArea(item.id)}>
         <View style={styles.info}>
-          <View style={styles.pincodeRow}>
-            <Text style={styles.pincode}>{item.pincode}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.distance}>{item.distanceKm.toFixed(2)} km</Text>
           </View>
-          <Text style={styles.city}>
-            {[item.city, item.district].filter(Boolean).join(', ') || 'Unknown'}
-          </Text>
-          {item.officeName ? <Text style={styles.office}>{item.officeName}</Text> : null}
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          {typeof item.pincodeCount === 'number' && item.pincodeCount > 0 ? (
+            <Text style={styles.pincodes}>
+              {item.pincodeCount} pincode{item.pincodeCount === 1 ? '' : 's'}
+            </Text>
+          ) : null}
         </View>
         <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
           {isSelected && <Icon name="check" size={16} color="#fff" />}
@@ -153,7 +157,7 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Select Serviceable Pincodes</Text>
+            <Text style={styles.title}>Select Serviceable Areas</Text>
             <TouchableOpacity onPress={handleCancel}>
               <Icon name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -182,7 +186,7 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
             <Icon name="magnify" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by pincode or city"
+              placeholder="Search by area or city"
               placeholderTextColor={colors.textMuted}
               value={searchText}
               onChangeText={setSearchText}
@@ -197,8 +201,8 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
           <View style={styles.summary}>
             <Icon name="map-marker-multiple" size={16} color={colors.primary} />
             <Text style={styles.summaryText}>
-              {tempSelected.length} pincode{tempSelected.length === 1 ? '' : 's'} selected
-              {!noLocation && ` · ${pincodes.length} within ${radiusKm} km`}
+              {tempSelected.length} area{tempSelected.length === 1 ? '' : 's'} selected
+              {!noLocation && ` · ${areas.length} within ${radiusKm} km`}
             </Text>
           </View>
 
@@ -207,19 +211,19 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
               <Icon name="map-marker-question" size={48} color={colors.textMuted} />
               <Text style={styles.emptyText}>
                 Set the kitchen location first (use "Detect Location" or enter latitude/longitude)
-                to load nearby pincodes.
+                to load nearby areas.
               </Text>
             </View>
           ) : loading ? (
             <View style={styles.emptyContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading nearby pincodes...</Text>
+              <Text style={styles.loadingText}>Loading nearby areas...</Text>
             </View>
           ) : error ? (
             <View style={styles.emptyContainer}>
               <Icon name="alert-circle" size={48} color={colors.error} />
               <Text style={styles.emptyText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={loadPincodes}>
+              <TouchableOpacity style={styles.retryButton} onPress={loadAreas}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -227,15 +231,15 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
             <FlatList
               data={filtered}
               renderItem={renderItem}
-              keyExtractor={(item) => item.pincode}
+              keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Icon name="map-marker-off" size={48} color={colors.textMuted} />
                   <Text style={styles.emptyText}>
                     {searchText
-                      ? 'No matching pincodes'
-                      : `No pincodes within ${radiusKm} km. Try a larger radius.`}
+                      ? 'No matching areas'
+                      : `No areas within ${radiusKm} km. Try a larger radius.`}
                   </Text>
                   {meta && !searchText && (
                     <View style={styles.metaBox}>
@@ -243,21 +247,20 @@ export const PincodePickerModal: React.FC<PincodePickerModalProps> = ({
                         <Text style={styles.metaWarn}>
                           Backend couldn't reverse-geocode this location and no city hint
                           was provided. Check that the kitchen address has city + state filled
-                          in, and that the backend has GOOGLE_MAPS_API_KEY set (restart required
-                          after .env changes).
+                          in.
                         </Text>
                       )}
                       {meta.geocodeFailed && meta.usedHint && (
                         <Text style={styles.metaWarn}>
-                          Reverse-geocode failed; tried "{meta.enrichmentCity}" via India Post —
-                          got {meta.enrichmentAddedCount} new pincodes. They may not be in radius;
+                          Reverse-geocode failed; tried "{meta.enrichmentCity}" — got
+                          {' '}{meta.enrichmentAddedCount} new areas. They may not be in radius;
                           try a larger one.
                         </Text>
                       )}
                       {!meta.geocodeFailed && meta.triggeredEnrichment && !meta.enrichmentRan && (
                         <Text style={styles.metaWarn}>
-                          City "{meta.enrichmentCity}" was already cached but has no pincodes in
-                          this radius. Try a larger radius, or unwarm the city to refetch.
+                          City "{meta.enrichmentCity}" was already cached but has no areas in
+                          this radius. Try a larger radius.
                         </Text>
                       )}
                       {!meta.triggeredEnrichment && meta.initialLocalCount === 0 && (
@@ -398,26 +401,28 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
   },
-  pincodeRow: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 2,
   },
-  pincode: {
+  name: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.textPrimary,
+    flex: 1,
+    marginRight: spacing.sm,
   },
   distance: {
     fontSize: 12,
     color: colors.textMuted,
   },
-  city: {
+  subtitle: {
     fontSize: 13,
     color: colors.textPrimary,
   },
-  office: {
+  pincodes: {
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
