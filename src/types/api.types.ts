@@ -425,30 +425,15 @@ export interface NearbyAreasResponse {
 
 export interface Area {
   _id: string;
-  id?: string;
   name: string;
   city?: string;
   state?: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING_REVIEW';
-  source?: 'SEED' | 'GOOGLE' | 'NOMINATIM' | 'MANUAL';
-  sources?: string[];
-  placeId?: string;
-  osmId?: string;
-  hasBoundary?: boolean;
+  status?: string;
   pincodes?: string[];
-  pincodeCount?: number;
-  viewport?: {
-    northeast: { latitude: number; longitude: number };
-    southwest: { latitude: number; longitude: number };
-  };
   coordinates?: {
     latitude: number;
     longitude: number;
   };
-  enrichedAt?: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-  rejectionReason?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -625,7 +610,7 @@ export interface CreateCouponRequest {
   termsAndConditions?: string;
 }
 
-export type UpdateCouponRequest = Partial<CreateCouponRequest>;
+export type UpdateCouponRequest = Partial<Omit<CreateCouponRequest, 'code'>>;
 
 // ============================================================================
 // Voucher Management Types

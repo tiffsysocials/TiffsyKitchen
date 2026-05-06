@@ -19,6 +19,18 @@ export interface NearbyAreasResult {
   meta?: NearbyAreasMeta;
 }
 
+export interface ReverseGeocodeResult {
+  formattedAddress: string;
+  addressLine1: string;
+  addressLine2: string;
+  locality: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  placeId: string;
+}
+
 class AreaService {
   async getNearbyAreas(params: GetNearbyAreasParams): Promise<NearbyAreasResult> {
     const query = new URLSearchParams({
@@ -54,6 +66,26 @@ class AreaService {
     }
   }
 
+  /**
+   * Server-side proxy to Google Geocoding. The backend holds the API key.
+   * Used by the kitchen-form "Detect Location" flow to auto-fill the address.
+   */
+  async reverseGeocode(latitude: number, longitude: number): Promise<ReverseGeocodeResult> {
+    const query = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+    try {
+      const response = await apiService.get<ApiResponse<ReverseGeocodeResult>>(
+        `/api/areas/reverse-geocode?${query.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error reverse-geocoding:', error);
+      throw error;
+    }
+  }
+
   async mapPincodesToAreas(pincodes: string[]): Promise<Area[]> {
     if (pincodes.length === 0) return [];
     try {
@@ -67,70 +99,6 @@ class AreaService {
       throw error;
     }
   }
-
-  async listAreas(params: {
-    status?: AreaStatus;
-    city?: string;
-    state?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  } = {}): Promise<AreaListResponse> {
-    const query = new URLSearchParams();
-    if (params.status) query.append('status', params.status);
-    if (params.city) query.append('city', params.city);
-    if (params.state) query.append('state', params.state);
-    if (params.search) query.append('search', params.search);
-    if (params.page) query.append('page', params.page.toString());
-    if (params.limit) query.append('limit', params.limit.toString());
-    const qs = query.toString();
-    try {
-      const response = await apiService.get<ApiResponse<AreaListResponse>>(
-        `/api/areas${qs ? `?${qs}` : ''}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error listing areas:', error);
-      throw error;
-    }
-  }
-
-  async approveArea(id: string): Promise<Area> {
-    try {
-      const response = await apiService.patch<ApiResponse<{ area: Area }>>(
-        `/api/areas/${id}/approve`
-      );
-      return response.data.area;
-    } catch (error) {
-      console.error('Error approving area:', error);
-      throw error;
-    }
-  }
-
-  async rejectArea(id: string, reason?: string): Promise<Area> {
-    try {
-      const response = await apiService.patch<ApiResponse<{ area: Area }>>(
-        `/api/areas/${id}/reject`,
-        reason ? { reason } : {}
-      );
-      return response.data.area;
-    } catch (error) {
-      console.error('Error rejecting area:', error);
-      throw error;
-    }
-  }
-}
-
-export type AreaStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING_REVIEW';
-
-export interface AreaListResponse {
-  areas: Area[];
-  pagination?: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-  };
 }
 
 const areaService = new AreaService();

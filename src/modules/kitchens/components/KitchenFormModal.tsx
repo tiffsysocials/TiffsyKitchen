@@ -230,43 +230,57 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
    * Reverse-geocode lat/lng to a postal address using OpenStreetMap Nominatim
    * (free, no API key required). Best-effort: silently no-ops on failure.
    */
+  /**
+   * Reverse-geocode lat/lng to a postal address via the backend's Google
+   * Geocoding proxy (`GET /api/areas/reverse-geocode`). Backend holds the
+   * GOOGLE_MAPS_API_KEY so it never ships in the app bundle.
+   */
   const reverseGeocodeAndFillAddress = async (latitude: number, longitude: number) => {
-    try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`;
-      const response = await fetch(url, {
-        headers: {
-          // Nominatim requires an identifying User-Agent
-          'User-Agent': 'TiffsyKitchenAdmin/1.0',
-          'Accept-Language': 'en',
-        },
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      const addr = data?.address;
-      if (!addr) return false;
+    const tag = '[DetectLocation/Google]';
+    console.log(`${tag} REQUEST →`, { latitude, longitude });
 
-      const line1Parts = [addr.house_number, addr.road || addr.pedestrian || addr.footway]
-        .filter(Boolean)
-        .join(' ');
-      const line2Parts = [addr.building, addr.residential].filter(Boolean).join(', ');
-      const locality = addr.neighbourhood || addr.suburb || addr.quarter || addr.hamlet || '';
-      const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || '';
-      const state = addr.state || '';
-      const pincode = addr.postcode || '';
+    try {
+      const startedAt = Date.now();
+      const result = await areaService.reverseGeocode(latitude, longitude);
+      const elapsedMs = Date.now() - startedAt;
+      console.log(`${tag} response (${elapsedMs} ms) →`, result);
+
+      const {
+        addressLine1,
+        addressLine2,
+        locality,
+        city,
+        state,
+        pincode,
+        formattedAddress,
+      } = result;
+
+      const parsed = {
+        addressLine1,
+        addressLine2,
+        locality,
+        city,
+        state,
+        pincode,
+        pincodeAccepted: !!(pincode && /^\d{6}$/.test(pincode)),
+        formattedAddress,
+      };
+      console.log(`${tag} parsed → form fill plan:`, parsed);
 
       setFormData((prev) => ({
         ...prev,
-        addressLine1: line1Parts || prev.addressLine1,
-        addressLine2: line2Parts || prev.addressLine2,
+        addressLine1: addressLine1 || prev.addressLine1,
+        addressLine2: addressLine2 || prev.addressLine2,
         locality: locality || prev.locality,
         city: city || prev.city,
         state: state || prev.state,
         pincode: pincode && /^\d{6}$/.test(pincode) ? pincode : prev.pincode,
       }));
 
+      console.log(`${tag} filled form successfully`);
       return true;
-    } catch (error) {
-      console.warn('Reverse geocode failed:', error);
+    } catch (error: any) {
+      console.warn(`${tag} request failed:`, error?.message || error);
       return false;
     }
   };
@@ -293,13 +307,24 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         }
       }
 
+      console.log('[DetectLocation] requesting GPS fix…');
       Geolocation.getCurrentPosition(
         async (position) => {
+          console.log('[DetectLocation] GPS position →', {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            altitude: position.coords.altitude,
+            heading: position.coords.heading,
+            speed: position.coords.speed,
+            timestamp: position.timestamp,
+          });
           const { latitude, longitude } = position.coords;
           updateField('latitude', latitude.toFixed(6));
           updateField('longitude', longitude.toFixed(6));
 
           const filled = await reverseGeocodeAndFillAddress(latitude, longitude);
+          console.log('[DetectLocation] reverse-geocode filled?', filled);
 
           setDetectingLocation(false);
           if (Platform.OS === 'android') {
@@ -310,7 +335,10 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
           }
         },
         (error) => {
-          console.error('Geolocation error:', error);
+          console.error('[DetectLocation] Geolocation error:', {
+            code: error.code,
+            message: error.message,
+          });
           setDetectingLocation(false);
           showError('Location Error', 'Could not detect location. Please enter coordinates manually.');
         },
