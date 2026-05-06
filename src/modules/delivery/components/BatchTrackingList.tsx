@@ -32,11 +32,17 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
     return `${Math.floor(seconds / 3600)}h ago`;
   };
 
-  const sortedDeliveries = [...deliveries].sort((a, b) => {
-    const seqA = a.sequence?.sequenceNumber ?? 999;
-    const seqB = b.sequence?.sequenceNumber ?? 999;
-    return seqA - seqB;
-  });
+  const isStale = driver && (Date.now() - new Date(driver.updatedAt).getTime()) > 5 * 60 * 1000; // 5 minutes
+
+  const sortedDeliveries = [...deliveries]
+    .filter((delivery, index, self) => 
+      index === self.findIndex(d => d.orderId === delivery.orderId)
+    )
+    .sort((a, b) => {
+      const seqA = a.sequence?.sequenceNumber ?? 999;
+      const seqB = b.sequence?.sequenceNumber ?? 999;
+      return seqA - seqB;
+    });
 
   return (
     <View className="px-4 py-2">
@@ -49,6 +55,7 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
               <Text className="text-sm font-semibold text-blue-800">{driver.name}</Text>
               <Text className="text-xs text-blue-600">
                 Last seen: {getTimeSince(driver.updatedAt)} · {driver.driverStatus}
+                {isStale && <Text className="text-red-500"> (stale)</Text>}
               </Text>
             </View>
           ) : (

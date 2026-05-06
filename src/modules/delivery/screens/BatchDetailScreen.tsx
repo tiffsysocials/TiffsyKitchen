@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
@@ -23,6 +23,7 @@ interface Props {
 type TabName = 'orders' | 'tracking';
 
 const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabName>('orders');
   const [showReassign, setShowReassign] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
@@ -34,6 +35,10 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
   }, []);
 
   const isAdmin = userRole === 'ADMIN';
+
+  const refreshTracking = () => {
+    queryClient.invalidateQueries({ queryKey: ['batchTracking', batchId] });
+  };
 
   // Batch detail query
   const { data: detailData, isLoading, refetch } = useQuery({
@@ -183,6 +188,11 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
               </Text>
               {isActive && (
                 <View className="w-2 h-2 rounded-full bg-green-500 ml-2" />
+              )}
+              {activeTab === 'tracking' && (
+                <TouchableOpacity onPress={refreshTracking} className="ml-2">
+                  <Icon name="refresh" size={16} color={activeTab === 'tracking' ? '#ea580c' : '#6b7280'} />
+                </TouchableOpacity>
               )}
             </View>
           </TouchableOpacity>
