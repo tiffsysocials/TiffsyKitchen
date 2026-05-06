@@ -147,22 +147,6 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
 
   // --- System group ---
   {
-    id: '6',
-    label: 'Zones',
-    icon: 'location-on',
-    screen: 'Zones',
-    roles: ['ADMIN'],
-    group: 'System',
-  },
-  {
-    id: '6b',
-    label: 'Pincodes',
-    icon: 'pin-drop',
-    screen: 'Pincodes' as ScreenName,
-    roles: ['ADMIN'],
-    group: 'System',
-  },
-  {
     id: '6c',
     label: 'Areas Review',
     icon: 'rule',

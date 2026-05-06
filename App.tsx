@@ -11,7 +11,6 @@ import { RoleBasedOrdersScreen } from './src/screens/RoleBasedOrdersScreen';
 import { RoleBasedBatchesScreen } from './src/screens/RoleBasedBatchesScreen';
 import OrdersManagementContainer from './src/modules/orders/screens/OrdersManagementContainer';
 import { MenuManagementMain } from './src/modules/menu/screens/MenuManagementMain';
-import { ZonesManagementScreen } from './src/modules/zones';
 import { KitchensManagementScreen } from './src/modules/kitchens/screens';
 import { SubscriptionsScreen } from './src/modules/subscriptions';
 import { BatchManagementLandingScreen } from './src/modules/kitchens/screens';
@@ -336,13 +335,6 @@ const MainContent: React.FC<{
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="Kitchens" onMenuPress={onMenuPress}>
           <KitchensManagementScreen onMenuPress={onMenuPress} />
-        </PermissionGuard>
-      );
-
-    case 'Zones':
-      return (
-        <PermissionGuard requiredRoles={['ADMIN']} screenName="Zones" onMenuPress={onMenuPress}>
-          <ZonesManagementScreen onMenuPress={onMenuPress} />
         </PermissionGuard>
       );
 
