@@ -26,7 +26,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAlert } from '../../../hooks/useAlert';
 import { GradientBox } from '../../../components/common/GradientBox';
 
-const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
+type StatusFilterValue = OrderStatus | 'ALL' | 'FAILED_PAYMENTS';
+
+const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Scheduled', value: 'SCHEDULED' },
   { label: 'Placed', value: 'PLACED' },
@@ -37,6 +39,7 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
   { label: 'Delivered', value: 'DELIVERED' },
   { label: 'Cancelled', value: 'CANCELLED' },
   { label: 'Failed', value: 'FAILED' },
+  { label: 'Failed Payments', value: 'FAILED_PAYMENTS' },
 ];
 
 const getTodayDateString = () => {
@@ -59,7 +62,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // const insets = useSafeAreaInsets(); // Removed
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo } = useAlert();
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'ALL'>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayDateString());
@@ -109,7 +112,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
       // because scheduled orders transition to PLACED/ACCEPTED etc. but keep orderSource='SCHEDULED'
       if (selectedStatus === 'SCHEDULED') {
         params.orderSource = 'SCHEDULED';
-      } else if (selectedStatus !== 'ALL') {
+      } else if (selectedStatus !== 'ALL' && selectedStatus !== 'FAILED_PAYMENTS') {
         params.status = selectedStatus;
       }
       // Skip date filter for SCHEDULED orders (they have future delivery dates)
@@ -179,7 +182,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     refetchOrders();
   }, [refetchKitchens, refetchOrders]);
 
-  const handleStatusFilter = (status: OrderStatus | 'ALL') => {
+  const handleStatusFilter = (status: StatusFilterValue) => {
     setSelectedStatus(status);
     // Query resets automatically when selectedStatus changes in queryKey
   };
@@ -229,18 +232,26 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   const isScheduledOrder = (order: Order) =>
     order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED';
 
+  // Hide orders whose payment never completed (PENDING) or failed (FAILED) from default views.
+  // These are surfaced only via the dedicated "Failed Payments" filter.
+  const hasVisiblePayment = (order: Order) =>
+    order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'FAILED';
+
   // Flatten all pages into a single orders array, exclude SCHEDULED from "All"
   const allOrders = useMemo(() => {
     const orders = ordersData?.pages?.flatMap(page => page.orders) ?? [];
+    if (selectedStatus === 'FAILED_PAYMENTS') {
+      return orders.filter(order => order.paymentStatus === 'FAILED');
+    }
     if (selectedStatus === 'ALL') {
-      // Exclude scheduled orders from "All" view
-      return orders.filter(order => !isScheduledOrder(order));
+      // Exclude scheduled orders and orders with pending/failed payments from "All" view
+      return orders.filter(order => !isScheduledOrder(order) && hasVisiblePayment(order));
     }
     if (selectedStatus === 'SCHEDULED') {
       // Client-side filter: show orders that are scheduled (via any field)
-      return orders.filter(order => isScheduledOrder(order));
+      return orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
     }
-    return orders;
+    return orders.filter(hasVisiblePayment);
   }, [ordersData, selectedStatus]);
 
   // Group orders by kitchen with search filtering
@@ -329,12 +340,16 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     );
   }, [allOrders, searchQuery, kitchenMap]);
 
-  // Compute stats from the main orders data (only when on ALL tab which has all statuses)
+  // Compute stats from the main orders data (only when on ALL tab which has all statuses).
+  // Stats only count orders with completed (non-pending, non-failed) payments so they match
+  // the order list shown to the admin.
   const todayStats = useMemo(() => {
     if (selectedStatus !== 'ALL' || !ordersData?.pages?.length) {
       return cachedStatsRef.current;
     }
-    const allLoadedOrders = ordersData.pages.flatMap(page => page.orders);
+    const allLoadedOrders = ordersData.pages
+      .flatMap(page => page.orders)
+      .filter(hasVisiblePayment);
     // Use pagination.total from first page for accurate total count
     const total = ordersData.pages[0]?.pagination?.total ?? allLoadedOrders.length;
     const placed = allLoadedOrders.filter(o => o.status === 'PLACED').length;
@@ -461,7 +476,9 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         <Text style={styles.emptyStateSubtext}>
           {selectedStatus === 'ALL'
             ? 'There are no orders yet'
-            : `No orders with status "${selectedStatus}"`}
+            : selectedStatus === 'FAILED_PAYMENTS'
+              ? 'No failed payments for the selected date'
+              : `No orders with status "${selectedStatus}"`}
         </Text>
       </View>
     );

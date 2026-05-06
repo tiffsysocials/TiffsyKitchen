@@ -28,7 +28,9 @@ import { useAlert } from '../../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GradientBox } from '../../../components/common/GradientBox';
 
-const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' | 'AUTO_ORDERS' }[] = [
+type StatusFilterValue = OrderStatus | 'ALL' | 'AUTO_ORDERS' | 'FAILED_PAYMENTS';
+
+const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Scheduled', value: 'SCHEDULED' },
   { label: 'Pending', value: 'PENDING_KITCHEN_ACCEPTANCE' },
@@ -37,6 +39,7 @@ const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' | 'AUTO_ORDERS
   { label: 'Auto-Orders', value: 'AUTO_ORDERS' },
   { label: 'Preparing', value: 'PREPARING' },
   { label: 'Ready', value: 'READY' },
+  { label: 'Failed Payments', value: 'FAILED_PAYMENTS' },
 ];
 
 const getTodayDateString = () => {
@@ -64,7 +67,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning, showConfirm } = useAlert();
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'ALL' | 'AUTO_ORDERS'>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
   const [selectedMealWindow, setSelectedMealWindow] = useState<'ALL' | 'LUNCH' | 'DINNER'>('ALL');
   const [page, setPage] = useState(1);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -112,7 +115,11 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
       // because scheduled orders transition to PLACED/ACCEPTED etc. but keep orderSource='SCHEDULED'
       if (selectedStatus === 'SCHEDULED') {
         params.orderSource = 'SCHEDULED';
-      } else if (selectedStatus !== 'ALL' && selectedStatus !== 'AUTO_ORDERS') {
+      } else if (
+        selectedStatus !== 'ALL' &&
+        selectedStatus !== 'AUTO_ORDERS' &&
+        selectedStatus !== 'FAILED_PAYMENTS'
+      ) {
         params.status = selectedStatus;
       }
       // Skip date filter for SCHEDULED orders (they have future delivery dates)
@@ -127,23 +134,31 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
   const isScheduledOrder = (order: Order) =>
     order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED';
 
+  // Hide orders whose payment never completed (PENDING) or failed (FAILED) from default views.
+  // These are surfaced only via the dedicated "Failed Payments" filter.
+  const hasVisiblePayment = (order: Order) =>
+    order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'FAILED';
+
   // Filter orders for auto-orders view, exclude SCHEDULED from "All"
   const filteredOrders = useMemo(() => {
     const orders = ordersData?.orders || [];
+    if (selectedStatus === 'FAILED_PAYMENTS') {
+      return orders.filter(order => order.paymentStatus === 'FAILED');
+    }
     if (selectedStatus === 'AUTO_ORDERS') {
       return orders.filter(order =>
-        isAutoOrder(order) || isAutoAccepted(order)
+        (isAutoOrder(order) || isAutoAccepted(order)) && hasVisiblePayment(order)
       );
     }
     if (selectedStatus === 'ALL') {
-      // Exclude scheduled orders from "All" view
-      return orders.filter(order => !isScheduledOrder(order));
+      // Exclude scheduled orders and pending/failed payments from "All" view
+      return orders.filter(order => !isScheduledOrder(order) && hasVisiblePayment(order));
     }
     if (selectedStatus === 'SCHEDULED') {
       // Client-side filter: show orders that are scheduled (via any field)
-      return orders.filter(order => isScheduledOrder(order));
+      return orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
     }
-    return orders;
+    return orders.filter(hasVisiblePayment);
   }, [ordersData, selectedStatus]);
 
   // Update order status mutation (Kitchen-specific endpoint)
@@ -287,7 +302,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     refetch();
   }, [refetch]);
 
-  const handleStatusFilter = (status: OrderStatus | 'ALL') => {
+  const handleStatusFilter = (status: StatusFilterValue) => {
     setSelectedStatus(status);
     setPage(1);
   };
@@ -431,7 +446,9 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
         <Text style={styles.emptyStateSubtext}>
           {selectedStatus === 'ALL'
             ? 'No orders available'
-            : `No orders with status "${selectedStatus}"`}
+            : selectedStatus === 'FAILED_PAYMENTS'
+              ? 'No failed payments for the selected date'
+              : `No orders with status "${selectedStatus}"`}
         </Text>
       </View>
     );
