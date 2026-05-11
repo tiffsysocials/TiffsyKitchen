@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { format } from 'date-fns';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CouponDetailsResponse, Coupon } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
@@ -42,6 +43,7 @@ export const CouponDetailModal: React.FC<CouponDetailModalProps> = ({
   onDelete,
 }) => {
   const { showConfirm } = useAlert();
+  const insets = useSafeAreaInsets();
   const coupon = data?.coupon;
   const stats = data?.usageStats;
   const recentUsage = data?.recentUsage || [];
@@ -89,7 +91,7 @@ export const CouponDetailModal: React.FC<CouponDetailModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Coupon Details</Text>

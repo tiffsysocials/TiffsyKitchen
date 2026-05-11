@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { BASE_URL } from '../../config/env';
 import { DashboardScreen } from './DashboardScreen';
 import { UsersScreen } from './UsersScreen';
 import { UserDetailsScreen } from './UserDetailsScreen';
@@ -167,7 +168,7 @@ const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({ firebaseToken, onLo
         'Authorization': `Bearer ${firebaseToken}`,
       };
 
-      const endpoint = 'https://tiffsy-backend.onrender.com/api/auth/admin/login';
+      const endpoint = `${BASE_URL}/api/auth/admin/login`;
       const requestBody = {
         username: username.trim(),
         password: password,

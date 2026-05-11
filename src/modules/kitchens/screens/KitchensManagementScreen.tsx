@@ -320,22 +320,22 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   };
 
   const handleDeleteKitchen = async (kitchen: Kitchen) => {
-    showConfirm(
-      'Delete Kitchen',
-      `Are you sure you want to delete "${kitchen.name}"? This action cannot be undone.`,
-      async () => {
-        try {
-          await kitchenService.deleteKitchen(kitchen._id);
-          showToast('Kitchen deleted successfully', 'success');
-          loadKitchens(true);
-        } catch (err: any) {
-          const errorMessage = err?.message || 'Failed to delete kitchen';
-          showToast(errorMessage, 'error');
-        }
-      },
-      undefined,
-      { confirmText: 'Delete', isDestructive: true }
-    );
+    // KitchenCard already shows the confirm dialog before calling this.
+    // Just hit the API directly here.
+    console.log('🍳 Deleting kitchen:', kitchen._id, kitchen.name);
+    try {
+      await kitchenService.deleteKitchen(kitchen._id);
+      showToast('Kitchen deleted successfully', 'success');
+      loadKitchens(true);
+    } catch (err: any) {
+      console.log('🍳 Kitchen delete error (full):', JSON.stringify(err, null, 2));
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to delete kitchen';
+      showToast(backendMessage, 'error');
+    }
   };
 
   const handleToggleAcceptingOrders = async (kitchen: Kitchen, isAccepting: boolean) => {

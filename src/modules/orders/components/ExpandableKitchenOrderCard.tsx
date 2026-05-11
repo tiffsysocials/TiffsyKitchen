@@ -26,6 +26,9 @@ interface ExpandableKitchenOrderCardProps {
   onOrderPress: (orderId: string) => void;
   onStatusChange: (orderId: string, newStatus: any) => void;
   updatingOrderId: string | null;
+  selectionMode?: boolean;
+  selectedOrderIds?: Set<string>;
+  onOrderSelect?: (orderId: string) => void;
 }
 
 const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
@@ -36,9 +39,29 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
   onOrderPress,
   onStatusChange,
   updatingOrderId,
+  selectionMode = false,
+  selectedOrderIds,
+  onOrderSelect,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [rotateAnim] = useState(new Animated.Value(0));
+
+  // Auto-expand when selection mode is enabled so user can pick orders
+  React.useEffect(() => {
+    if (selectionMode && !isExpanded) {
+      setIsExpanded(true);
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [selectionMode]);
+
+  const selectedCountInKitchen = React.useMemo(() => {
+    if (!selectedOrderIds || selectedOrderIds.size === 0) return 0;
+    return orders.reduce((acc, o) => acc + (selectedOrderIds.has(o._id) ? 1 : 0), 0);
+  }, [orders, selectedOrderIds]);
 
   const toggleExpanded = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -102,6 +125,12 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
                   <Text style={styles.statValueWhite}>{stats.preparing}</Text>
                 </View>
               )}
+              {selectionMode && selectedCountInKitchen > 0 && (
+                <View style={[styles.statBadge, styles.selectedBadge]}>
+                  <Text style={styles.statLabelWhite}>Selected: </Text>
+                  <Text style={styles.statValueWhite}>{selectedCountInKitchen}</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -125,9 +154,16 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
               <OrderCardAdminImproved
                 key={order._id}
                 order={order}
-                onPress={() => onOrderPress(order._id)}
+                onPress={() =>
+                  selectionMode && onOrderSelect
+                    ? onOrderSelect(order._id)
+                    : onOrderPress(order._id)
+                }
                 onStatusChange={onStatusChange}
                 isUpdating={updatingOrderId === order._id}
+                selectionMode={selectionMode}
+                isSelected={selectedOrderIds?.has(order._id) ?? false}
+                onSelect={() => onOrderSelect?.(order._id)}
               />
             ))
           )}
@@ -198,6 +234,9 @@ const styles = StyleSheet.create({
   },
   preparingBadge: {
     backgroundColor: '#FFCC00',
+  },
+  selectedBadge: {
+    backgroundColor: '#FE8733',
   },
   statLabel: {
     fontSize: 11,

@@ -336,9 +336,23 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             {/* KPI Cards */}
             <SectionHeader title={getOverviewTitle()} />
             <View style={styles.kpiGrid}>
-              {filteredKpis.map((metric) => (
-                <KpiCard key={metric.id} metric={metric} />
-              ))}
+              {filteredKpis.map((metric) => {
+                const kpiNav: Record<string, () => void> = {
+                  'total-orders': () => navigate('Orders'),
+                  'total-revenue': () => navigate('Reports'),
+                  'active-customers': () => navigate('Users'),
+                  'active-kitchens': () => navigate('Kitchens'),
+                  'today-orders': () => navigate('Orders'),
+                  'pending-orders': () => navigate('Orders'),
+                };
+                return (
+                  <KpiCard
+                    key={metric.id}
+                    metric={metric}
+                    onPress={kpiNav[metric.id]}
+                  />
+                );
+              })}
             </View>
 
             {/* Order Status Funnel */}

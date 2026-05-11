@@ -16,6 +16,7 @@ import { Subscription } from '../../../types/subscription.types';
 import { subscriptionsService } from '../../../services/subscriptions.service';
 import { ordersService } from '../../../services/orders.service';
 import { addressService, Address } from '../../../services/address.service';
+import { vouchersService } from '../../../services/vouchers.service';
 import { RoleBadge } from '../components/RoleBadge';
 import { StatusBadge } from '../components/StatusBadge';
 import { SuspendUserModal } from '../components/SuspendUserModal';
@@ -23,6 +24,8 @@ import { ResetPasswordModal } from '../components/ResetPasswordModal';
 import { EditUserModal } from '../components/EditUserModal';
 import { useAlert } from '../../../hooks/useAlert';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
+import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
+import { IssueVoucherModal } from '../components/IssueVoucherModal';
 
 interface UserDetailAdminScreenProps {
   userId: string;
@@ -49,7 +52,7 @@ const spacing = {
   xl: 32,
 };
 
-export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
+const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
   userId,
   onBack,
 }) => {
@@ -68,6 +71,18 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showIssueVoucherModal, setShowIssueVoucherModal] = useState(false);
+  const [vouchers, setVouchers] = useState<Array<{
+    _id: string;
+    voucherCode: string;
+    issuedDate: string;
+    expiryDate: string;
+    status: string;
+    source?: string;
+    redeemedAt?: string;
+  }>>([]);
+  const [loadingVouchers, setLoadingVouchers] = useState(false);
+  const [voucherStatusFilter, setVoucherStatusFilter] = useState<'AVAILABLE' | 'ALL'>('AVAILABLE');
 
   const fetchUserDetails = async (showRefresh = false) => {
     try {
@@ -81,11 +96,12 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
       const data = await adminUsersService.getUserById(userId);
       setUserData(data);
 
-      // For customers, fetch subscriptions, orders, and addresses
+      // For customers, fetch subscriptions, orders, addresses, and vouchers
       if (data.user.role === 'CUSTOMER') {
         fetchSubscriptions();
         fetchOrders();
         fetchAddresses();
+        fetchVouchers();
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load user details');
@@ -129,6 +145,23 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
       console.log('Failed to fetch addresses:', err);
     } finally {
       setLoadingAddresses(false);
+    }
+  };
+
+  const fetchVouchers = async (statusFilter?: 'AVAILABLE' | 'ALL') => {
+    const status = statusFilter ?? voucherStatusFilter;
+    try {
+      setLoadingVouchers(true);
+      const response = await vouchersService.adminGetVouchersForUser(userId, {
+        status: status === 'ALL' ? undefined : 'AVAILABLE',
+        limit: 100,
+      });
+      setVouchers(response.vouchers || []);
+    } catch (err: any) {
+      console.log('Failed to fetch vouchers:', err?.message || err);
+      setVouchers([]);
+    } finally {
+      setLoadingVouchers(false);
     }
   };
 
@@ -314,12 +347,32 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
             <StatusBadge status={user.status} size="medium" />
           </View>
 
-          {/* Voucher Count for Customers */}
-          {user.role === 'CUSTOMER' && stats && (
+          {/* Voucher Count + Issue button for Customers (uses live vouchers list, falls back to stats while loading) */}
+          {user.role === 'CUSTOMER' && (
             <View style={styles.voucherInfoCard}>
               <MaterialIcons name="confirmation-number" size={20} color="#4ECDC4" />
               <Text style={styles.voucherInfoLabel}>Available Vouchers:</Text>
-              <Text style={styles.voucherInfoValue}>{stats.availableVouchers || 0}</Text>
+              <Text style={styles.voucherInfoValue}>
+                {loadingVouchers
+                  ? '…'
+                  : vouchers.filter((v) => v.status === 'AVAILABLE').length || (stats?.availableVouchers ?? 0)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowIssueVoucherModal(true)}
+                style={{
+                  marginLeft: 'auto',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <MaterialIcons name="add" size={14} color={colors.white} />
+                <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>Issue</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -344,7 +397,7 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
               <View style={styles.kitchenMeta}>
                 <MaterialIcons name="location-on" size={14} color={colors.gray} />
                 <Text style={styles.kitchenMetaText}>
-                  {kitchen.address.city}, {kitchen.address.pincode}
+                  {kitchen.address?.city || '—'}{kitchen.address?.pincode ? `, ${kitchen.address.pincode}` : ''}
                 </Text>
               </View>
             </View>
@@ -409,6 +462,110 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
           </View>
         )}
 
+        {/* Vouchers list (for Customers) — issue date + expiry per voucher */}
+        {user.role === 'CUSTOMER' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="confirmation-number" size={20} color="#4ECDC4" />
+              <Text style={styles.sectionTitle}>Vouchers</Text>
+              <View style={{ flexDirection: 'row', marginLeft: 'auto', gap: 6 }}>
+                {(['AVAILABLE', 'ALL'] as const).map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => {
+                      setVoucherStatusFilter(s);
+                      fetchVouchers(s);
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      backgroundColor: voucherStatusFilter === s ? colors.primary : colors.lightGray,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: voucherStatusFilter === s ? colors.white : colors.gray,
+                    }}>
+                      {s === 'AVAILABLE' ? 'Available' : 'All'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {loadingVouchers ? (
+              <View style={styles.loadingSection}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>Loading vouchers...</Text>
+              </View>
+            ) : vouchers.length > 0 ? (
+              vouchers.map((v) => {
+                const isExpired = v.status === 'EXPIRED' || new Date(v.expiryDate) < new Date();
+                const statusColor =
+                  v.status === 'AVAILABLE' && !isExpired ? colors.success
+                  : v.status === 'REDEEMED' ? colors.primary
+                  : v.status === 'CANCELLED' ? colors.danger
+                  : isExpired ? colors.gray
+                  : colors.warning;
+                return (
+                  <View
+                    key={v._id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: spacing.md,
+                      marginBottom: spacing.sm,
+                      backgroundColor: colors.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.black, marginBottom: 4 }}>
+                        {v.voucherCode}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                        <MaterialIcons name="event-available" size={12} color={colors.gray} />
+                        <Text style={{ fontSize: 12, color: colors.gray }}>
+                          Issued: {new Date(v.issuedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <MaterialIcons name="event-busy" size={12} color={isExpired ? colors.danger : colors.gray} />
+                        <Text style={{ fontSize: 12, color: isExpired ? colors.danger : colors.gray, fontWeight: isExpired ? '700' : '400' }}>
+                          Expires: {new Date(v.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      {v.source && (
+                        <Text style={{ fontSize: 10, color: colors.gray, marginTop: 4 }}>
+                          Source: {v.source}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      backgroundColor: `${statusColor}20`,
+                    }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>
+                        {isExpired && v.status === 'AVAILABLE' ? 'EXPIRED' : v.status}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={styles.noDataText}>
+                {voucherStatusFilter === 'AVAILABLE' ? 'No available vouchers' : 'No vouchers found'}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Subscription Plans (for Customers) */}
         {user.role === 'CUSTOMER' && (
           <View style={styles.section}>
@@ -425,7 +582,9 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
               subscriptions.map(subscription => (
                 <View key={subscription._id} style={styles.subscriptionCard}>
                   <View style={styles.subscriptionHeader}>
-                    <Text style={styles.subscriptionPlanName}>{subscription.planId.name}</Text>
+                    <Text style={styles.subscriptionPlanName}>
+                      {(typeof subscription.planId === 'object' && subscription.planId?.name) || 'Unknown plan'}
+                    </Text>
                     <View
                       style={[
                         styles.subscriptionStatusBadge,
@@ -441,7 +600,7 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
                     <View style={styles.subscriptionMetaRow}>
                       <MaterialIcons name="calendar-today" size={14} color={colors.gray} />
                       <Text style={styles.subscriptionMetaText}>
-                        {subscription.planId.durationDays} days
+                        {(typeof subscription.planId === 'object' && subscription.planId?.durationDays) || 0} days
                       </Text>
                     </View>
                     <View style={styles.subscriptionMetaRow}>
@@ -513,7 +672,9 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
                   {address.zoneId && (
                     <View style={styles.addressZone}>
                       <MaterialIcons name="location-city" size={14} color={colors.primary} />
-                      <Text style={styles.addressZoneText}>{address.zoneId.name}</Text>
+                      <Text style={styles.addressZoneText}>
+                        {(typeof address.zoneId === 'object' && address.zoneId?.name) || 'Zone'}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -556,7 +717,7 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
                   <View style={styles.orderMeta}>
                     <MaterialIcons name="restaurant" size={14} color={colors.gray} />
                     <Text style={styles.orderMetaText} numberOfLines={1}>
-                      {order.kitchenId.name}
+                      {(typeof order.kitchenId === 'object' && order.kitchenId?.name) || 'Unknown kitchen'}
                     </Text>
                   </View>
                   {order.mealWindow && (
@@ -712,10 +873,28 @@ export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = ({
         onClose={() => setShowResetPasswordModal(false)}
         onSuccess={() => fetchUserDetails()}
       />
+      {user.role === 'CUSTOMER' && (
+        <IssueVoucherModal
+          visible={showIssueVoucherModal}
+          userId={user._id}
+          userName={user.name}
+          onClose={() => setShowIssueVoucherModal(false)}
+          onSuccess={() => {
+            fetchUserDetails();
+            fetchVouchers();
+          }}
+        />
+      )}
     </View>
     </SafeAreaScreen>
   );
 };
+
+export const UserDetailAdminScreen: React.FC<UserDetailAdminScreenProps> = (props) => (
+  <ErrorBoundary fallbackTitle="Couldn't open user details" onReset={props.onBack}>
+    <UserDetailAdminScreenInner {...props} />
+  </ErrorBoundary>
+);
 
 const styles = StyleSheet.create({
   container: {

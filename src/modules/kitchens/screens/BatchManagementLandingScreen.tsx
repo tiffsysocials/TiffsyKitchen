@@ -7,7 +7,9 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  Modal,
 } from 'react-native';
+import { Calendar } from 'react-native-calendars';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
@@ -44,10 +46,25 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   const [deliveryStats, setDeliveryStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [showBatchHistory, setShowBatchHistory] = useState(false);
+  const getTodayDateString = () => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  };
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadKitchens();
   }, []);
+
+  // Refetch batches/stats when the date changes (only if a kitchen is selected)
+  useEffect(() => {
+    if (selectedKitchen) {
+      loadBatchData(selectedKitchen._id);
+      loadDeliveryStats(selectedKitchen._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   // Remove the meal window useEffect since we're loading all batches once
   // and filtering on the frontend
@@ -135,15 +152,13 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   const loadBatchData = async (kitchenId?: string, mealWindow?: MealWindow) => {
     setLoadingBatches(true);
     try {
-      // Get today's date range
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Use the admin-picked date (defaults to today)
+      const dayStart = new Date(`${selectedDate}T00:00:00`);
+      const dayEnd = new Date(`${selectedDate}T23:59:59.999`);
 
       const params: any = {
-        dateFrom: today.toISOString(),
-        dateTo: tomorrow.toISOString(),
+        dateFrom: dayStart.toISOString(),
+        dateTo: dayEnd.toISOString(),
         limit: 100,
       };
 
@@ -195,15 +210,13 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
   const loadDeliveryStats = async (kitchenId?: string) => {
     setLoadingStats(true);
     try {
-      // Get today's stats
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Use the admin-picked date (defaults to today)
+      const dayStart = new Date(`${selectedDate}T00:00:00`);
+      const dayEnd = new Date(`${selectedDate}T23:59:59.999`);
 
       const params: any = {
-        dateFrom: today.toISOString(),
-        dateTo: tomorrow.toISOString(),
+        dateFrom: dayStart.toISOString(),
+        dateTo: dayEnd.toISOString(),
       };
 
       const result = await deliveryService.getDeliveryStats(params);
@@ -509,6 +522,13 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
 
   // Show batch operations screen when a kitchen is selected
   if (selectedKitchen) {
+    const formatDateLabel = (d: string) => {
+      const today = getTodayDateString();
+      if (d === today) return 'Today';
+      const dt = new Date(`${d}T00:00:00`);
+      return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    };
+
     return (
       <SafeAreaScreen style={{ flex: 1 }} backgroundColor={colors.primary}>
         <GradientBox style={styles.header}>
@@ -519,8 +539,59 @@ export const BatchManagementLandingScreen: React.FC<BatchManagementLandingScreen
             <Text style={styles.headerTitle}>{selectedKitchen.name}</Text>
             <Text style={styles.headerSubtitle}>Batch Operations</Text>
           </View>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={dateChipStyles.chip}>
+            <Icon name="calendar" size={16} color="#fff" />
+            <Text style={dateChipStyles.chipText}>{formatDateLabel(selectedDate)}</Text>
+          </TouchableOpacity>
         </GradientBox>
+
+        {/* Date picker modal */}
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <TouchableOpacity
+            style={dateChipStyles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <View style={dateChipStyles.modalContent}>
+              <View style={dateChipStyles.modalHeader}>
+                <Text style={dateChipStyles.modalTitle}>Select Date</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedDate(getTodayDateString());
+                      setShowDatePicker(false);
+                    }}
+                    style={dateChipStyles.todayButton}
+                  >
+                    <Text style={dateChipStyles.todayButtonText}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Icon name="close" size={24} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Calendar
+                onDayPress={(day) => {
+                  setSelectedDate(day.dateString);
+                  setShowDatePicker(false);
+                }}
+                markedDates={{
+                  [selectedDate]: { selected: true, selectedColor: colors.primary },
+                }}
+                theme={{
+                  todayTextColor: colors.primary,
+                  selectedDayBackgroundColor: colors.primary,
+                  arrowColor: colors.primary,
+                }}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         <ScrollView style={[styles.content, { backgroundColor: colors.background }]}>
           {/* Meal Window Selection */}
@@ -1388,5 +1459,60 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     textAlign: 'center',
+  },
+});
+
+const dateChipStyles = StyleSheet.create({
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  chipText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 420,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  todayButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#FE8733',
+    borderRadius: 6,
+  },
+  todayButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
   },
 });

@@ -104,13 +104,23 @@ export const KitchenCard: React.FC<KitchenCardProps> = ({
         <View style={styles.headerActions}>
           {onEdit && (
             <TouchableOpacity
-              onPress={() => onEdit(kitchen)}
-              style={styles.iconButton}>
+              onPress={(e) => {
+                e.stopPropagation();
+                onEdit(kitchen);
+              }}
+              style={styles.iconButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Icon name="pencil" size={20} color={colors.primary} />
             </TouchableOpacity>
           )}
           {onDelete && (
-            <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              style={styles.iconButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Icon name="delete" size={20} color={colors.error} />
             </TouchableOpacity>
           )}

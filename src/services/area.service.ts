@@ -2,8 +2,11 @@ import { apiService } from './api.enhanced.service';
 import {
   ApiResponse,
   Area,
+  AreaAutocompleteResponse,
+  AreaAutocompleteSuggestion,
   NearbyAreasMeta,
   NearbyAreasResponse,
+  ResolveAreaResponse,
 } from '../types/api.types';
 
 export interface GetNearbyAreasParams {
@@ -96,6 +99,52 @@ class AreaService {
       return response.data.areas;
     } catch (error) {
       console.error('Error mapping pincodes to areas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Server-side autocomplete: local DB matches + Google Places suggestions.
+   * Used by the area picker so any locality (Navalakha, etc.) is discoverable.
+   */
+  async autocompleteAreas(
+    query: string,
+    latitude?: number,
+    longitude?: number,
+    radiusKm?: number,
+  ): Promise<AreaAutocompleteSuggestion[]> {
+    const q = (query || '').trim();
+    if (q.length < 2) return [];
+    const params = new URLSearchParams({ q });
+    if (latitude != null && longitude != null) {
+      params.append('latitude', latitude.toString());
+      params.append('longitude', longitude.toString());
+    }
+    if (radiusKm != null) params.append('radiusKm', radiusKm.toString());
+
+    try {
+      const response = await apiService.get<ApiResponse<AreaAutocompleteResponse>>(
+        `/api/areas/autocomplete?${params.toString()}`,
+      );
+      return response.data.suggestions;
+    } catch (error) {
+      console.error('Error in area autocomplete:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Hydrate a Google Place pick into a saved Area row. Idempotent.
+   */
+  async resolveArea(placeId: string, name?: string): Promise<ResolveAreaResponse['area']> {
+    try {
+      const response = await apiService.post<ApiResponse<ResolveAreaResponse>>(
+        '/api/areas/resolve',
+        { placeId, ...(name ? { name } : {}) },
+      );
+      return response.data.area;
+    } catch (error) {
+      console.error('Error resolving area:', error);
       throw error;
     }
   }

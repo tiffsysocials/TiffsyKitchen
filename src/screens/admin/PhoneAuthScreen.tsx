@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useAlert } from '../../hooks/useAlert';
+import { useOtpAutoFill } from '../../hooks/useOtpAutoFill';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaScreen } from '../../components/common/SafeAreaScreen';
@@ -89,6 +90,20 @@ const PhoneAuthScreen: React.FC<PhoneAuthScreenProps> = ({ onVerificationComplet
       setIsSubmitting(false);
     }
   };
+
+  // Android auto-read via SMS User Consent (iOS uses textContentType="oneTimeCode" below)
+  useOtpAutoFill(
+    (code) => {
+      const digits = code.split('').slice(0, 6);
+      if (digits.length === 6) {
+        setOtp(digits);
+        setOtpError(undefined);
+        otpInputRefs.current[5]?.blur();
+        Keyboard.dismiss();
+      }
+    },
+    { enabled: showOtpInput, length: 6 },
+  );
 
   // Handle OTP input change
   const handleOtpChange = (text: string, index: number) => {

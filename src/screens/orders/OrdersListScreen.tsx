@@ -114,7 +114,7 @@ export default function OrdersListScreen({ onMenuPress, onLogout }: OrdersListSc
         <View style={styles.detailRow}>
           <Icon name="schedule" size={16} color="#6b7280" />
           <Text style={styles.detailText}>
-            {item.scheduledFor ? `${new Date(item.scheduledFor).toLocaleDateString()} ${new Date(item.scheduledFor).toLocaleTimeString()}` : 'Not scheduled'}
+            {item.scheduledFor ? `${new Date(item.scheduledFor).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}${item.mealWindow ? ` · ${item.mealWindow}` : ''}` : 'Not scheduled'}
           </Text>
         </View>
         <View style={styles.detailRow}>

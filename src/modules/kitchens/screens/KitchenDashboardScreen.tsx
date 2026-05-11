@@ -61,6 +61,7 @@ export const KitchenDashboardScreen: React.FC<KitchenDashboardScreenProps> = ({
 
 // Overview Tab Component
 const OverviewTab: React.FC = () => {
+  const { navigate } = useNavigation();
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['kitchenDashboard'],
     queryFn: () => kitchenStaffService.getDashboardStats(),
@@ -105,30 +106,35 @@ const OverviewTab: React.FC = () => {
           value={stats?.ordersCount || 0}
           icon="receipt"
           color={colors.info}
+          onPress={() => navigate('Orders')}
         />
         <StatCard
           label="Revenue"
           value={`₹${stats?.ordersRevenue || 0}`}
           icon="cash-multiple"
           color={colors.success}
+          onPress={() => navigate('Orders')}
         />
         <StatCard
           label="Awaiting Accept"
           value={stats?.pendingAcceptanceOrders || 0}
           icon="timer-sand"
           color="#D97706"
+          onPress={() => navigate('Orders')}
         />
         <StatCard
           label="Pending"
           value={stats?.pendingOrders || 0}
           icon="progress-clock"
           color={colors.warning}
+          onPress={() => navigate('Orders')}
         />
         <StatCard
           label="Completed"
           value={stats?.completedOrders || 0}
           icon="check-decagram"
           color={colors.success}
+          onPress={() => navigate('Orders')}
         />
       </View>
 
@@ -246,15 +252,26 @@ const StatCard: React.FC<{
   value: string | number;
   icon: string;
   color: string;
-}> = ({ label, value, icon, color }) => (
-  <View style={styles.statCard}>
-    <View style={[styles.statIconBubble, { backgroundColor: color + '15' }]}>
-      <MaterialCommunityIcons name={icon} size={20} color={color} />
-    </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
+  onPress?: () => void;
+}> = ({ label, value, icon, color, onPress }) => {
+  const content = (
+    <>
+      <View style={[styles.statIconBubble, { backgroundColor: color + '15' }]}>
+        <MaterialCommunityIcons name={icon} size={20} color={color} />
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={styles.statCard}>{content}</View>;
+};
 
 const MealWindowCard: React.FC<{
   title: string;

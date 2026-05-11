@@ -327,14 +327,10 @@ export const OrderDetailScreenEnhanced: React.FC<OrderDetailScreenProps> = ({
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
+                  timeZone: 'Asia/Kolkata',
                 })}
               </Text>
-              <Text style={styles.infoSubtext}>
-                {new Date(order.scheduledFor).toLocaleTimeString('en-IN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
+              <Text style={styles.infoSubtext}>{order.mealWindow}</Text>
             </View>
           </View>
 

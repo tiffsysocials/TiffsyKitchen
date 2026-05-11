@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { KpiMetric } from '../../types/dashboard';
 
 interface KpiCardProps {
   metric: KpiMetric;
+  onPress?: () => void;
 }
 
-export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
+export const KpiCard: React.FC<KpiCardProps> = ({ metric, onPress }) => {
   const formatValue = (value: number, prefix?: string, unit?: string): string => {
     const formattedNumber = value.toLocaleString('en-IN');
     return `${prefix || ''}${formattedNumber}${unit || ''}`;
@@ -35,8 +36,8 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
     }
   };
 
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       <View style={[styles.iconContainer, { backgroundColor: metric.color + '20' }]}>
         <MaterialIcons name={metric.icon} size={24} color={metric.color} />
       </View>
@@ -46,9 +47,18 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
       <Text style={styles.label} numberOfLines={1}>
         {metric.label}
       </Text>
-
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.card}>{content}</View>;
 };
 
 const styles = StyleSheet.create({

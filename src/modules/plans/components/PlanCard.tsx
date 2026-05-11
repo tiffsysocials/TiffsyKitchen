@@ -105,7 +105,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
           <View style={styles.durationContainer}>
             <MaterialIcons name="date-range" size={14} color={colors.textMuted} />
             <Text style={styles.durationText}>
-              {plan.durationMinDays}–{plan.durationMaxDays} days
+              {plan.durationMinDays}–{plan.durationMaxDays} vouchers
             </Text>
           </View>
         </View>

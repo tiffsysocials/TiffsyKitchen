@@ -197,6 +197,15 @@ const OrderCardKitchen: React.FC<OrderCardKitchenProps> = ({
 
   const kitchenStatusOptions = getKitchenStatusOptions(order.status);
   const canChangeStatus = onStatusChange && kitchenStatusOptions.length > 0;
+  const thaliCount = order.items?.reduce((sum, it) => {
+    const isMain = (it as any).isMainCourse;
+    if (isMain === undefined) return sum + (it.quantity || 0);
+    return sum + (isMain ? (it.quantity || 0) : 0);
+  }, 0) ?? 0;
+  const addonCount = order.items?.reduce(
+    (sum, it) => sum + ((it as any).addons?.reduce((s: number, a: any) => s + (a.quantity || 0), 0) ?? 0),
+    0,
+  ) ?? 0;
 
   return (
     <>
@@ -226,6 +235,22 @@ const OrderCardKitchen: React.FC<OrderCardKitchenProps> = ({
             <Text style={styles.timeAgo} numberOfLines={1}>
               {formatDateTime(order.placedAt)}
             </Text>
+          </View>
+
+          {/* Thali + Addon count pills (next to status) */}
+          <View style={styles.countPillsRow}>
+            {thaliCount > 0 && (
+              <View style={styles.thaliPill}>
+                <Icon name="restaurant" size={12} color="#FFFFFF" />
+                <Text style={styles.thaliPillText}>{thaliCount} {thaliCount === 1 ? 'thali' : 'thalis'}</Text>
+              </View>
+            )}
+            {addonCount > 0 && (
+              <View style={styles.addonPill}>
+                <Icon name="add-circle" size={12} color="#FFFFFF" />
+                <Text style={styles.addonPillText}>{addonCount} {addonCount === 1 ? 'addon' : 'addons'}</Text>
+              </View>
+            )}
           </View>
 
           {/* Status Badge with Dropdown */}
@@ -262,15 +287,15 @@ const OrderCardKitchen: React.FC<OrderCardKitchenProps> = ({
         {/* Auto-Accept Badge */}
         <AutoAcceptBadge order={order} size="small" showLabel={true} />
 
-        {/* Scheduled Delivery Date */}
-        {(order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED') && (
+        {/* Scheduled Delivery Date — only while the order is still pending promotion */}
+        {order.status === 'SCHEDULED' && (
           <View style={styles.scheduledDateRow}>
             <Icon name="event" size={16} color="#6366f1" style={styles.compactIcon} />
             <Text style={styles.scheduledDateText} numberOfLines={1}>
-              Scheduled for: {new Date(order.scheduledFor || order.estimatedDeliveryTime || order.createdAt).toLocaleString('en-IN', {
+              Scheduled for: {new Date(order.scheduledFor || order.estimatedDeliveryTime || order.createdAt).toLocaleDateString('en-IN', {
                 weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-              })}
+                timeZone: 'Asia/Kolkata',
+              })}{order.mealWindow ? ` · ${order.mealWindow}` : ''}
             </Text>
           </View>
         )}
@@ -512,6 +537,52 @@ const styles = StyleSheet.create({
   },
   statusBadgeDisabled: {
     opacity: 0.9,
+  },
+  countPillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(4),
+    marginRight: rs(6),
+  },
+  thaliPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FE8733',
+    paddingHorizontal: rs(8),
+    paddingVertical: rs(5),
+    borderRadius: rs(14),
+    elevation: 2,
+    shadowColor: '#FE8733',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: rs(2),
+  },
+  thaliPillText: {
+    fontSize: rf(11),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  addonPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#34C759',
+    paddingHorizontal: rs(8),
+    paddingVertical: rs(5),
+    borderRadius: rs(14),
+    elevation: 2,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: rs(2),
+  },
+  addonPillText: {
+    fontSize: rf(11),
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   statusIcon: {
     marginRight: 2,

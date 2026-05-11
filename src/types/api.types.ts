@@ -414,6 +414,9 @@ export interface NearbyAreasMeta {
   enrichmentAlreadyWarmed: boolean;
   geocodeFailed: boolean;
   usedHint: boolean;
+  scopeCity?: string;
+  scopeState?: string;
+  outOfScope?: boolean;
 }
 
 export interface NearbyAreasResponse {
@@ -436,6 +439,34 @@ export interface Area {
   };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface AreaAutocompleteSuggestion {
+  // Local match (already in DB)
+  id?: string;
+  _id?: string;
+  // Google match (not yet in DB)
+  placeId?: string;
+  // Common
+  name: string;
+  city?: string;
+  state?: string;
+  secondaryText?: string;
+  distanceKm?: number;
+  pincodeCount?: number;
+  _remote: boolean;
+}
+
+export interface AreaAutocompleteResponse {
+  count: number;
+  suggestions: AreaAutocompleteSuggestion[];
+}
+
+export interface ResolveAreaResponse {
+  area: Area & {
+    id: string;
+    pincodeCount?: number;
+  };
 }
 
 // ============================================================================
@@ -791,8 +822,8 @@ export interface Order {
   specialInstructions?: string;
   leaveAtDoor?: boolean;
   doNotContact?: boolean;
-  batchId?: string; // Added when order is batched for delivery
-  driverId?: string; // Added when driver is assigned
+  batchId?: string | { _id: string; batchNumber?: string }; // Added when order is batched for delivery (may be populated)
+  driverId?: string | { _id: string; name?: string; phone?: string }; // Added when driver is assigned (may be populated)
   placedAt: string;
   estimatedDeliveryTime?: string;
   cancelledAt?: string;

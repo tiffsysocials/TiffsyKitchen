@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { Coupon, CreateCouponRequest, UpdateCouponRequest } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
@@ -20,6 +21,7 @@ import { spacing } from '../../../theme/spacing';
 import { DatePickerModal } from '../../../components/dashboard/DatePickerModal';
 import { ZonePickerModal } from '../../kitchens/components/ZonePickerModal';
 import { KitchenPickerModal } from './KitchenPickerModal';
+import { CustomerPickerModal } from './CustomerPickerModal';
 import {
   CouponFormState,
   CouponFormErrors,
@@ -43,6 +45,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<CouponFormState>(DEFAULT_FORM_STATE);
   const [errors, setErrors] = useState<CouponFormErrors>({});
   const [saving, setSaving] = useState(false);
@@ -64,6 +67,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   const [zonePickerVisible, setZonePickerVisible] = useState(false);
   const [kitchenPickerVisible, setKitchenPickerVisible] = useState(false);
   const [excludedKitchenPickerVisible, setExcludedKitchenPickerVisible] = useState(false);
+  const [customerPickerVisible, setCustomerPickerVisible] = useState(false);
 
   const isEditMode = coupon !== null;
 
@@ -147,12 +151,20 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
     if (!formData.validFrom) newErrors.validFrom = 'Start date is required';
     if (!formData.validTill) newErrors.validTill = 'End date is required';
-    if (formData.validFrom && formData.validTill && formData.validFrom >= formData.validTill) {
-      newErrors.validTill = 'End date must be after start date';
+    if (formData.validFrom && formData.validTill) {
+      const fromMs = new Date(formData.validFrom).setHours(0, 0, 0, 0);
+      const tillMs = new Date(formData.validTill).setHours(0, 0, 0, 0);
+      if (fromMs > tillMs) {
+        newErrors.validTill = 'End date must be on or after start date';
+      }
     }
 
     if (formData.targetUserType === 'SPECIFIC_USERS' && !formData.specificUserIds.trim()) {
       newErrors.specificUserIds = 'At least one user ID is required';
+    }
+
+    if (!formData.applicableMenuTypes || formData.applicableMenuTypes.length === 0) {
+      newErrors.applicableMenuTypes = 'Select at least one menu type';
     }
 
     setErrors(newErrors);
@@ -227,9 +239,17 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
     setSaving(true);
     try {
       const data = buildRequestData();
+      console.log('🎟️ Coupon save payload:', JSON.stringify(data, null, 2));
       await onSave(data, isEditMode);
     } catch (error: any) {
-      setErrors(prev => ({ ...prev, submit: error?.response?.data?.message || error?.message || 'Failed to save coupon' }));
+      // apiService.enhanced throws the response body directly: { success, message, errors? }
+      console.log('🎟️ Coupon save error:', JSON.stringify(error, null, 2));
+      const backendMessage =
+        error?.message ||
+        error?.response?.data?.message ||
+        (Array.isArray(error?.errors) && error.errors[0]?.message) ||
+        'Failed to save coupon';
+      setErrors(prev => ({ ...prev, submit: backendMessage }));
     } finally {
       setSaving(false);
     }
@@ -268,7 +288,7 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
@@ -547,16 +567,31 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
 
                 {formData.targetUserType === 'SPECIFIC_USERS' && (
                   <>
-                    <Text style={styles.label}>User IDs (comma separated) *</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea, errors.specificUserIds && styles.inputError]}
-                      value={formData.specificUserIds}
-                      onChangeText={(text) => handleChange('specificUserIds', text)}
-                      placeholder="user_id_1, user_id_2, ..."
-                      placeholderTextColor={colors.textMuted}
-                      multiline
-                      numberOfLines={3}
-                    />
+                    <Text style={styles.label}>Assigned Customers *</Text>
+                    {(() => {
+                      const ids = formData.specificUserIds
+                        .split(',')
+                        .map((s: string) => s.trim())
+                        .filter(Boolean);
+                      const count = ids.length;
+                      return (
+                        <TouchableOpacity
+                          style={[styles.pickerButton, errors.specificUserIds && styles.inputError]}
+                          onPress={() => setCustomerPickerVisible(true)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.pickerButtonText,
+                            count === 0 && styles.pickerButtonPlaceholder,
+                          ]}>
+                            {count === 0
+                              ? 'Select customers...'
+                              : `${count} customer${count === 1 ? '' : 's'} selected`}
+                          </Text>
+                          <Icon name="chevron-down" size={20} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      );
+                    })()}
                     {renderError('specificUserIds')}
                   </>
                 )}
@@ -797,6 +832,18 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
         onClose={() => setExcludedKitchenPickerVisible(false)}
         onSave={(ids) => handleChange('excludedKitchenIds', ids)}
         title="Select Excluded Kitchens"
+      />
+
+      {/* Customer Picker (for SPECIFIC_USERS target) */}
+      <CustomerPickerModal
+        visible={customerPickerVisible}
+        selectedCustomerIds={formData.specificUserIds
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter(Boolean)}
+        onClose={() => setCustomerPickerVisible(false)}
+        onSave={(ids) => handleChange('specificUserIds', ids.join(','))}
+        title="Assign coupon to specific customers"
       />
     </Modal>
   );

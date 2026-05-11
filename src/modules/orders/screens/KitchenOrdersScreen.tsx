@@ -130,9 +130,10 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     },
   });
 
-  // Helper to check if an order is scheduled
-  const isScheduledOrder = (order: Order) =>
-    order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED';
+  // Helper to check if an order is *currently* pending promotion.
+  // Keyed off status — `orderSource`/`isScheduledMeal` are immutable creation
+  // metadata and stay true even after the order is promoted/delivered.
+  const isScheduledOrder = (order: Order) => order.status === 'SCHEDULED';
 
   // Hide orders whose payment never completed (PENDING) or failed (FAILED) from default views.
   // These are surfaced only via the dedicated "Failed Payments" filter.

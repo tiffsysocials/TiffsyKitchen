@@ -20,6 +20,9 @@ interface OrderCardAdminImprovedProps {
   onPress: () => void;
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => void;
   isUpdating?: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 const getStatusColor = (status: OrderStatus): string => {
@@ -120,6 +123,9 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
   onPress,
   onStatusChange,
   isUpdating = false,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
 }) => {
   const [showStatusModal, setShowStatusModal] = useState(false);
 
@@ -161,20 +167,58 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
   };
 
   const quickStatusOptions = getQuickStatusOptions(order.status);
-  const canChangeStatus = onStatusChange && quickStatusOptions.length > 0;
+  const canChangeStatus = onStatusChange && quickStatusOptions.length > 0 && !selectionMode;
+  // Thalis = main-course items (or fallback to total items if isMainCourse flag is missing)
+  const thaliCount = order.items?.reduce((sum, it) => {
+    const isMain = (it as any).isMainCourse;
+    if (isMain === undefined) return sum + (it.quantity || 0);
+    return sum + (isMain ? (it.quantity || 0) : 0);
+  }, 0) ?? 0;
+  const addonCount = order.items?.reduce(
+    (sum, it) => sum + ((it as any).addons?.reduce((s: number, a: any) => s + (a.quantity || 0), 0) ?? 0),
+    0,
+  ) ?? 0;
 
   return (
     <>
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={[styles.card, selectionMode && isSelected && styles.cardSelected]}
+        onPress={onPress}
+        activeOpacity={0.7}>
+        {/* Selection Checkbox */}
+        {selectionMode && (
+          <View style={styles.checkboxContainer}>
+            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+              {isSelected && <Icon name="check" size={14} color="#FFFFFF" />}
+            </View>
+          </View>
+        )}
+
         {/* Header with Status Dropdown */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <View style={[styles.headerLeft, selectionMode && styles.headerLeftWithCheckbox]}>
             <Text style={styles.orderNumber} numberOfLines={1}>
               {order.orderNumber || 'N/A'}
             </Text>
             <Text style={styles.timeAgo} numberOfLines={1}>
               {formatDateTime(order.placedAt)}
             </Text>
+          </View>
+
+          {/* Thali + Addon count pills (next to status) */}
+          <View style={styles.countPillsRow}>
+            {thaliCount > 0 && (
+              <View style={styles.thaliPill}>
+                <Icon name="restaurant" size={12} color="#FFFFFF" />
+                <Text style={styles.thaliPillText}>{thaliCount} {thaliCount === 1 ? 'thali' : 'thalis'}</Text>
+              </View>
+            )}
+            {addonCount > 0 && (
+              <View style={styles.addonPill}>
+                <Icon name="add-circle" size={12} color="#FFFFFF" />
+                <Text style={styles.addonPillText}>{addonCount} {addonCount === 1 ? 'addon' : 'addons'}</Text>
+              </View>
+            )}
           </View>
 
           {/* Status Badge with Dropdown */}
@@ -264,21 +308,21 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
           </View>
         )}
 
-        {/* Scheduled Delivery Date - shown prominently for scheduled orders */}
-        {(order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED') && (
+        {/* Scheduled Delivery Date — only while the order is still pending promotion */}
+        {order.status === 'SCHEDULED' && (
           <View style={styles.scheduledDateRow}>
             <Icon name="event" size={16} color="#6366f1" style={styles.compactIcon} />
             <Text style={styles.scheduledDateText} numberOfLines={1}>
-              Scheduled for: {new Date(order.scheduledFor || order.estimatedDeliveryTime || order.createdAt).toLocaleString('en-IN', {
+              Scheduled for: {new Date(order.scheduledFor || order.estimatedDeliveryTime || order.createdAt).toLocaleDateString('en-IN', {
                 weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-              })}
+                timeZone: 'Asia/Kolkata',
+              })}{order.mealWindow ? ` · ${order.mealWindow}` : ''}
             </Text>
           </View>
         )}
 
         {/* Estimated Delivery Time - for non-scheduled orders */}
-        {!(order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED') && order.estimatedDeliveryTime && (
+        {order.status !== 'SCHEDULED' && order.estimatedDeliveryTime && (
           <View style={styles.compactInfoRow}>
             <Icon name="schedule" size={16} color="#6b7280" style={styles.compactIcon} />
             <Text style={styles.compactText} numberOfLines={1}>
@@ -360,11 +404,13 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
             </View>
           )}
 
-          <View style={styles.itemCountBadge}>
-            <Text style={styles.itemCountText} numberOfLines={1}>
-              {order.itemCount || order.items?.length || 0} items
-            </Text>
-          </View>
+          {(order.items?.length ?? 0) > 0 && (
+            <View style={styles.itemCountBadge}>
+              <Text style={styles.itemCountText} numberOfLines={1}>
+                {order.items?.length} {order.items?.length === 1 ? 'item' : 'items'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Footer */}
@@ -493,6 +539,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f3f4f6',
   },
+  cardSelected: {
+    borderColor: '#FE8733',
+    borderWidth: 2,
+    backgroundColor: '#FFF5F3',
+  },
+  checkboxContainer: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
+  },
+  headerLeftWithCheckbox: {
+    marginLeft: 32,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -537,6 +611,52 @@ const styles = StyleSheet.create({
   },
   statusBadgeDisabled: {
     opacity: 0.9,
+  },
+  countPillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginRight: 6,
+  },
+  thaliPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FE8733',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 14,
+    elevation: 2,
+    shadowColor: '#FE8733',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  thaliPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  addonPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#34C759',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 14,
+    elevation: 2,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  addonPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   statusIcon: {
     marginRight: 2,

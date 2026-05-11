@@ -777,13 +777,34 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                   </Text>
                 </View>
               )}
+              {order.voucherUsage && order.voucherUsage.voucherCount > 0 && (
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceLabel, { color: '#5856D6' }]}>
+                    Vouchers redeemed ({order.voucherUsage.voucherCount})
+                  </Text>
+                  <Text style={[styles.priceValue, { color: '#5856D6' }]}>
+                    -₹{(order.voucherUsage.voucherCoverage || 0).toFixed(2)}
+                  </Text>
+                </View>
+              )}
               <View style={styles.divider} />
               <View style={styles.priceRow}>
-                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalLabel}>Grand Total</Text>
                 <Text style={styles.totalValue}>
                   ₹{(order.grandTotal || 0).toFixed(2)}
                 </Text>
               </View>
+              <View style={[styles.priceRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#fee2d4' }]}>
+                <Text style={[styles.totalLabel, { color: '#FE8733' }]}>Amount Paid (cash)</Text>
+                <Text style={[styles.totalValue, { color: '#FE8733' }]}>
+                  ₹{(order.amountPaid || 0).toFixed(2)}
+                </Text>
+              </View>
+              {(order.voucherUsage?.voucherCount ?? 0) > 0 && (order.amountPaid || 0) === 0 && (
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>
+                  Paid entirely via vouchers — no cash collected.
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -807,7 +828,7 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
           </View>
         )}
 
-        {/* Payment Section */}
+        {/* Payment Status (status, method, ID — totals live in Pricing Breakdown above) */}
         {!isKitchenMode && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment</Text>
@@ -835,10 +856,6 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                   <Text style={[styles.value, { fontSize: 12 }]}>{order.paymentId}</Text>
                 </View>
               )}
-              <View style={styles.infoRow}>
-                <Text style={styles.label}>Amount Paid:</Text>
-                <Text style={styles.value}>₹{(order.amountPaid || 0).toFixed(2)}</Text>
-              </View>
             </View>
           </View>
         )}
@@ -882,13 +899,21 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
               {order.batchId && (
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Batch ID:</Text>
-                  <Text style={[styles.value, { fontSize: 12 }]}>{order.batchId}</Text>
+                  <Text style={[styles.value, { fontSize: 12 }]}>
+                    {typeof order.batchId === 'object'
+                      ? (order.batchId.batchNumber || order.batchId._id)
+                      : order.batchId}
+                  </Text>
                 </View>
               )}
               {order.driverId && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.label}>Driver ID:</Text>
-                  <Text style={[styles.value, { fontSize: 12 }]}>{order.driverId}</Text>
+                  <Text style={styles.label}>Driver:</Text>
+                  <Text style={[styles.value, { fontSize: 12 }]}>
+                    {typeof order.driverId === 'object'
+                      ? `${order.driverId.name || 'Unknown'}${order.driverId.phone ? ` • ${order.driverId.phone}` : ''}`
+                      : order.driverId}
+                  </Text>
                 </View>
               )}
             </View>
@@ -1279,6 +1304,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: rs(12),
+  },
+  pricingDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: rs(8),
   },
   label: {
     fontSize: rf(14),

@@ -102,6 +102,57 @@ class VouchersService {
     console.log(`🎫 Finished fetching balances. Map size: ${balanceMap.size}`);
     return balanceMap;
   }
+
+  /**
+   * Admin: Get vouchers for a specific user (with full per-voucher detail)
+   * GET /api/vouchers/admin/all?userId=...
+   */
+  async adminGetVouchersForUser(
+    userId: string,
+    opts?: { status?: 'AVAILABLE' | 'REDEEMED' | 'EXPIRED' | 'RESTORED' | 'CANCELLED'; limit?: number }
+  ): Promise<{
+    vouchers: Array<{
+      _id: string;
+      voucherCode: string;
+      issuedDate: string;
+      expiryDate: string;
+      status: string;
+      source?: string;
+      redeemedAt?: string;
+    }>;
+    pagination: { total: number; page: number; limit: number; pages: number };
+  }> {
+    const qs = new URLSearchParams();
+    qs.append('userId', userId);
+    if (opts?.status) qs.append('status', opts.status);
+    qs.append('limit', String(opts?.limit ?? 50));
+    const response = await apiService.get<any>(`/api/vouchers/admin/all?${qs.toString()}`);
+    return response.data || response;
+  }
+
+  /**
+   * Admin: Issue vouchers to a customer
+   * POST /api/vouchers/admin/issue
+   */
+  async adminIssueVouchers(params: {
+    userId: string;
+    count: number;
+    expiryDays?: number;
+    reason?: string;
+  }): Promise<{ count: number; voucherIds: string[]; expiryDate: string }> {
+    const response = await apiService.post<any>('/api/vouchers/admin/issue', params);
+    // Backend response shape: { success, message, data: { count, voucherIds, expiryDate } }
+    return response.data || response;
+  }
+
+  /**
+   * Admin: Cancel vouchers
+   * POST /api/vouchers/admin/cancel
+   */
+  async adminCancelVouchers(params: { voucherIds: string[]; reason: string }): Promise<{ modified: number }> {
+    const response = await apiService.post<any>('/api/vouchers/admin/cancel', params);
+    return response.data || response;
+  }
 }
 
 export const vouchersService = new VouchersService();

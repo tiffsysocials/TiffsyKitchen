@@ -237,50 +237,42 @@ export const PlanEditor: React.FC<PlanEditorProps> = ({
     );
   };
 
-  // Render duration chips
-  const renderDurationChips = () => {
-    const minDays = parseInt(formData.durationMinDays, 10) || 0;
-    const maxDays = parseInt(formData.durationMaxDays, 10) || 999;
+  // Render voucher-count numeric input (replaces the old chip multi-select)
+  const renderVoucherCountInput = () => {
+    const minVouchers = parseInt(formData.durationMinDays, 10) || 0;
+    const maxVouchers = parseInt(formData.durationMaxDays, 10) || 999;
     const error = errors.allowedDurations;
+    const currentValue = formData.allowedDurations[0]?.toString() || '';
+
+    const handleChange = (text: string) => {
+      const cleaned = text.replace(/[^0-9]/g, '');
+      const num = parseInt(cleaned, 10);
+      setFormData((prev) => ({
+        ...prev,
+        allowedDurations: Number.isFinite(num) && num > 0 ? [num] : [],
+      }));
+      if (errors.allowedDurations) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.allowedDurations;
+          return next;
+        });
+      }
+    };
 
     return (
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Allowed Durations</Text>
-        <View style={styles.chipsContainer}>
-          {DURATION_OPTIONS.map((duration) => {
-            const isSelected = formData.allowedDurations.includes(duration);
-            const isInRange = duration >= minDays && duration <= maxDays;
-            const isDisabled = !isInRange;
-
-            return (
-              <TouchableOpacity
-                key={duration}
-                style={[
-                  styles.chip,
-                  isSelected && styles.chipSelected,
-                  isDisabled && styles.chipDisabled,
-                ]}
-                onPress={() => !isDisabled && toggleDuration(duration)}
-                disabled={isDisabled}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    isSelected && styles.chipTextSelected,
-                    isDisabled && styles.chipTextDisabled,
-                  ]}
-                >
-                  {duration} days
-                </Text>
-                {isSelected && (
-                  <MaterialIcons name="check" size={14} color={colors.white} style={styles.chipCheck} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <Text style={styles.label}>No of vouchers</Text>
+        <TextInput
+          style={[styles.input, error ? styles.inputError : undefined]}
+          value={currentValue}
+          onChangeText={handleChange}
+          keyboardType="numeric"
+          placeholder={`e.g., ${minVouchers || 15}`}
+          placeholderTextColor={colors.textMuted}
+        />
         <Text style={styles.helperText}>
-          Select durations within min-max range that customers can choose
+          Number of vouchers this plan grants (must be between {minVouchers} and {maxVouchers}).
         </Text>
         {error && (
           <View style={styles.errorContainer}>
@@ -402,8 +394,8 @@ export const PlanEditor: React.FC<PlanEditorProps> = ({
             })}
           </View>
 
-          {/* Pricing & Duration Section */}
-          {renderSectionHeader('Pricing & Duration', 'payments')}
+          {/* Pricing & Vouchers Section */}
+          {renderSectionHeader('Pricing & Vouchers', 'payments')}
           <View style={styles.section}>
             {renderInput('Base Price per Meal', 'basePricePerMeal', 'e.g., 79', {
               keyboardType: 'numeric',
@@ -412,18 +404,18 @@ export const PlanEditor: React.FC<PlanEditorProps> = ({
 
             <View style={styles.durationRow}>
               <View style={styles.durationField}>
-                {renderInput('Min Days', 'durationMinDays', '7', {
+                {renderInput('Min vouchers', 'durationMinDays', '7', {
                   keyboardType: 'numeric',
                 })}
               </View>
               <View style={styles.durationField}>
-                {renderInput('Max Days', 'durationMaxDays', '60', {
+                {renderInput('Max vouchers', 'durationMaxDays', '60', {
                   keyboardType: 'numeric',
                 })}
               </View>
             </View>
 
-            {renderDurationChips()}
+            {renderVoucherCountInput()}
           </View>
 
           {/* Meal & Audience Section */}

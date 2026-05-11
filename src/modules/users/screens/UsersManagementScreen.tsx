@@ -50,13 +50,17 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
   onCreateUserPress,
 }) => {
   const { showError } = useAlert();
+  const PAGE_SIZE = 20;
   const [users, setUsers] = useState<(User & { availableVouchers?: number; hasActiveSubscription?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeRoleTab, setActiveRoleTab] = useState<RoleTab>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [totalCounts, setTotalCounts] = useState({
     all: 0,
     customers: 0,
@@ -66,16 +70,20 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
   });
   const [customersData, setCustomersData] = useState<Map<string, { availableVouchers: number; hasActiveSubscription: boolean }>>(new Map());
 
-  const fetchUsers = async (showRefresh = false) => {
+  const fetchUsers = async (opts: { showRefresh?: boolean; pageOverride?: number; append?: boolean } = {}) => {
+    const { showRefresh = false, pageOverride, append = false } = opts;
+    const currentPage = pageOverride ?? 1;
     try {
       if (showRefresh) {
         setRefreshing(true);
+      } else if (append) {
+        setLoadingMore(true);
       } else {
         setLoading(true);
       }
       setError(null);
 
-      const params: any = {};
+      const params: any = { page: currentPage, limit: PAGE_SIZE };
       if (activeRoleTab !== 'ALL') {
         params.role = activeRoleTab;
       }
@@ -160,7 +168,17 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
       });
       console.log('=========================================');
 
-      setUsers(usersWithVouchers);
+      setUsers(prev => append ? [...prev, ...usersWithVouchers] : usersWithVouchers);
+      setPage(currentPage);
+
+      // Determine if there are more pages
+      const pagination = response?.pagination;
+      if (pagination) {
+        setHasMore(pagination.page < pagination.pages);
+      } else {
+        // Fallback: if we got fewer than PAGE_SIZE users, assume no more
+        setHasMore((response?.users?.length ?? 0) === PAGE_SIZE);
+      }
 
       if (response?.counts) {
         setTotalCounts({
@@ -177,23 +195,31 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
       console.log('Error message:', err.message);
       console.log('========================================');
       setError(err.message || 'Failed to load users');
-      setUsers([]);
+      if (!append) setUsers([]);
       showError('Error', err.message || 'Failed to load users');
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      fetchUsers({ pageOverride: page + 1, append: true });
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    // Reset to page 1 when filters change
+    fetchUsers({ pageOverride: 1, append: false });
   }, [activeRoleTab, statusFilter]);
 
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.trim() || searchQuery === '') {
-        fetchUsers();
+        fetchUsers({ pageOverride: 1, append: false });
       }
     }, 500);
 
@@ -201,7 +227,7 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
   }, [searchQuery]);
 
   const onRefresh = () => {
-    fetchUsers(true);
+    fetchUsers({ showRefresh: true, pageOverride: 1, append: false });
   };
 
   const roleTabs: { key: RoleTab; label: string; icon: string }[] = [
@@ -378,8 +404,9 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
       {/* User Count */}
       <View style={styles.summaryContainer}>
         <Text style={styles.summaryText}>
-          {users?.length || 0} user{(users?.length || 0) !== 1 ? 's' : ''}
-          {searchQuery && ' found'}
+          Showing {users?.length || 0} of {totalCounts.all || users?.length || 0} user{(totalCounts.all || users?.length || 0) !== 1 ? 's' : ''}
+          {searchQuery && ' (filtered)'}
+          {hasMore && !loadingMore && ' · scroll for more'}
         </Text>
       </View>
 
@@ -401,6 +428,35 @@ export const UsersManagementScreen: React.FC<UsersManagementScreenProps> = ({
             />
           }
           ListEmptyComponent={renderEmptyState}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: spacing.lg }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : hasMore ? (
+              <TouchableOpacity
+                style={{
+                  paddingVertical: spacing.md,
+                  marginHorizontal: spacing.md,
+                  marginTop: spacing.sm,
+                  borderRadius: 8,
+                  backgroundColor: colors.primary,
+                  alignItems: 'center',
+                }}
+                onPress={handleLoadMore}
+              >
+                <Text style={{ color: colors.white, fontWeight: '700', fontSize: 14 }}>
+                  Load more users
+                </Text>
+              </TouchableOpacity>
+            ) : (users?.length || 0) > 0 ? (
+              <View style={{ paddingVertical: spacing.md, alignItems: 'center' }}>
+                <Text style={{ color: colors.gray, fontSize: 12 }}>End of list</Text>
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaScreen>

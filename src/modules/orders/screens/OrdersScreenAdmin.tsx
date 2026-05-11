@@ -61,12 +61,15 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   const onMenuPressProp = onMenuPress; // Renaming to avoid lint issues if needed, or just keep as is
   // const insets = useSafeAreaInsets(); // Removed
   const queryClient = useQueryClient();
-  const { showSuccess, showError, showInfo } = useAlert();
+  const { showSuccess, showError, showInfo, showWarning, showConfirm } = useAlert();
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayDateString());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
 
   // Fetch all kitchens upfront to resolve unpopulated kitchenId strings
   const {
@@ -90,7 +93,14 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   }, [kitchensData]);
 
   // Cache stats from the ALL tab so they persist when switching to specific status filters
-  const cachedStatsRef = useRef({ total: 0, placed: 0, preparing: 0, delivered: 0, cancelled: 0, revenue: 0 });
+  const cachedStatsRef = useRef({
+    confirmedToday: 0,
+    totalMealsToday: 0,
+    pendingAcceptance: 0,
+    outForDelivery: 0,
+    failedOrders: 0,
+    revenue: 0,
+  });
 
   // Fetch orders with infinite query to accumulate pages
   const {
@@ -177,10 +187,96 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     },
   });
 
+  // Bulk status update mutation (using ADMIN endpoint)
+  const bulkUpdateStatusMutation = useMutation({
+    mutationFn: async ({ orderIds, status }: { orderIds: string[]; status: OrderStatus }) => {
+      console.log('====================================');
+      console.log('🔄 BULK ADMIN STATUS UPDATE');
+      console.log('====================================');
+      console.log('Order IDs:', orderIds);
+      console.log('New Status:', status);
+      console.log('Using Admin Endpoint: /api/orders/admin/:id/status');
+      console.log('====================================');
+
+      const promises = orderIds.map(orderId =>
+        ordersService.updateOrderStatusAdmin(orderId, { status })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+      showSuccess('Success', `${variables.orderIds.length} order(s) updated to ${variables.status}`);
+      setSelectedOrderIds(new Set());
+      setSelectionMode(false);
+      setShowBulkStatusModal(false);
+    },
+    onError: (error: any) => {
+      showError(
+        'Update Failed',
+        error?.response?.data?.error?.message || 'Failed to update orders. Please try again.',
+      );
+    },
+  });
+
   const handleRefresh = useCallback(() => {
     refetchKitchens();
     refetchOrders();
   }, [refetchKitchens, refetchOrders]);
+
+  const toggleSelectionMode = () => {
+    setSelectionMode(prev => !prev);
+    setSelectedOrderIds(new Set());
+  };
+
+  const handleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = (visibleOrderIds: string[]) => {
+    if (visibleOrderIds.every(id => selectedOrderIds.has(id))) {
+      // All visible are selected -> deselect them
+      setSelectedOrderIds(prev => {
+        const next = new Set(prev);
+        visibleOrderIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedOrderIds(prev => {
+        const next = new Set(prev);
+        visibleOrderIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkStatusUpdate = (status: OrderStatus) => {
+    if (selectedOrderIds.size === 0) {
+      showWarning('No Selection', 'Please select at least one order');
+      return;
+    }
+
+    showConfirm(
+      'Confirm Bulk Update',
+      `Update ${selectedOrderIds.size} order(s) to ${status}?`,
+      () => {
+        bulkUpdateStatusMutation.mutate({
+          orderIds: Array.from(selectedOrderIds),
+          status,
+        });
+      },
+      undefined,
+      { confirmText: 'Update', cancelText: 'Cancel' }
+    );
+  };
 
   const handleStatusFilter = (status: StatusFilterValue) => {
     setSelectedStatus(status);
@@ -228,9 +324,10 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     }
   };
 
-  // Helper to check if an order is scheduled
-  const isScheduledOrder = (order: Order) =>
-    order.orderSource === 'SCHEDULED' || order.isScheduledMeal || order.status === 'SCHEDULED';
+  // Helper to check if an order is *currently* pending promotion.
+  // Keyed off status — `orderSource`/`isScheduledMeal` are immutable creation
+  // metadata and stay true even after the order is promoted/delivered.
+  const isScheduledOrder = (order: Order) => order.status === 'SCHEDULED';
 
   // Hide orders whose payment never completed (PENDING) or failed (FAILED) from default views.
   // These are surfaced only via the dedicated "Failed Payments" filter.
@@ -341,23 +438,43 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   }, [allOrders, searchQuery, kitchenMap]);
 
   // Compute stats from the main orders data (only when on ALL tab which has all statuses).
-  // Stats only count orders with completed (non-pending, non-failed) payments so they match
-  // the order list shown to the admin.
+  // Confirmed = orders to actually be delivered today: excludes CANCELLED/REJECTED/FAILED and scheduled.
+  // Failed   = CANCELLED, REJECTED, FAILED, or PAID-but-failed orders (today).
   const todayStats = useMemo(() => {
     if (selectedStatus !== 'ALL' || !ordersData?.pages?.length) {
       return cachedStatsRef.current;
     }
-    const allLoadedOrders = ordersData.pages
-      .flatMap(page => page.orders)
-      .filter(hasVisiblePayment);
-    // Use pagination.total from first page for accurate total count
-    const total = ordersData.pages[0]?.pagination?.total ?? allLoadedOrders.length;
-    const placed = allLoadedOrders.filter(o => o.status === 'PLACED').length;
-    const preparing = allLoadedOrders.filter(o => o.status === 'PREPARING' || o.status === 'ACCEPTED').length;
-    const delivered = allLoadedOrders.filter(o => o.status === 'DELIVERED').length;
-    const cancelled = allLoadedOrders.filter(o => o.status === 'CANCELLED').length;
-    const revenue = allLoadedOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
-    const stats = { total, placed, preparing, delivered, cancelled, revenue };
+    const allLoadedOrders = ordersData.pages.flatMap(page => page.orders);
+
+    const CONFIRMED_STATUSES = new Set([
+      'PENDING_KITCHEN_ACCEPTANCE', 'PLACED', 'ACCEPTED',
+      'PREPARING', 'READY', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED',
+    ]);
+    const FAILED_STATUSES = new Set(['CANCELLED', 'REJECTED', 'FAILED']);
+
+    // Confirmed orders to be delivered today (exclude scheduled, exclude failed)
+    const confirmedOrders = allLoadedOrders.filter(o =>
+      !isScheduledOrder(o) && CONFIRMED_STATUSES.has(o.status) && hasVisiblePayment(o)
+    );
+
+    const confirmedToday = confirmedOrders.length;
+    const totalMealsToday = confirmedOrders.reduce(
+      (sum: number, o: Order) =>
+        sum + (o.items?.reduce((s: number, it: any) => s + (it.quantity || 0), 0) ?? 0),
+      0
+    );
+    const pendingAcceptance = allLoadedOrders.filter(
+      o => o.status === 'PENDING_KITCHEN_ACCEPTANCE' && hasVisiblePayment(o)
+    ).length;
+    const outForDelivery = allLoadedOrders.filter(
+      o => (o.status === 'OUT_FOR_DELIVERY' || o.status === 'PICKED_UP') && hasVisiblePayment(o)
+    ).length;
+    const failedOrders = allLoadedOrders.filter(o =>
+      FAILED_STATUSES.has(o.status) || o.paymentStatus === 'FAILED'
+    ).length;
+    const revenue = confirmedOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+
+    const stats = { confirmedToday, totalMealsToday, pendingAcceptance, outForDelivery, failedOrders, revenue };
     cachedStatsRef.current = stats;
     return stats;
   }, [ordersData, selectedStatus]);
@@ -379,32 +496,33 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         contentContainerStyle={styles.statsContainer}>
         <OrderStatsCard
           label="Today's Orders"
-          value={todayStats.total}
+          value={todayStats.confirmedToday}
           color="#FE8733"
           icon="receipt-long"
         />
         <OrderStatsCard
-          label="Placed"
-          value={todayStats.placed}
-          color="#FF9500"
-          highlight={todayStats.placed > 0}
-          icon="pending"
-        />
-        <OrderStatsCard
-          label="Preparing"
-          value={todayStats.preparing}
-          color="#FFCC00"
-          icon="restaurant"
-        />
-        <OrderStatsCard
-          label="Delivered"
-          value={todayStats.delivered}
+          label="Total Meals Today"
+          value={todayStats.totalMealsToday}
           color="#34C759"
-          icon="check-circle"
+          icon="restaurant"
+          highlight={todayStats.totalMealsToday > 0}
         />
         <OrderStatsCard
-          label="Cancelled"
-          value={todayStats.cancelled}
+          label="Pending Acceptance"
+          value={todayStats.pendingAcceptance}
+          color="#FF9500"
+          icon="pending"
+          highlight={todayStats.pendingAcceptance > 0}
+        />
+        <OrderStatsCard
+          label="Out for Delivery"
+          value={todayStats.outForDelivery}
+          color="#5856D6"
+          icon="delivery-dining"
+        />
+        <OrderStatsCard
+          label="Failed Orders"
+          value={todayStats.failedOrders}
           color="#FF3B30"
           icon="cancel"
         />
@@ -414,7 +532,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}`}
-          color="#5856D6"
+          color="#00C7BE"
           icon="currency-rupee"
         />
       </ScrollView>
@@ -464,6 +582,9 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         onOrderPress={handleOrderPress}
         onStatusChange={handleStatusChange}
         updatingOrderId={updatingOrderId}
+        selectionMode={selectionMode}
+        selectedOrderIds={selectedOrderIds}
+        onOrderSelect={handleOrderSelection}
       />
     );
   };
@@ -501,7 +622,36 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
           <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
             <Icon name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Orders Management</Text>
+          <Text style={styles.headerTitle}>
+            {selectionMode ? `${selectedOrderIds.size} Selected` : 'Orders Management'}
+          </Text>
+          <View style={styles.headerActions}>
+            {selectionMode ? (
+              <>
+                <TouchableOpacity
+                  onPress={() => handleSelectAllVisible(allOrders.map(o => o._id))}
+                  style={styles.iconButton}
+                >
+                  <Icon
+                    name={
+                      allOrders.length > 0 && allOrders.every(o => selectedOrderIds.has(o._id))
+                        ? 'check-box'
+                        : 'check-box-outline-blank'
+                    }
+                    size={22}
+                    color="#ffffff"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={toggleSelectionMode} style={styles.iconButton}>
+                  <Icon name="close" size={22} color="#ffffff" />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity onPress={toggleSelectionMode} style={styles.iconButton}>
+                <Icon name="checklist" size={22} color="#ffffff" />
+              </TouchableOpacity>
+            )}
+          </View>
         </GradientBox>
       )}
 
@@ -587,6 +737,91 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         />
       </View>
 
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedOrderIds.size > 0 && (
+        <View style={styles.bulkActionBar}>
+          <View style={styles.bulkActionHeader}>
+            <Text style={styles.bulkActionTitle}>
+              {selectedOrderIds.size} selected
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedOrderIds(new Set())}
+              style={styles.clearSelectionButton}
+            >
+              <Text style={styles.clearSelectionText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.changeStatusButton}
+            onPress={() => setShowBulkStatusModal(true)}
+            disabled={bulkUpdateStatusMutation.isPending}
+          >
+            {bulkUpdateStatusMutation.isPending ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <Icon name="swap-vert" size={18} color="#ffffff" />
+                <Text style={styles.changeStatusText}>Change Status</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Bulk Status Selection Modal */}
+      <Modal
+        visible={showBulkStatusModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBulkStatusModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.dateModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowBulkStatusModal(false)}
+        >
+          <View style={styles.bulkStatusModalContent}>
+            <View style={styles.dateModalHeader}>
+              <Text style={styles.dateModalTitle}>
+                Change Status ({selectedOrderIds.size})
+              </Text>
+              <TouchableOpacity onPress={() => setShowBulkStatusModal(false)}>
+                <Icon name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {(
+                [
+                  { status: 'ACCEPTED', label: 'Accepted', color: '#00C7BE', icon: 'check-circle' },
+                  { status: 'PREPARING', label: 'Preparing', color: '#FFCC00', icon: 'restaurant' },
+                  { status: 'READY', label: 'Ready', color: '#FF9500', icon: 'done-all' },
+                  { status: 'PICKED_UP', label: 'Picked Up', color: '#AF52DE', icon: 'local-shipping' },
+                  { status: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', color: '#5856D6', icon: 'delivery-dining' },
+                  { status: 'DELIVERED', label: 'Delivered', color: '#34C759', icon: 'home' },
+                  { status: 'CANCELLED', label: 'Cancel order', color: '#FF3B30', icon: 'cancel' },
+                ] as { status: OrderStatus; label: string; color: string; icon: string }[]
+              ).map(opt => (
+                <TouchableOpacity
+                  key={opt.status}
+                  style={styles.bulkStatusOption}
+                  onPress={() => {
+                    setShowBulkStatusModal(false);
+                    handleBulkStatusUpdate(opt.status);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.bulkStatusIcon, { backgroundColor: opt.color }]}>
+                    <Icon name={opt.icon} size={18} color="#ffffff" />
+                  </View>
+                  <Text style={styles.bulkStatusLabel}>{opt.label}</Text>
+                  <Icon name="chevron-right" size={20} color="#8E8E93" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Date Picker Modal */}
       <Modal
         visible={showDatePicker}
@@ -633,11 +868,102 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    padding: 4,
+  },
+  bulkActionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 2,
+    borderTopColor: '#FE8733',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  bulkActionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  bulkActionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  clearSelectionButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#f3f4f6',
+  },
+  clearSelectionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  changeStatusButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#FE8733',
+    gap: 6,
+  },
+  changeStatusText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  bulkStatusModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    overflow: 'hidden',
+  },
+  bulkStatusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  bulkStatusIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulkStatusLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000000',
   },
   topSection: {
     backgroundColor: '#f9fafb',
