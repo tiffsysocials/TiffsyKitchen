@@ -8,8 +8,6 @@ import {
   StyleSheet,
   Switch,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from 'react-native';
 
@@ -62,110 +60,111 @@ const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
+      hardwareAccelerated
       onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}>
+      <View style={styles.overlay}>
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.scrollView}>
-            <View style={styles.content}>
-              {/* Header */}
-              <Text style={styles.title}>Cancel Order</Text>
-              <Text style={styles.subtitle}>
-                Please provide a reason for cancelling this order
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}>
+            <Text style={styles.title}>Cancel Order</Text>
+            <Text style={styles.subtitle}>
+              Please provide a reason for cancelling this order
+            </Text>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Cancellation Reason <Text style={styles.required}>*</Text>
               </Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter reason..."
+                value={reason}
+                onChangeText={setReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                editable={!loading}
+              />
+            </View>
 
-              {/* Reason Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  Cancellation Reason <Text style={styles.required}>*</Text>
+            <View style={styles.option}>
+              <View style={styles.optionLeft}>
+                <Text style={styles.optionTitle}>Issue Refund</Text>
+                <Text style={styles.optionDescription}>
+                  Refund the amount paid by customer
                 </Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter reason..."
-                  value={reason}
-                  onChangeText={setReason}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  editable={!loading}
-                />
               </View>
+              <Switch
+                value={issueRefund}
+                onValueChange={setIssueRefund}
+                disabled={loading}
+                trackColor={{false: '#C7C7CC', true: '#34C759'}}
+                thumbColor="#FFFFFF"
+              />
+            </View>
 
-              {/* Issue Refund Option */}
+            {hasVouchers && (
               <View style={styles.option}>
                 <View style={styles.optionLeft}>
-                  <Text style={styles.optionTitle}>Issue Refund</Text>
+                  <Text style={styles.optionTitle}>Restore Vouchers</Text>
                   <Text style={styles.optionDescription}>
-                    Refund the amount paid by customer
+                    Restore vouchers used in this order
                   </Text>
                 </View>
                 <Switch
-                  value={issueRefund}
-                  onValueChange={setIssueRefund}
+                  value={restoreVouchers}
+                  onValueChange={setRestoreVouchers}
                   disabled={loading}
                   trackColor={{false: '#C7C7CC', true: '#34C759'}}
                   thumbColor="#FFFFFF"
                 />
               </View>
+            )}
 
-              {/* Restore Vouchers Option */}
-              {hasVouchers && (
-                <View style={styles.option}>
-                  <View style={styles.optionLeft}>
-                    <Text style={styles.optionTitle}>Restore Vouchers</Text>
-                    <Text style={styles.optionDescription}>
-                      Restore vouchers used in this order
-                    </Text>
-                  </View>
-                  <Switch
-                    value={restoreVouchers}
-                    onValueChange={setRestoreVouchers}
-                    disabled={loading}
-                    trackColor={{false: '#C7C7CC', true: '#34C759'}}
-                    thumbColor="#FFFFFF"
-                  />
-                </View>
-              )}
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                Warning: This action cannot be undone. The order will be
+                permanently cancelled.
+              </Text>
+            </View>
 
-              {/* Warning */}
-              <View style={styles.warningBox}>
-                <Text style={styles.warningText}>
-                  ⚠️ This action cannot be undone. The order will be permanently
-                  cancelled.
-                </Text>
-              </View>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={handleClose}
+                disabled={loading}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
 
-              {/* Buttons */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={handleClose}
-                  disabled={loading}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.confirmButton,
-                    (!reason.trim() || loading) && styles.buttonDisabled,
-                  ]}
-                  onPress={handleConfirm}
-                  disabled={!reason.trim() || loading}>
-                  {loading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.confirmButtonText}>
-                      Confirm Cancellation
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  (!reason.trim() || loading) && styles.buttonDisabled,
+                ]}
+                onPress={handleConfirm}
+                disabled={!reason.trim() || loading}>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>
+                    Confirm Cancellation
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
@@ -176,17 +175,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalContainer: {
-    width: '90%',
+    width: '100%',
     maxWidth: 500,
     maxHeight: '80%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
-  },
-  scrollView: {
-    flex: 1,
   },
   content: {
     padding: 24,

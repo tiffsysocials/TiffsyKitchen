@@ -246,7 +246,8 @@ class OrdersService {
   }
 
   /**
-   * Cancel an order
+   * Cancel an order (admin endpoint)
+   * Backend returns: { order, refundInitiated: boolean, vouchersRestored: number }
    */
   async cancelOrder(
     orderId: string,
@@ -257,27 +258,20 @@ class OrdersService {
     }
   ): Promise<{
     order: Order;
-    refund?: {
-      amount: number;
-      status: string;
-      refundId: string;
-    };
+    refundInitiated?: boolean;
     vouchersRestored?: number;
   }> {
+    console.log('🚫 cancelOrder request:', orderId, JSON.stringify(data));
     const response = await apiService.patch<{
       success: boolean;
       message: string;
       data: {
         order: Order;
-        refund?: {
-          amount: number;
-          status: string;
-          refundId: string;
-        };
+        refundInitiated?: boolean;
         vouchersRestored?: number;
       };
     }>(`/api/orders/${orderId}/admin-cancel`, data);
-
+    console.log('🚫 cancelOrder response:', JSON.stringify(response));
     return response.data;
   }
 

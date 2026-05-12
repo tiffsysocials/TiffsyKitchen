@@ -82,7 +82,6 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
   const [showDeliveryStatusModal, setShowDeliveryStatusModal] = useState(false);
   const [pendingDeliveryStatus, setPendingDeliveryStatus] = useState<OrderStatus | null>(null);
-  const [showTracking, setShowTracking] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useAlert();
 
@@ -275,27 +274,40 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
       issueRefund: boolean;
       restoreVouchers: boolean;
     }) => ordersService.cancelOrder(orderId, data),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orderStats'] });
 
+      const refundLine = data.refundInitiated ? '\nRefund initiated' : '';
+      const voucherLine = (data.vouchersRestored && data.vouchersRestored > 0)
+        ? `\n${data.vouchersRestored} voucher(s) restored`
+        : '';
+
+      // If admin asked to restore vouchers but backend restored zero, warn
+      const voucherRestoreFailed =
+        variables.restoreVouchers &&
+        (order?.voucherUsage?.voucherCount ?? 0) > 0 &&
+        (!data.vouchersRestored || data.vouchersRestored === 0);
+      const warningLine = voucherRestoreFailed
+        ? '\n⚠️ Voucher restore returned 0 — check voucher status on user profile.'
+        : '';
+
       showSuccess(
         'Order Cancelled',
-        `Order cancelled successfully${data.refund ? `\nRefund of ₹${data.refund.amount} initiated` : ''
-        }${data.vouchersRestored
-          ? `\n${data.vouchersRestored} voucher(s) restored`
-          : ''
-        }`,
+        `Order cancelled successfully${refundLine}${voucherLine}${warningLine}`,
         () => setShowCancelModal(false),
       );
     },
     onError: (error: any) => {
-      showError(
-        'Error',
-        error?.response?.data?.error?.message ||
-        'Failed to cancel order. Please try again.',
-      );
+      // api.service.ts throws Error with .response = { status, data: { success, message, error } }
+      console.log('🚫 cancelOrder error:', JSON.stringify(error, null, 2));
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Failed to cancel order. Please try again.';
+      showError('Error', backendMessage);
     },
   });
 
@@ -513,55 +525,6 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
           }
           return null;
         })()}
-
-        {/* Action Buttons */}
-        {(canAcceptOrder(order) || canRejectOrder(order) || canUpdateStatus(order) || canUpdateDeliveryStatus(order) || canCancelOrder(order)) && (
-          <View style={styles.actionsSection}>
-            <Text style={styles.sectionTitle}>Actions</Text>
-            <View style={styles.actionsGrid}>
-              {canAcceptOrder(order) && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.acceptButton]}
-                  onPress={() => setShowAcceptModal(true)}>
-                  <MaterialIcons name="check-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Accept Order</Text>
-                </TouchableOpacity>
-              )}
-              {canRejectOrder(order) && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.rejectButton]}
-                  onPress={() => setShowRejectModal(true)}>
-                  <MaterialIcons name="cancel" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Reject Order</Text>
-                </TouchableOpacity>
-              )}
-              {canUpdateStatus(order) && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.updateButton]}
-                  onPress={() => setShowUpdateStatusModal(true)}>
-                  <MaterialIcons name="update" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Update Status</Text>
-                </TouchableOpacity>
-              )}
-              {canUpdateDeliveryStatus(order) && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deliveryButton]}
-                  onPress={() => setShowDeliveryStatusModal(true)}>
-                  <MaterialIcons name="local-shipping" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Delivery Status</Text>
-                </TouchableOpacity>
-              )}
-              {canCancelOrder(order) && (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cancelButton]}
-                  onPress={() => setShowCancelModal(true)}>
-                  <MaterialIcons name="close" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Cancel Order</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
 
         {/* Customer Section */}
         <View style={styles.section}>
@@ -1044,6 +1007,57 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Action Buttons — outside ScrollView to avoid touch conflicts */}
+      {(canAcceptOrder(order) || canRejectOrder(order) || canUpdateStatus(order) || canUpdateDeliveryStatus(order) || canCancelOrder(order)) && (
+        <View style={styles.actionsSection}>
+          <View style={styles.actionsGrid}>
+            {canAcceptOrder(order) && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.acceptButton]}
+                onPress={() => setShowAcceptModal(true)}>
+                <MaterialIcons name="check-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Accept Order</Text>
+              </TouchableOpacity>
+            )}
+            {canRejectOrder(order) && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.rejectButton]}
+                onPress={() => setShowRejectModal(true)}>
+                <MaterialIcons name="cancel" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Reject Order</Text>
+              </TouchableOpacity>
+            )}
+            {canUpdateStatus(order) && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.updateButton]}
+                onPress={() => setShowUpdateStatusModal(true)}>
+                <MaterialIcons name="update" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Update Status</Text>
+              </TouchableOpacity>
+            )}
+            {canUpdateDeliveryStatus(order) && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deliveryButton]}
+                onPress={() => setShowDeliveryStatusModal(true)}>
+                <MaterialIcons name="local-shipping" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Delivery Status</Text>
+              </TouchableOpacity>
+            )}
+            {canCancelOrder(order) && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  console.log('🔴 Cancel Order button pressed');
+                  setShowCancelModal(true);
+                }}>
+                <MaterialIcons name="close" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Cancel Order</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Modals */}
       <AcceptOrderModal
         visible={showAcceptModal}
@@ -1248,9 +1262,10 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   actionsSection: {
-    marginTop: rs(12),
     backgroundColor: '#FFFFFF',
     padding: wp(4),
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
   },
   actionsGrid: {
     flexDirection: 'row',
