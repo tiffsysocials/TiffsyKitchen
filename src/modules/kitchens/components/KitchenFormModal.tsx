@@ -19,6 +19,7 @@ import { Area, Kitchen, KitchenType, NearbyArea, Zone } from '../../../types/api
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { AreaPickerModal } from './AreaPickerModal';
+import { AreaMapPreview } from './AreaMapPreview';
 import areaService from '../../../services/area.service';
 import { SearchableSelect } from '../../../components/common/SearchableSelect';
 import { TimePickerField } from '../../../components/common/TimePickerField';
@@ -82,6 +83,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [areaPickerVisible, setAreaPickerVisible] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<Array<NearbyArea | Area>>([]);
+  const [areaMapAreas, setAreaMapAreas] = useState<Area[]>([]);
   const [formData, setFormData] = useState<KitchenFormState>({
     name: '',
     type: 'PARTNER',
@@ -122,6 +124,14 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         : [];
       const areaIds = populatedAreas.map((a) => a._id);
       setSelectedAreas(populatedAreas);
+      const withCoords = populatedAreas.filter((a) => !!a.coordinates);
+      if (withCoords.length === populatedAreas.length) {
+        setAreaMapAreas(withCoords);
+      } else if (areaIds.length > 0) {
+        areaService.getAreasByIds(areaIds).then((full) => {
+          setAreaMapAreas(full.filter((a) => !!a.coordinates));
+        }).catch(() => {});
+      }
 
       setFormData({
         name: kitchen.name,
@@ -154,6 +164,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
     } else if (visible && !kitchen) {
       // Reset for creating new kitchen
       setSelectedAreas([]);
+      setAreaMapAreas([]);
       setFormData({
         name: '',
         type: 'PARTNER',
@@ -867,6 +878,17 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
                   {selectedAreas.map((a) => a.name).join(', ')}
                 </Text>
               )}
+              <AreaMapPreview
+                kitchenCoords={
+                  formData.latitude && formData.longitude
+                    ? {
+                        latitude: parseFloat(formData.latitude),
+                        longitude: parseFloat(formData.longitude),
+                      }
+                    : undefined
+                }
+                areas={areaMapAreas}
+              />
             </View>
 
             {/* Delivery Radii */}
@@ -1083,6 +1105,13 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         onSave={(areaIds, areas) => {
           updateField('serviceableAreas', areaIds);
           setSelectedAreas(areas);
+          if (areaIds.length > 0) {
+            areaService.getAreasByIds(areaIds).then((fullAreas) => {
+              setAreaMapAreas(fullAreas.filter((a) => !!a.coordinates));
+            }).catch(() => {});
+          } else {
+            setAreaMapAreas([]);
+          }
         }}
       />
     </>

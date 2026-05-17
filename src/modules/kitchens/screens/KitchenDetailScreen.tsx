@@ -19,6 +19,7 @@ import { spacing } from '../../../theme/spacing';
 import { Kitchen, Zone, Area, KitchenDetailsResponse } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
+import { AreaMapPreview } from '../components/AreaMapPreview';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { useAlert } from '../../../hooks/useAlert';
 
@@ -61,6 +62,20 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveArea = async (areaId: string) => {
+    if (!kitchen) return;
+    const remainingIds = (Array.isArray(kitchen.areasServed)
+      ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
+      : []
+    ).filter(a => a._id !== areaId).map(a => a._id);
+    try {
+      await kitchenService.updateServiceableAreas(kitchen._id, { serviceableAreas: remainingIds });
+      loadKitchenDetails();
+    } catch (err: any) {
+      showError('Failed', err?.message || 'Could not remove area.');
     }
   };
 
@@ -443,6 +458,13 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
             ))
           ) : (
             <Text style={styles.emptyText}>No areas assigned</Text>
+          )}
+          {areas.length > 0 && (
+            <AreaMapPreview
+              kitchenCoords={kitchen.address?.coordinates ?? undefined}
+              areas={areas}
+              onRemoveArea={handleRemoveArea}
+            />
           )}
         </View>
 

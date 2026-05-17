@@ -1,4 +1,4 @@
-const TEST_BASE_URL = 'https://d31od4t2t5epcb.cloudfront.net';
+const TEST_BASE_URL = 'https://tiffsy-backend-8ecm.onrender.com';
 const PROD_BASE_URL = 'https://d31od4t2t5epcb.cloudfront.net';
 
 // Set to true to force the test URL even in release builds.

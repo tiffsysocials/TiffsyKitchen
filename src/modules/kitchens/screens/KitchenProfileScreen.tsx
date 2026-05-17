@@ -28,6 +28,7 @@ import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { Kitchen, Zone, Area, OperatingHours } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
+import { AreaMapPreview } from '../components/AreaMapPreview';
 import { useAlert } from '../../../hooks/useAlert';
 
 // Form interfaces
@@ -125,6 +126,20 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
   });
 
   const kitchen = data?.kitchen;
+
+  const handleRemoveArea = async (areaId: string) => {
+    if (!kitchenId || !kitchen) return;
+    const remainingIds = (Array.isArray(kitchen.areasServed)
+      ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
+      : []
+    ).filter(a => a._id !== areaId).map(a => a._id);
+    try {
+      await kitchenService.updateServiceableAreas(kitchenId, { serviceableAreas: remainingIds });
+      await refetch();
+    } catch (err: any) {
+      showError('Failed', err?.message || 'Could not remove area.');
+    }
+  };
 
   const getStatusColor = () => {
     if (!kitchen) return colors.textMuted;
@@ -761,6 +776,13 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
             ))
           ) : (
             <Text style={styles.emptyText}>No areas assigned</Text>
+          )}
+          {areas.length > 0 && (
+            <AreaMapPreview
+              kitchenCoords={kitchen?.address?.coordinates ?? undefined}
+              areas={areas}
+              onRemoveArea={handleRemoveArea}
+            />
           )}
         </View>
 
