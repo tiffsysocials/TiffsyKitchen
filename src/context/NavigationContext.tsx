@@ -52,7 +52,9 @@ export type ScreenName =
   | 'AutoOrderAddons'
   | 'Coupons'
   | 'Referrals'
-  | 'Banners';
+  | 'Banners'
+  | 'ServiceZones'
+  | 'KitchenDeliveryZones';
 
 interface NavigationContextType {
   currentScreen: ScreenName;

@@ -63,6 +63,8 @@ import DeliveryConfigScreen from './src/modules/settings/screens/DeliveryConfigS
 import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
 import { BannerManagementScreen } from './src/modules/banners';
+import { ServiceZonesScreen } from './src/modules/kitchens/screens/ServiceZonesScreen';
+import { KitchenDeliveryZonesScreen } from './src/modules/kitchens/screens/KitchenDeliveryZonesScreen';
 import { AuditLogsScreen } from './src/modules';
 import { KitchenRegistrationScreen } from './src/screens/admin/KitchenRegistrationScreen';
 
@@ -550,6 +552,20 @@ const MainContent: React.FC<{
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="Banners" onMenuPress={onMenuPress}>
           <BannerManagementScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
+    case 'ServiceZones':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN']} screenName="ServiceZones" onMenuPress={onMenuPress}>
+          <ServiceZonesScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
+    case 'KitchenDeliveryZones':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN']} screenName="KitchenDeliveryZones" onMenuPress={onMenuPress}>
+          <KitchenDeliveryZonesScreen onMenuPress={onMenuPress} />
         </PermissionGuard>
       );
 

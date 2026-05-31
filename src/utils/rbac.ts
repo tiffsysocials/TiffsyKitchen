@@ -234,6 +234,22 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     roles: ['ADMIN'],
     group: 'System',
   },
+  {
+    id: '25',
+    label: 'Service Zones',
+    icon: 'map',
+    screen: 'ServiceZones',
+    roles: ['ADMIN'],
+    group: 'Kitchen',
+  },
+  {
+    id: '26',
+    label: 'Delivery Zones',
+    icon: 'map-marker-radius',
+    screen: 'KitchenDeliveryZones',
+    roles: ['ADMIN'],
+    group: 'Kitchen',
+  },
 ];
 
 /**

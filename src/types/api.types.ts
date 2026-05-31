@@ -322,6 +322,11 @@ export interface Kitchen {
   address: Address;
   zonesServed: Zone[] | string[];
   areasServed?: Area[] | string[];
+  serviceZoneIds?: ServiceZone[] | string[];
+  /** Phase 4: per-kitchen delivery zones with priced areas (replaces areasServed flow). */
+  deliveryZones?: DeliveryZone[];
+  /** Phase 3 migration flag — true if Default Zone was auto-created and needs admin review. */
+  needsZoneReview?: boolean;
   operatingHours: OperatingHours;
   contactPhone?: string;
   contactEmail?: string;
@@ -437,8 +442,113 @@ export interface Area {
     latitude: number;
     longitude: number;
   };
+  /** Real geographic boundary from OSM Nominatim — GeoJSON Polygon or MultiPolygon. */
+  boundary?: {
+    type: 'Polygon' | 'MultiPolygon';
+    coordinates: number[][][] | number[][][][];
+  };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ServiceZone {
+  _id: string;
+  name: string;
+  city: string;
+  description?: string;
+  areaIds: Area[] | string[];
+  boundary?: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  };
+  status: 'ACTIVE' | 'INACTIVE';
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ============================================================================
+// Delivery Zone Types (per-kitchen zones with per-meal-window pricing)
+// ============================================================================
+
+export interface MealWindowPricing {
+  deliveryFee: number;
+  platformFee: number;
+  handlingFee: number;
+  serviceFee: number;
+  packagingFee: number;
+  minOrderAmount: number;
+  /** null = no free-delivery threshold (delivery is always charged) */
+  freeDeliveryAbove: number | null;
+}
+
+export interface DeliveryZone {
+  _id: string;
+  /** Kitchen ID (string when unpopulated, object when populated) */
+  kitchenId: string | { _id: string; name: string; code?: string };
+  name: string;
+  /** Higher number wins when zones of the same kitchen overlap on an area */
+  priority: number;
+  centerCoordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  /** Admin-chosen radius. Used only for UI auto-fetch, not enforced at match time. */
+  radiusKm: number;
+  /** Area IDs in this zone. Populated as Area[] when fetched with details. */
+  areaIds: Area[] | string[];
+  pricing: {
+    lunch: MealWindowPricing;
+    dinner: MealWindowPricing;
+  };
+  status: 'ACTIVE' | 'INACTIVE';
+  /** True if this zone was auto-created by the migration (Phase 3) */
+  createdByMigration?: boolean;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateDeliveryZoneRequest {
+  kitchenId: string;
+  name: string;
+  priority: number;
+  centerCoordinates: { latitude: number; longitude: number };
+  radiusKm: number;
+  areaIds: string[];
+  pricing: {
+    lunch: MealWindowPricing;
+    dinner: MealWindowPricing;
+  };
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export type UpdateDeliveryZoneRequest = Partial<Omit<CreateDeliveryZoneRequest, 'kitchenId'>>;
+
+export interface PreviewAreasRequest {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  cityHint?: string;
+  stateHint?: string;
+}
+
+/** Area shape returned by preview-areas (matches NearbyArea) */
+export interface PreviewAreaResult {
+  id?: string;
+  _id?: string;
+  name: string;
+  city?: string;
+  state?: string;
+  pincodeCount?: number;
+  distanceKm?: number;
+}
+
+export interface PreviewAreasResponse {
+  count: number;
+  radiusKm: number;
+  center: { latitude: number; longitude: number };
+  areas: PreviewAreaResult[];
 }
 
 export interface AreaAutocompleteSuggestion {

@@ -8,3 +8,5 @@ export { KitchenProfileScreen } from './KitchenProfileScreen';
 export { BatchManagementScreen } from './BatchManagementScreen';
 export { BatchManagementLandingScreen } from './BatchManagementLandingScreen';
 export { BatchHistoryScreen } from './BatchHistoryScreen';
+export { ServiceZonesScreen } from './ServiceZonesScreen';
+export { KitchenDeliveryZonesScreen } from './KitchenDeliveryZonesScreen';
