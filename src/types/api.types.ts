@@ -664,6 +664,8 @@ export interface Coupon {
   applicableMenuTypes?: string[];
   applicableKitchenIds?: string[];
   applicableZoneIds?: string[];
+  /** Phase 5: per-kitchen DeliveryZone restriction. Coexists with applicableZoneIds (OR semantics). */
+  applicableDeliveryZoneIds?: string[];
   excludedKitchenIds?: string[];
   totalUsageLimit?: number;
   totalUsageCount?: number;
@@ -736,6 +738,8 @@ export interface CreateCouponRequest {
   applicableMenuTypes?: string[];
   applicableKitchenIds?: string[];
   applicableZoneIds?: string[];
+  /** Phase 5: per-kitchen DeliveryZone restriction (request side) */
+  applicableDeliveryZoneIds?: string[];
   excludedKitchenIds?: string[];
   totalUsageLimit?: number;
   perUserLimit?: number;
