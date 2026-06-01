@@ -146,22 +146,8 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
   },
 
   // --- System group ---
-  {
-    id: '6',
-    label: 'Zones',
-    icon: 'location-on',
-    screen: 'Zones',
-    roles: ['ADMIN'],
-    group: 'System',
-  },
-  {
-    id: '6b',
-    label: 'Pincodes',
-    icon: 'pin-drop',
-    screen: 'Pincodes',
-    roles: ['ADMIN'],
-    group: 'System',
-  },
+  // 'Zones' (pincode-based legacy) and 'Pincodes' menu items removed —
+  // both replaced by the DeliveryZones flow under Kitchen group.
   {
     id: '7',
     label: 'Users',
@@ -234,14 +220,8 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     roles: ['ADMIN'],
     group: 'System',
   },
-  {
-    id: '25',
-    label: 'Service Zones',
-    icon: 'map',
-    screen: 'ServiceZones',
-    roles: ['ADMIN'],
-    group: 'Kitchen',
-  },
+  // 'Service Zones' (the abandoned earlier admin module) removed —
+  // superseded by 'Delivery Zones'.
   {
     id: '26',
     label: 'Delivery Zones',

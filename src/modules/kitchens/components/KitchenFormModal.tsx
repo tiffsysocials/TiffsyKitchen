@@ -431,11 +431,9 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       return false;
     }
 
-    // 6. Serviceable Areas Validation
-    if (!formData.serviceableAreas || formData.serviceableAreas.length === 0) {
-      showToast('Please select at least one serviceable area', 'error');
-      return false;
-    }
+    // 6. Serviceable Areas validation removed — coverage is now configured
+    //    per-kitchen via Admin → Delivery Zones after the kitchen is saved.
+    //    Allow creating a kitchen with no areas; admin sets zones next.
 
     // 7. Operating Hours Validation
     const timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -854,41 +852,20 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
               <Text style={styles.hint}>Used for geofencing-based delivery matching. Tap "Detect Location" while at the kitchen — it will also auto-fill the address fields above.</Text>
             </View>
 
-            {/* Serviceable Areas */}
+            {/* Delivery Zones — configured after kitchen is saved.
+                The old per-kitchen "Serviceable Areas" picker is gone;
+                coverage is now managed per-zone with per-meal pricing under
+                Admin → Delivery Zones. */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                Serviceable Areas <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.zonePicker}
-                onPress={() => setAreaPickerVisible(true)}
-                disabled={loading || !formData.latitude || !formData.longitude}>
-                <Icon name="map-marker-multiple" size={20} color={colors.primary} />
-                <Text style={styles.zonePickerText}>
-                  {!formData.latitude || !formData.longitude
-                    ? 'Set kitchen location first'
-                    : formData.serviceableAreas.length === 0
-                    ? 'Select areas'
-                    : `${formData.serviceableAreas.length} area${formData.serviceableAreas.length === 1 ? '' : 's'} selected`}
+              <Text style={styles.sectionTitle}>Delivery Coverage</Text>
+              <View style={styles.hintBox}>
+                <Icon name="map-marker-radius" size={18} color={colors.primary} />
+                <Text style={styles.hintBoxText}>
+                  Save this kitchen first, then go to{'  '}
+                  <Text style={styles.hintBoxTextBold}>Admin → Delivery Zones</Text>
+                  {'  '}to define service areas + per-meal pricing.
                 </Text>
-                <Icon name="chevron-right" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              {selectedAreas.length > 0 && (
-                <Text style={styles.hint}>
-                  {selectedAreas.map((a) => a.name).join(', ')}
-                </Text>
-              )}
-              <AreaMapPreview
-                kitchenCoords={
-                  formData.latitude && formData.longitude
-                    ? {
-                        latitude: parseFloat(formData.latitude),
-                        longitude: parseFloat(formData.longitude),
-                      }
-                    : undefined
-                }
-                areas={areaMapAreas}
-              />
+              </View>
             </View>
 
             {/* Delivery Radii */}
@@ -1094,26 +1071,9 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         </View>
       </Modal>
 
-      <AreaPickerModal
-        visible={areaPickerVisible}
-        selectedAreaIds={formData.serviceableAreas}
-        latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
-        longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
-        cityHint={formData.city || undefined}
-        stateHint={formData.state || undefined}
-        onClose={() => setAreaPickerVisible(false)}
-        onSave={(areaIds, areas) => {
-          updateField('serviceableAreas', areaIds);
-          setSelectedAreas(areas);
-          if (areaIds.length > 0) {
-            areaService.getAreasByIds(areaIds).then((fullAreas) => {
-              setAreaMapAreas(fullAreas.filter((a) => !!a.coordinates));
-            }).catch(() => {});
-          } else {
-            setAreaMapAreas([]);
-          }
-        }}
-      />
+      {/* AreaPickerModal removed — area selection now happens per
+          delivery zone via the Delivery Zones screen, not on the
+          kitchen form. */}
     </>
   );
 };
@@ -1191,6 +1151,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: spacing.xs,
+  },
+  hintBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3EE',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDCDB8',
+  },
+  hintBoxText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textPrimary,
+    marginLeft: 8,
+    lineHeight: 18,
+  },
+  hintBoxTextBold: {
+    fontWeight: '700',
+    color: colors.primary,
   },
   typeSelector: {
     flexDirection: 'row',
