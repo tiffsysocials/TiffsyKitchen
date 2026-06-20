@@ -251,6 +251,148 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
               </View>
             )}
 
+            {/* Phase 11 — Global Wallet */}
+            {(subscription as any).globalWallet && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Global Wallet</Text>
+                <View style={styles.infoRow}>
+                  <Icon name="account-balance-wallet" size={20} color="#F56B4C" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Current balance</Text>
+                    <Text style={[styles.infoValue, { fontSize: 18, fontWeight: '700', color: '#F56B4C' }]}>
+                      {`₹${(subscription as any).globalWallet.balance || 0}`}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoRow}>
+                  <Icon name="trending-up" size={18} color="#16a34a" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Total deposited</Text>
+                    <Text style={styles.infoValue}>{`₹${(subscription as any).globalWallet.totalDeposited || 0}`}</Text>
+                  </View>
+                </View>
+                <View style={styles.infoRow}>
+                  <Icon name="trending-down" size={18} color="#dc2626" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Total deducted</Text>
+                    <Text style={styles.infoValue}>{`₹${(subscription as any).globalWallet.totalDeducted || 0}`}</Text>
+                  </View>
+                </View>
+                {(subscription as any).globalWallet.transactions?.length > 0 && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={styles.infoLabel}>Recent transactions</Text>
+                    {(subscription as any).globalWallet.transactions
+                      .slice(-5)
+                      .reverse()
+                      .map((tx: any, idx: number) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.infoRow,
+                            { borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#f3f4f6' },
+                          ]}
+                        >
+                          <Icon
+                            name={
+                              tx.type === 'DEPOSIT'
+                                ? 'add-circle'
+                                : tx.type === 'DEDUCTION'
+                                ? 'remove-circle'
+                                : 'sync'
+                            }
+                            size={18}
+                            color={
+                              tx.type === 'DEPOSIT'
+                                ? '#16a34a'
+                                : tx.type === 'DEDUCTION'
+                                ? '#dc2626'
+                                : '#6b7280'
+                            }
+                          />
+                          <View style={styles.infoContent}>
+                            <Text style={[styles.infoLabel, { fontSize: 11 }]}>
+                              {`${tx.type} · ${tx.source || ''} · ${new Date(tx.timestamp).toLocaleString('en-IN')}`}
+                            </Text>
+                            <Text style={[styles.infoValue, { fontSize: 13 }]}>
+                              {`${tx.type === 'DEDUCTION' ? '-' : '+'}₹${tx.amount}  ·  bal: ₹${tx.balanceAfter}`}
+                            </Text>
+                            {!!tx.note && (
+                              <Text style={[styles.infoLabel, { fontSize: 10, color: '#9ca3af' }]}>
+                                {tx.note}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Phase 11 — Auto-Order Setup (single-setup model) */}
+            {(subscription as any).autoOrderSetup && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Auto-Order Setup (Phase 11)</Text>
+                <View style={styles.infoRow}>
+                  <Icon
+                    name="auto-mode"
+                    size={20}
+                    color={(subscription as any).autoOrderSetup.enabled ? '#16a34a' : '#9ca3af'}
+                  />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Status</Text>
+                    <Text style={styles.infoValue}>
+                      {(subscription as any).autoOrderSetup.enabled ? 'Active' : 'Paused / off'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoRow}>
+                  <Icon name="restaurant-menu" size={18} color="#6b7280" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Thalis per meal</Text>
+                    <Text style={styles.infoValue}>
+                      {(subscription as any).autoOrderSetup.thalisPerMeal}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoRow}>
+                  <Icon name="schedule" size={18} color="#6b7280" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Meal windows</Text>
+                    <Text style={styles.infoValue}>
+                      {((subscription as any).autoOrderSetup.mealWindows || []).join(', ')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoRow}>
+                  <Icon name="local-shipping" size={18} color="#6b7280" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Prepaid deliveries</Text>
+                    <Text style={styles.infoValue}>
+                      {`${(subscription as any).autoOrderSetup.totalDeliveriesPrepaid || 0} (₹${(subscription as any).autoOrderSetup.totalFeesPrepaid || 0})`}
+                    </Text>
+                  </View>
+                </View>
+                {(subscription as any).autoOrderSetup.perMealFeesSnapshot && (
+                  <View style={styles.infoRow}>
+                    <Icon name="receipt-long" size={18} color="#6b7280" />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Per-meal snapshot</Text>
+                      <Text style={[styles.infoValue, { fontSize: 12 }]}>
+                        {(() => {
+                          const s = (subscription as any).autoOrderSetup.perMealFeesSnapshot;
+                          const parts: string[] = [];
+                          if (s.lunch) parts.push(`L: ₹${s.lunch.total}`);
+                          if (s.dinner) parts.push(`D: ₹${s.dinner.total}`);
+                          return parts.length ? parts.join(' · ') : 'No snapshot (live pricing)';
+                        })()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Weekly Schedule */}
             {subscription.weeklySchedule && Object.keys(subscription.weeklySchedule).length > 0 && (
               <View style={styles.section}>
