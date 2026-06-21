@@ -26,7 +26,7 @@ import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { Header } from '../../../components/common/Header';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { Kitchen, Zone, Area, OperatingHours } from '../../../types/api.types';
+import { Kitchen, Area, OperatingHours } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { AreaMapPreview } from '../components/AreaMapPreview';
 import { useAlert } from '../../../hooks/useAlert';
@@ -72,6 +72,12 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
   const [basicInfoForm, setBasicInfoForm] = React.useState<BasicInfoForm | null>(null);
   const [contactForm, setContactForm] = React.useState<ContactForm | null>(null);
   const [hoursForm, setHoursForm] = React.useState<OperatingHoursForm | null>(null);
+  // Phase 11 — holidays / closures: recurring weekly off-days + one-off dates.
+  const [holidaysForm, setHolidaysForm] = React.useState<{
+    closedDays: string[];
+    closedDates: string[];
+    newDate: string; // working buffer for the date input
+  } | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   // Load kitchen ID and user role from AsyncStorage
@@ -127,20 +133,6 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
 
   const kitchen = data?.kitchen;
 
-  const handleRemoveArea = async (areaId: string) => {
-    if (!kitchenId || !kitchen) return;
-    const remainingIds = (Array.isArray(kitchen.areasServed)
-      ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
-      : []
-    ).filter(a => a._id !== areaId).map(a => a._id);
-    try {
-      await kitchenService.updateServiceableAreas(kitchenId, { serviceableAreas: remainingIds });
-      await refetch();
-    } catch (err: any) {
-      showError('Failed', err?.message || 'Could not remove area.');
-    }
-  };
-
   const getStatusColor = () => {
     if (!kitchen) return colors.textMuted;
     switch (kitchen.status) {
@@ -165,11 +157,6 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
   const areas = kitchen?.areasServed
     ? Array.isArray(kitchen.areasServed)
       ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
-      : []
-    : [];
-  const legacyZones = kitchen?.zonesServed
-    ? Array.isArray(kitchen.zonesServed)
-      ? kitchen.zonesServed.filter((z): z is Zone => typeof z !== 'string')
       : []
     : [];
 
@@ -320,6 +307,13 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           onDemandAlwaysOpen: kitchen.operatingHours.onDemand?.isAlwaysOpen || false,
         });
         break;
+      case 'holidays':
+        setHolidaysForm({
+          closedDays: Array.isArray((kitchen as any).closedDays) ? [...(kitchen as any).closedDays] : [],
+          closedDates: Array.isArray((kitchen as any).closedDates) ? [...(kitchen as any).closedDates] : [],
+          newDate: '',
+        });
+        break;
     }
 
     setEditingSection(sectionId);
@@ -331,6 +325,7 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
     setBasicInfoForm(null);
     setContactForm(null);
     setHoursForm(null);
+    setHolidaysForm(null);
     setErrors({});
   };
 
@@ -427,6 +422,18 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
             await kitchenService.updateMyKitchen({ operatingHours });
           } else {
             await kitchenService.updateKitchen(kitchenId, { operatingHours });
+          }
+          break;
+
+        case 'holidays':
+          if (!holidaysForm) return;
+          // Normalise: dedupe + sort dates ascending; lowercase day names.
+          const closedDays = [...new Set((holidaysForm.closedDays || []).map(d => d.toLowerCase()))];
+          const closedDates = [...new Set(holidaysForm.closedDates || [])].sort();
+          if (userRole === 'KITCHEN_STAFF') {
+            await kitchenService.updateMyKitchen({ closedDays, closedDates } as any);
+          } else {
+            await kitchenService.updateKitchen(kitchenId, { closedDays, closedDates } as any);
           }
           break;
 
@@ -737,11 +744,10 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
           </View>
         </View>
 
-        {/* Areas Served */}
+        {/* Areas Served — read-only. Edit coverage via Delivery Zones. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Areas Served ({areas.length > 0 ? areas.length : legacyZones.length})
-          </Text>
+          <Text style={styles.sectionTitle}>Areas Served ({areas.length})</Text>
+          <Text style={styles.emptyText}>Edit coverage via Delivery Zones.</Text>
           {areas.length > 0 ? (
             areas.map((area) => (
               <View key={area._id} style={styles.zoneItem}>
@@ -754,26 +760,6 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
                 <Icon name="check-circle" size={16} color={colors.success} />
               </View>
             ))
-          ) : legacyZones.length > 0 ? (
-            legacyZones.map((zone) => (
-              <View key={zone._id} style={styles.zoneItem}>
-                <View style={styles.zoneInfo}>
-                  {zone.pincode && (
-                    <Text style={styles.zonePincode}>
-                      Pincode: {zone.pincode}
-                    </Text>
-                  )}
-                  <Text style={styles.zoneName}>
-                    {zone.name}, {zone.city}
-                  </Text>
-                </View>
-                {zone.orderingEnabled ? (
-                  <Icon name="check-circle" size={16} color={colors.success} />
-                ) : (
-                  <Icon name="close-circle" size={16} color={colors.error} />
-                )}
-              </View>
-            ))
           ) : (
             <Text style={styles.emptyText}>No areas assigned</Text>
           )}
@@ -781,7 +767,6 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
             <AreaMapPreview
               kitchenCoords={kitchen?.address?.coordinates ?? undefined}
               areas={areas}
-              onRemoveArea={handleRemoveArea}
             />
           )}
         </View>
@@ -969,6 +954,177 @@ export const KitchenProfileScreen: React.FC<KitchenProfileScreenProps> = ({
                 !kitchen.operatingHours.onDemand && (
                   <Text style={styles.emptyText}>No operating hours configured</Text>
                 )}
+            </>
+          )}
+        </View>
+
+        {/* Holidays & Closures — recurring weekly off-days + one-off dates */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Holidays & Closures</Text>
+            {editingSection !== 'holidays' && (
+              <TouchableOpacity onPress={() => handleEditSection('holidays')}>
+                <Icon name="pencil" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {editingSection === 'holidays' && holidaysForm ? (
+            <>
+              <View style={styles.form}>
+                <Text style={[styles.inputLabel, { marginTop: 8 }]}>
+                  Closed every week on
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 }}>
+                  {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const).map((d) => {
+                    const active = holidaysForm.closedDays.includes(d);
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        onPress={() => {
+                          setHolidaysForm({
+                            ...holidaysForm,
+                            closedDays: active
+                              ? holidaysForm.closedDays.filter((x) => x !== d)
+                              : [...holidaysForm.closedDays, d],
+                          });
+                        }}
+                        style={{
+                          paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, marginBottom: 8,
+                          borderRadius: 999, borderWidth: 1,
+                          borderColor: active ? colors.primary : '#D1D5DB',
+                          backgroundColor: active ? colors.primary : '#fff',
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 13, fontWeight: '600',
+                          color: active ? '#fff' : '#374151',
+                          textTransform: 'capitalize',
+                        }}>
+                          {d.slice(0, 3)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.inputLabel, { marginTop: 16 }]}>
+                  One-off closure dates (YYYY-MM-DD)
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    value={holidaysForm.newDate}
+                    onChangeText={(t) => setHolidaysForm({ ...holidaysForm, newDate: t })}
+                    placeholder="e.g. 2026-08-15"
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      const v = (holidaysForm.newDate || '').trim();
+                      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                        showError('Invalid date', 'Use YYYY-MM-DD format');
+                        return;
+                      }
+                      if (holidaysForm.closedDates.includes(v)) {
+                        showError('Already added', `${v} is already in the list`);
+                        return;
+                      }
+                      setHolidaysForm({
+                        ...holidaysForm,
+                        closedDates: [...holidaysForm.closedDates, v].sort(),
+                        newDate: '',
+                      });
+                    }}
+                    style={{
+                      marginLeft: 8, paddingHorizontal: 16, paddingVertical: 10,
+                      backgroundColor: colors.primary, borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {holidaysForm.closedDates.length > 0 && (
+                  <View style={{ marginTop: 12 }}>
+                    {holidaysForm.closedDates.map((d) => (
+                      <View
+                        key={d}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                          paddingVertical: 8, paddingHorizontal: 12,
+                          backgroundColor: '#F9FAFB', borderRadius: 8, marginBottom: 6,
+                        }}
+                      >
+                        <Text style={{ fontSize: 14, color: '#374151' }}>{d}</Text>
+                        <TouchableOpacity
+                          onPress={() => setHolidaysForm({
+                            ...holidaysForm,
+                            closedDates: holidaysForm.closedDates.filter((x) => x !== d),
+                          })}
+                        >
+                          <Icon name="close-circle" size={20} color={colors.error || '#DC2626'} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={[styles.editActions, { marginTop: 16 }]}>
+                  <TouchableOpacity onPress={handleCancelEdit} style={styles.cancelButton}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.saveButton,
+                      savingSection === 'holidays' && { opacity: 0.6 },
+                    ]}
+                    onPress={() => handleSaveSection('holidays')}
+                    disabled={savingSection === 'holidays'}
+                  >
+                    {savingSection === 'holidays' ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              {Array.isArray((kitchen as any).closedDays) && (kitchen as any).closedDays.length > 0 ? (
+                <View style={styles.hoursRow}>
+                  <Icon name="calendar-week" size={18} color={colors.textSecondary} />
+                  <Text style={styles.hoursLabel}>Weekly:</Text>
+                  <Text style={styles.hoursValue}>
+                    {(kitchen as any).closedDays
+                      .map((d: string) => d.charAt(0).toUpperCase() + d.slice(1))
+                      .join(', ')}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.hoursRow}>
+                  <Icon name="calendar-week" size={18} color={colors.textSecondary} />
+                  <Text style={styles.hoursLabel}>Weekly:</Text>
+                  <Text style={styles.hoursValue}>Open every day</Text>
+                </View>
+              )}
+              {Array.isArray((kitchen as any).closedDates) && (kitchen as any).closedDates.length > 0 ? (
+                <View style={styles.hoursRow}>
+                  <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
+                  <Text style={styles.hoursLabel}>Dates:</Text>
+                  <Text style={styles.hoursValue}>
+                    {(kitchen as any).closedDates.join(', ')}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.hoursRow}>
+                  <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
+                  <Text style={styles.hoursLabel}>Dates:</Text>
+                  <Text style={styles.hoursValue}>No one-off closures</Text>
+                </View>
+              )}
             </>
           )}
         </View>
