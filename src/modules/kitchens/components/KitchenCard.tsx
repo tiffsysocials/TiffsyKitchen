@@ -51,15 +51,8 @@ export const KitchenCard: React.FC<KitchenCardProps> = ({
     return kitchen.type === 'TIFFSY' ? colors.info : colors.secondary;
   };
 
-  const getCoverageCount = () => {
-    if (Array.isArray(kitchen.areasServed) && kitchen.areasServed.length > 0) {
-      return kitchen.areasServed.length;
-    }
-    if (Array.isArray(kitchen.zonesServed)) {
-      return kitchen.zonesServed.length;
-    }
-    return 0;
-  };
+  const getCoverageCount = () =>
+    Array.isArray(kitchen.areasServed) ? kitchen.areasServed.length : 0;
 
   const handleDelete = () => {
     showConfirm(

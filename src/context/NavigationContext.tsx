@@ -25,6 +25,7 @@ export type ScreenName =
   | 'Zones'
   | 'MenuManagement'
   | 'Subscriptions'
+  | 'Subscribers'
   | 'Users'
   | 'DriverApprovals'
   | 'DriverProfileManagement'
@@ -41,7 +42,7 @@ export type ScreenName =
   | 'DeliverySettingsHub'
   | 'RoutePlanningConfig'
   | 'DriverAssignmentConfig'
-  | 'GeofencingConfig'
+  | 'OrderAcceptanceConfig'
   | 'DeliveryActions'
   | 'DeliveryManagement'
   | 'BatchMonitoring'
@@ -54,7 +55,8 @@ export type ScreenName =
   | 'Referrals'
   | 'Banners'
   | 'ServiceZones'
-  | 'KitchenDeliveryZones';
+  | 'KitchenDeliveryZones'
+  | 'Reviews';
 
 interface NavigationContextType {
   currentScreen: ScreenName;

@@ -24,6 +24,7 @@ import MapView, {
 import {
   Area,
   DeliveryZone,
+  DistancePricing,
   Kitchen,
   MealWindowPricing,
   NearbyArea,
@@ -48,6 +49,14 @@ const FEE_FIELDS: { key: keyof MealWindowPricing; label: string; helper?: string
   },
 ];
 
+const emptyDistancePricing = (): DistancePricing => ({
+  enabled: false,
+  baseFee: 10,
+  baseFeeEnabled: true,
+  baseFreeUptoKm: 8,
+  perKmAfterFree: 2,
+});
+
 const emptyPricing = (): MealWindowPricing => ({
   deliveryFee: 0,
   platformFee: 0,
@@ -56,6 +65,7 @@ const emptyPricing = (): MealWindowPricing => ({
   packagingFee: 0,
   minOrderAmount: 0,
   freeDeliveryAbove: null,
+  distancePricing: emptyDistancePricing(),
 });
 
 const stepTitles = ['Basics', 'Areas', 'Pricing', 'Preview'] as const;
@@ -103,6 +113,10 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
   // areaCatalog = union of (auto-fetched within radius) + (manually added by name).
   // Stored as full Area-like objects so we can render markers + labels uniformly.
   const [areaCatalog, setAreaCatalog] = useState<Area[]>([]);
+  // Areas explicitly added via the "Add by name" picker (NOT auto-fetched from
+  // radius). On radius shrink we drop selections that fell out of the new
+  // radius, but we PRESERVE these explicit picks.
+  const [manuallyAddedAreaIds, setManuallyAddedAreaIds] = useState<Set<string>>(new Set());
   const [lunchPricing, setLunchPricing] = useState<MealWindowPricing>(emptyPricing());
   const [dinnerPricing, setDinnerPricing] = useState<MealWindowPricing>(emptyPricing());
   const [activePricingTab, setActivePricingTab] = useState<'lunch' | 'dinner'>('lunch');
@@ -110,6 +124,7 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
   // ─── UX state ──────────────────────────────────────────────────────────────
   const [previewingAreas, setPreviewingAreas] = useState(false);
   const [areaPickerVisible, setAreaPickerVisible] = useState(false);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -132,19 +147,32 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
       const ids = (Array.isArray(zone.areaIds) ? zone.areaIds : [])
         .map((a) => (typeof a === 'string' ? a : a._id));
       setSelectedAreaIds(new Set(ids));
+      // Pre-existing zone areas are treated as "manually added" for shrink-
+      // cleanup purposes — they were explicit picks by the original author and
+      // should NOT be auto-removed if the editing admin shrinks the radius.
+      setManuallyAddedAreaIds(new Set(ids));
       // Populated areas if fetched, else empty list (will fetch on Areas step)
       const populated = (Array.isArray(zone.areaIds) ? zone.areaIds : []).filter(
         (a): a is Area => typeof a === 'object',
       );
       setAreaCatalog(populated);
-      setLunchPricing(zone.pricing?.lunch || emptyPricing());
-      setDinnerPricing(zone.pricing?.dinner || emptyPricing());
+      const hydrate = (p?: MealWindowPricing): MealWindowPricing => ({
+        ...emptyPricing(),
+        ...(p || {}),
+        distancePricing: {
+          ...emptyDistancePricing(),
+          ...((p as any)?.distancePricing || {}),
+        },
+      });
+      setLunchPricing(hydrate(zone.pricing?.lunch));
+      setDinnerPricing(hydrate(zone.pricing?.dinner));
     } else {
       // Create mode defaults
       setName('');
       setPriority(String(defaultPriority || 1));
       setRadiusKmInput('5');
       setSelectedAreaIds(new Set());
+      setManuallyAddedAreaIds(new Set());
       setAreaCatalog([]);
       setLunchPricing(emptyPricing());
       setDinnerPricing(emptyPricing());
@@ -170,44 +198,58 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
         // Re-fetch full Area docs to get coordinates.
         const ids = result.areas.map((a) => a.id || a._id).filter(Boolean) as string[];
         if (ids.length === 0) {
-          // Keep any manually-added areas, but no new auto-fetched ones
-          setAreaCatalog((prev) => prev.filter((a) => selectedAreaIds.has(a._id)));
+          // Catalog: keep only manually-added areas (no auto-fetched in radius)
+          setAreaCatalog((prev) => prev.filter((a) => manuallyAddedAreaIds.has(a._id)));
+          // Selection: drop everything that wasn't manually added
+          setSelectedAreaIds((prev) => {
+            const next = new Set<string>();
+            prev.forEach((id) => { if (manuallyAddedAreaIds.has(id)) next.add(id); });
+            return next;
+          });
           return;
         }
         const fullAreas = await areaService.getAreasByIds(ids);
+        const fetchedIds = new Set(fullAreas.map((a) => a._id));
         setAreaCatalog((prev) => {
-          // Merge: keep manually-added (those selected and not in fullAreas), add fetched
-          const fetchedIds = new Set(fullAreas.map((a) => a._id));
+          // Catalog = fresh in-radius fetched + any manually-added ones
+          // (regardless of whether they're in radius — they were explicit picks)
           const manuallyKept = prev.filter(
-            (a) => selectedAreaIds.has(a._id) && !fetchedIds.has(a._id),
+            (a) => manuallyAddedAreaIds.has(a._id) && !fetchedIds.has(a._id),
           );
           return [...fullAreas, ...manuallyKept];
         });
-        if (preSelectAll) {
-          // Pre-check newly fetched areas (admin can uncheck)
-          setSelectedAreaIds((prev) => {
-            const next = new Set(prev);
-            fullAreas.forEach((a) => next.add(a._id));
-            return next;
+        // Phase: on every radius re-fetch, drop selections that are NEITHER in
+        // the new radius NOR manually-added. This makes shrinking the radius
+        // clean up the previously-auto-selected outliers, which used to stay
+        // selected forever.
+        setSelectedAreaIds((prev) => {
+          const next = new Set<string>();
+          prev.forEach((id) => {
+            if (fetchedIds.has(id) || manuallyAddedAreaIds.has(id)) next.add(id);
           });
-        }
+          if (preSelectAll) {
+            // Pre-check newly fetched areas (admin can still uncheck)
+            fullAreas.forEach((a) => next.add(a._id));
+          }
+          return next;
+        });
       } catch (err) {
         console.warn('Failed to fetch areas for radius:', err);
       } finally {
         setPreviewingAreas(false);
       }
     },
-    [kitchenCoords, selectedAreaIds],
+    [kitchenCoords, manuallyAddedAreaIds],
   );
 
-  // When entering Areas step (or radius changes while on Areas step), fetch
+  // When entering Areas step (or radius changes while on Areas step), fetch.
+  // Create mode: pre-select ALL fetched areas (admin can uncheck).
+  // Edit mode: never auto-pre-select — preserve the zone's existing selection.
   useEffect(() => {
     if (!visible || step !== 1) return;
     const rKm = Number(radiusKmInput);
     if (!Number.isFinite(rKm) || rKm <= 0) return;
-    // In edit mode on first entry, don't bulk-preselect — preserve current selection
-    const preSelectAll = !isEdit && selectedAreaIds.size === 0;
-    fetchAreasForRadius(rKm, preSelectAll);
+    fetchAreasForRadius(rKm, !isEdit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, step, radiusKmInput]);
 
@@ -228,13 +270,13 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
     if (s >= 2) {
       const checkBlock = (block: MealWindowPricing, label: string) => {
         for (const f of FEE_FIELDS) {
-          const v = block[f.key];
+          const v = block[f.key] as number | null;
           if (f.key === 'freeDeliveryAbove') {
             if (v != null && (!Number.isFinite(v) || v < 0)) {
               e[`${label}.${f.key}`] = `${label} ${f.label}: invalid`;
             }
           } else {
-            if (!Number.isFinite(v) || v < 0) {
+            if (v == null || !Number.isFinite(v) || v < 0) {
               e[`${label}.${f.key}`] = `${label} ${f.label}: must be ≥ 0`;
             }
           }
@@ -289,6 +331,11 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
           areaIds.forEach((id) => next.add(id));
           return next;
         });
+        setManuallyAddedAreaIds((prev) => {
+          const next = new Set(prev);
+          areaIds.forEach((id) => next.add(id));
+          return next;
+        });
       } catch (err) {
         console.warn('Failed to fetch picked areas:', err);
       }
@@ -322,7 +369,22 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
       if (!Number.isFinite(parsed)) return;
     }
     const setter = tab === 'lunch' ? setLunchPricing : setDinnerPricing;
-    setter((prev) => ({ ...prev, [key]: parsed }));
+    setter((prev) => ({ ...prev, [key]: parsed } as MealWindowPricing));
+  };
+
+  const handleDistancePricingChange = (
+    tab: 'lunch' | 'dinner',
+    key: keyof DistancePricing,
+    value: number | boolean,
+  ) => {
+    const setter = tab === 'lunch' ? setLunchPricing : setDinnerPricing;
+    setter((prev) => ({
+      ...prev,
+      distancePricing: {
+        ...(prev.distancePricing || emptyDistancePricing()),
+        [key]: value,
+      } as DistancePricing,
+    }));
   };
 
   const handleSave = async () => {
@@ -486,56 +548,85 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
     </View>
   );
 
+  /**
+   * Renders the map overlays (kitchen pin, radius circle, area dots).
+   * Reused by both the thumbnail and the full-screen modal.
+   * `interactive=true` enables marker taps for toggling area selection.
+   */
+  const renderMapOverlays = (interactive: boolean) => (
+    <>
+      {kitchenCoords && (
+        <>
+          <Marker
+            coordinate={kitchenCoords}
+            pinColor={colors.primary}
+            title="Kitchen"
+            tracksViewChanges={false}
+          />
+          <Circle
+            center={kitchenCoords}
+            radius={Number(radiusKmInput) * 1000}
+            strokeColor="rgba(245,107,76,0.7)"
+            strokeWidth={1.5}
+            fillColor="rgba(245,107,76,0.05)"
+          />
+        </>
+      )}
+      {areaCatalog.map((a) => {
+        if (a.coordinates?.latitude == null) return null;
+        const selected = selectedAreaIds.has(a._id);
+        return (
+          <Marker
+            key={`${a._id}-${selected ? 'sel' : 'uns'}`}
+            coordinate={{
+              latitude: a.coordinates.latitude,
+              longitude: a.coordinates.longitude,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
+            title={a.name}
+            description={selected ? 'Selected — tap to remove' : 'Tap to include'}
+            onPress={interactive ? () => toggleArea(a._id) : undefined}>
+            <View
+              style={[
+                s.areaDot,
+                selected ? s.areaDotSelected : s.areaDotUnselected,
+              ]}
+            />
+          </Marker>
+        );
+      })}
+    </>
+  );
+
   const renderAreasStep = () => (
     <View>
       <Text style={s.sectionTitle}>Areas</Text>
       <Text style={s.sectionHint}>
-        Tap an area marker on the map or use the checkbox list to include / exclude it.
+        Tap the map to expand. Use checkboxes below to include / exclude areas.
       </Text>
 
       {mapRegion && (
-        <View style={s.mapWrap}>
+        <TouchableOpacity
+          style={s.mapWrap}
+          activeOpacity={0.95}
+          onPress={() => setMapFullscreen(true)}>
           <MapView
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={StyleSheet.absoluteFillObject}
             initialRegion={mapRegion}
+            scrollEnabled={false}
+            zoomEnabled={false}
             pitchEnabled={false}
             rotateEnabled={false}>
-            {kitchenCoords && (
-              <>
-                <Marker coordinate={kitchenCoords} pinColor={colors.primary} title="Kitchen" />
-                <Circle
-                  center={kitchenCoords}
-                  radius={Number(radiusKmInput) * 1000}
-                  strokeColor="rgba(245,107,76,0.7)"
-                  strokeWidth={1.5}
-                  fillColor="rgba(245,107,76,0.05)"
-                />
-              </>
-            )}
-            {areaCatalog.map((a) => {
-              if (a.coordinates?.latitude == null) return null;
-              const selected = selectedAreaIds.has(a._id);
-              return (
-                <Marker
-                  key={a._id}
-                  coordinate={{
-                    latitude: a.coordinates.latitude,
-                    longitude: a.coordinates.longitude,
-                  }}
-                  pinColor={selected ? '#F56B4C' : '#9CA3AF'}
-                  title={a.name}
-                  description={selected ? 'Selected — tap to remove' : 'Tap to include'}
-                  onPress={() => toggleArea(a._id)}
-                />
-              );
-            })}
+            {renderMapOverlays(false)}
           </MapView>
-          <TouchableOpacity style={s.fitBtn} onPress={fitMap}>
-            <Icon name="fit-to-page-outline" size={20} color="#374151" />
-          </TouchableOpacity>
-        </View>
+          <View style={s.expandBadge}>
+            <Icon name="fullscreen" size={14} color="#fff" />
+            <Text style={s.expandBadgeText}>Tap to explore</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       <View style={s.areasHeader}>
@@ -543,13 +634,43 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
           {areaCatalog.length} area{areaCatalog.length !== 1 ? 's' : ''} listed •{' '}
           {selectedAreaIds.size} selected
         </Text>
-        <TouchableOpacity
-          style={s.pickBtn}
-          onPress={() => setAreaPickerVisible(true)}
-          activeOpacity={0.7}>
-          <Icon name="plus-circle" size={16} color={colors.primary} />
-          <Text style={s.pickBtnText}>Add by name</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {areaCatalog.length > 0 && (() => {
+            const allListedSelected = areaCatalog.every((a) => selectedAreaIds.has(a._id));
+            return (
+              <TouchableOpacity
+                style={s.pickBtn}
+                onPress={() => {
+                  setSelectedAreaIds((prev) => {
+                    const next = new Set(prev);
+                    if (allListedSelected) {
+                      areaCatalog.forEach((a) => next.delete(a._id));
+                    } else {
+                      areaCatalog.forEach((a) => next.add(a._id));
+                    }
+                    return next;
+                  });
+                }}
+                activeOpacity={0.7}>
+                <Icon
+                  name={allListedSelected ? 'checkbox-multiple-blank-outline' : 'checkbox-multiple-marked'}
+                  size={16}
+                  color={colors.primary}
+                />
+                <Text style={s.pickBtnText}>
+                  {allListedSelected ? 'Clear all' : 'Select all'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
+          <TouchableOpacity
+            style={s.pickBtn}
+            onPress={() => setAreaPickerVisible(true)}
+            activeOpacity={0.7}>
+            <Icon name="plus-circle" size={16} color={colors.primary} />
+            <Text style={s.pickBtnText}>Add by name</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {previewingAreas && (
@@ -637,7 +758,7 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
           const key = `${activePricingTab === 'lunch' ? 'Lunch' : 'Dinner'}.${f.key}`;
           const hasErr = !!errors[key];
           const raw = block[f.key];
-          const display = raw == null ? '' : String(raw);
+          const display = raw == null ? '' : String(raw as any);
           return (
             <View key={f.key}>
               <Text style={s.label}>{f.label}</Text>
@@ -654,6 +775,86 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
             </View>
           );
         })}
+
+        {/* Phase 8 — per-zone distance-based delivery pricing */}
+        {(() => {
+          const dp = block.distancePricing || emptyDistancePricing();
+          const tab = activePricingTab;
+          return (
+            <View style={s.dpCard}>
+              <View style={s.dpHeader}>
+                <Text style={s.dpTitle}>Distance-based Delivery Fee</Text>
+                <TouchableOpacity
+                  onPress={() => handleDistancePricingChange(tab, 'enabled', !dp.enabled)}
+                  style={[s.dpToggle, dp.enabled && s.dpToggleOn]}
+                  activeOpacity={0.7}>
+                  <View style={[s.dpToggleDot, dp.enabled && s.dpToggleDotOn]} />
+                </TouchableOpacity>
+              </View>
+              <Text style={s.fieldHint}>
+                When ON, this zone's delivery fee scales with distance: base + per-km beyond the free range. Overrides the flat Delivery Fee above for matched orders.
+              </Text>
+
+              <View style={s.dpRowToggle}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={s.label}>Charge a Base Fee</Text>
+                  <Text style={s.fieldHint}>When OFF, the free-distance portion is truly free.</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDistancePricingChange(tab, 'baseFeeEnabled', !dp.baseFeeEnabled)}
+                  style={[s.dpToggle, dp.baseFeeEnabled && s.dpToggleOn]}
+                  activeOpacity={0.7}>
+                  <View style={[s.dpToggleDot, dp.baseFeeEnabled && s.dpToggleDotOn]} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={s.label}>Base Fee (₹)</Text>
+              <TextInput
+                style={s.input}
+                value={String(dp.baseFee ?? 0)}
+                onChangeText={(t) => {
+                  const v = Number(t);
+                  if (Number.isFinite(v)) handleDistancePricingChange(tab, 'baseFee', v);
+                  else if (t === '') handleDistancePricingChange(tab, 'baseFee', 0);
+                }}
+                placeholder="10"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={s.label}>Free Distance (km)</Text>
+              <TextInput
+                style={s.input}
+                value={String(dp.baseFreeUptoKm ?? 0)}
+                onChangeText={(t) => {
+                  const v = Number(t);
+                  if (Number.isFinite(v)) handleDistancePricingChange(tab, 'baseFreeUptoKm', v);
+                  else if (t === '') handleDistancePricingChange(tab, 'baseFreeUptoKm', 0);
+                }}
+                placeholder="8"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={s.label}>Per km Beyond Free Distance (₹)</Text>
+              <TextInput
+                style={s.input}
+                value={String(dp.perKmAfterFree ?? 0)}
+                onChangeText={(t) => {
+                  const v = Number(t);
+                  if (Number.isFinite(v)) handleDistancePricingChange(tab, 'perKmAfterFree', v);
+                  else if (t === '') handleDistancePricingChange(tab, 'perKmAfterFree', 0);
+                }}
+                placeholder="2"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="decimal-pad"
+              />
+              <Text style={s.fieldHint}>
+                Example: with base ₹10, free 8km, ₹2/km, a 12km order = 10 + 4×2 = ₹18.
+              </Text>
+            </View>
+          );
+        })()}
       </View>
     );
   };
@@ -703,9 +904,11 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
                       latitude: a.coordinates.latitude,
                       longitude: a.coordinates.longitude,
                     }}
-                    pinColor="#F56B4C"
-                    title={a.name}
-                  />
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    tracksViewChanges={false}
+                    title={a.name}>
+                    <View style={[s.areaDot, s.areaDotSelected]} />
+                  </Marker>
                 ) : null,
               )}
             </MapView>
@@ -869,6 +1072,63 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
           onSave={handleAreaPickerSave}
         />
       )}
+
+      {/* Full-screen interactive map — opens when the small map thumbnail is tapped */}
+      {mapFullscreen && mapRegion && (
+        <Modal
+          visible
+          animationType="slide"
+          statusBarTranslucent
+          onRequestClose={() => setMapFullscreen(false)}>
+          <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+          <View
+            style={[
+              s.fsContainer,
+              { paddingTop: insets.top, paddingBottom: insets.bottom },
+            ]}>
+            <View style={s.fsHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.fsTitle} numberOfLines={1}>
+                  {name || 'New Zone'}
+                </Text>
+                <Text style={s.fsSubtitle}>
+                  {selectedAreaIds.size} of {areaCatalog.length} areas selected · tap a dot to toggle
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setMapFullscreen(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Icon name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1 }}>
+              <MapView
+                provider={PROVIDER_GOOGLE}
+                style={StyleSheet.absoluteFillObject}
+                initialRegion={mapRegion}
+                pitchEnabled={false}
+                rotateEnabled={false}>
+                {renderMapOverlays(true)}
+              </MapView>
+              <TouchableOpacity
+                style={s.fsLegend}
+                activeOpacity={0.85}
+                onPress={() => setMapFullscreen(false)}>
+                <View style={s.fsLegendDot}>
+                  <View style={[s.areaDot, s.areaDotSelected]} />
+                </View>
+                <Text style={s.fsLegendText}>= selected</Text>
+                <View style={[s.fsLegendDot, { marginLeft: 12 }]}>
+                  <View style={[s.areaDot, s.areaDotUnselected]} />
+                </View>
+                <Text style={s.fsLegendText}>= excluded</Text>
+                <View style={{ flex: 1 }} />
+                <Text style={s.fsDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </Modal>
   );
 };
@@ -963,6 +1223,75 @@ const s = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
+  },
+  // Small dot markers (replaces full pin icons)
+  areaDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  areaDotSelected: {
+    backgroundColor: colors.primary,
+  },
+  areaDotUnselected: {
+    backgroundColor: '#9CA3AF',
+  },
+  // "Tap to explore" badge on the thumbnail map
+  expandBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  expandBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  // Full-screen map modal
+  fsContainer: { flex: 1, backgroundColor: '#fff' },
+  fsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  fsTitle: { fontSize: 17, fontWeight: '600', color: '#111827' },
+  fsSubtitle: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  fsLegend: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+  },
+  fsLegendDot: { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  fsLegendText: { fontSize: 11, color: '#374151', marginLeft: 6 },
+  fsDoneText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '700',
+    marginLeft: 10,
   },
 
   // Areas
@@ -1137,4 +1466,44 @@ const s = StyleSheet.create({
     paddingVertical: 12,
   },
   saveBtnDisabled: { opacity: 0.6 },
+
+  // Phase 8 — distance-pricing card
+  dpCard: {
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFBF7',
+  },
+  dpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  dpTitle: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  dpRowToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  dpToggle: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D1D5DB',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  dpToggleOn: { backgroundColor: '#22C55E' },
+  dpToggleDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+  },
+  dpToggleDotOn: { alignSelf: 'flex-end' },
 });

@@ -63,6 +63,18 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({ plan
         </Text>
       </View>
 
+      {/* GST Info */}
+      {!!plan.taxRate && plan.taxRate > 0 && (
+        <View style={styles.vouchersRow}>
+          <Icon name="receipt" size={16} color="#6b7280" />
+          <Text style={styles.vouchersText}>
+            GST {Math.round(plan.taxRate * 100 * 100) / 100}% •{' '}
+            {plan.taxInclusive ? 'Inclusive' : 'Exclusive'}
+            {plan.hsnCode ? ` • HSN ${plan.hsnCode}` : ''}
+          </Text>
+        </View>
+      )}
+
       {/* Features */}
       {plan.features && plan.features.length > 0 && (
         <View style={styles.featuresContainer}>

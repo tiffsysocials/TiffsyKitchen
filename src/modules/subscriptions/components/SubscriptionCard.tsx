@@ -48,7 +48,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ subscription
       <View style={styles.planRow}>
         <Icon name="card-membership" size={16} color="#6b7280" />
         <Text style={styles.planName}>{subscription.planId.name}</Text>
-        <Text style={styles.planDuration}>({subscription.planId.durationDays} days)</Text>
+        <Text style={styles.planDuration}>({subscription.vouchersIssued} meals)</Text>
       </View>
 
       {/* Voucher Progress */}

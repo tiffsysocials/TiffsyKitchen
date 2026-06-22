@@ -1,0 +1,13 @@
+
+> TiffsyKitchen@0.0.1 android
+> react-native run-android
+
+info Installing the app...
+
+info 💡 Tip: Make sure that you have set up your development environment correctly, by running npx react-native doctor. To read more about doctor command visit: https://github.com/react-native-community/cli/blob/main/packages/cli-doctor/README.md#doctor 
+
+'gradlew.bat' is not recognized as an internal or external command,
+operable program or batch file.
+error Failed to install the app. Command failed with exit code 1: gradlew.bat app:installDebug -PreactNativeDevServerPort=8081
+'gradlew.bat' is not recognized as an internal or external command, operable program or batch file.
+info Run CLI with --verbose flag for more details.

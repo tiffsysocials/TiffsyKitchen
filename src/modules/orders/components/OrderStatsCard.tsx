@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface OrderStatsCardProps {
@@ -8,6 +8,7 @@ interface OrderStatsCardProps {
   color: string;
   highlight?: boolean;
   icon?: string;
+  onPress?: () => void;
 }
 
 const OrderStatsCard: React.FC<OrderStatsCardProps> = ({
@@ -16,9 +17,10 @@ const OrderStatsCard: React.FC<OrderStatsCardProps> = ({
   color,
   highlight = false,
   icon,
+  onPress,
 }) => {
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       {icon && (
         <View style={[styles.iconContainer, {backgroundColor: `${color}15`}]}>
           <Icon name={icon} size={16} color={color} />
@@ -28,8 +30,21 @@ const OrderStatsCard: React.FC<OrderStatsCardProps> = ({
         <Text style={styles.label}>{label}</Text>
         <Text style={[styles.value, {color}]}>{value}</Text>
       </View>
-    </View>
+      {onPress && (
+        <Icon name="chevron-right" size={12} color={color} style={styles.chevron} />
+      )}
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.card}>{content}</View>;
 };
 
 const styles = StyleSheet.create({
@@ -73,6 +88,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -0.5,
     lineHeight: 20,
+  },
+  chevron: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
   },
 });
 

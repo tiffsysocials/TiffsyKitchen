@@ -27,6 +27,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { GradientBox } from '../../../components/common/GradientBox';
 
 type StatusFilterValue = OrderStatus | 'ALL' | 'FAILED_PAYMENTS';
+type MealWindowFilterValue = 'ALL' | 'LUNCH' | 'DINNER';
 
 const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
   { label: 'All', value: 'ALL' },
@@ -40,6 +41,12 @@ const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
   { label: 'Cancelled', value: 'CANCELLED' },
   { label: 'Failed', value: 'FAILED' },
   { label: 'Failed Payments', value: 'FAILED_PAYMENTS' },
+];
+
+const MEAL_WINDOW_FILTERS: { label: string; value: MealWindowFilterValue; icon: string }[] = [
+  { label: 'All Meals', value: 'ALL', icon: 'restaurant-menu' },
+  { label: 'Lunch', value: 'LUNCH', icon: 'wb-sunny' },
+  { label: 'Dinner', value: 'DINNER', icon: 'nightlight-round' },
 ];
 
 const getTodayDateString = () => {
@@ -63,6 +70,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo, showWarning, showConfirm } = useAlert();
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
+  const [selectedMealWindow, setSelectedMealWindow] = useState<MealWindowFilterValue>('ALL');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayDateString());
@@ -70,6 +78,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+  const [showAddonDetail, setShowAddonDetail] = useState(false);
 
   // Fetch all kitchens upfront to resolve unpopulated kitchenId strings
   const {
@@ -92,14 +101,22 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     return map;
   }, [kitchensData]);
 
-  // Cache stats from the ALL tab so they persist when switching to specific status filters
-  const cachedStatsRef = useRef({
+  // Cache stats from the ALL tab so they persist when switching to specific status filters.
+  // Keyed by meal window so switching Lunch/Dinner/All pills doesn't show stale numbers.
+  const emptyStats = () => ({
     confirmedToday: 0,
     totalMealsToday: 0,
     pendingAcceptance: 0,
     outForDelivery: 0,
     failedOrders: 0,
     revenue: 0,
+    totalAddonsToday: 0,
+    addonBreakdown: {} as Record<string, number>,
+  });
+  const cachedStatsRef = useRef<Record<MealWindowFilterValue, ReturnType<typeof emptyStats>>>({
+    ALL: emptyStats(),
+    LUNCH: emptyStats(),
+    DINNER: emptyStats(),
   });
 
   // Fetch orders with infinite query to accumulate pages
@@ -337,19 +354,30 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // Flatten all pages into a single orders array, exclude SCHEDULED from "All"
   const allOrders = useMemo(() => {
     const orders = ordersData?.pages?.flatMap(page => page.orders) ?? [];
+    let filtered: Order[];
     if (selectedStatus === 'FAILED_PAYMENTS') {
-      return orders.filter(order => order.paymentStatus === 'FAILED');
-    }
-    if (selectedStatus === 'ALL') {
-      // Exclude scheduled orders and orders with pending/failed payments from "All" view
-      return orders.filter(order => !isScheduledOrder(order) && hasVisiblePayment(order));
-    }
-    if (selectedStatus === 'SCHEDULED') {
+      filtered = orders.filter(order => order.paymentStatus === 'FAILED');
+    } else if (selectedStatus === 'ALL') {
+      // Exclude scheduled orders and orders with pending/failed payments from "All" view.
+      // Also exclude DELIVERED orders — once marked delivered they live only in the
+      // Delivered tab. (They remain in the fetched data so the stats cards above still
+      // count them; this filter only affects the displayed list.)
+      filtered = orders.filter(
+        order => !isScheduledOrder(order) && hasVisiblePayment(order) && order.status !== 'DELIVERED'
+      );
+    } else if (selectedStatus === 'SCHEDULED') {
       // Client-side filter: show orders that are scheduled (via any field)
-      return orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
+      filtered = orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
+    } else {
+      filtered = orders.filter(hasVisiblePayment);
     }
-    return orders.filter(hasVisiblePayment);
-  }, [ordersData, selectedStatus]);
+
+    // Meal window filter — only applies to MEAL_MENU orders that have mealWindow set
+    if (selectedMealWindow !== 'ALL') {
+      filtered = filtered.filter(order => order.mealWindow === selectedMealWindow);
+    }
+    return filtered;
+  }, [ordersData, selectedStatus, selectedMealWindow]);
 
   // Group orders by kitchen with search filtering
   const kitchenOrdersGroups = useMemo(() => {
@@ -442,9 +470,14 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // Failed   = CANCELLED, REJECTED, FAILED, or PAID-but-failed orders (today).
   const todayStats = useMemo(() => {
     if (selectedStatus !== 'ALL' || !ordersData?.pages?.length) {
-      return cachedStatsRef.current;
+      return cachedStatsRef.current[selectedMealWindow];
     }
-    const allLoadedOrders = ordersData.pages.flatMap(page => page.orders);
+    let allLoadedOrders = ordersData.pages.flatMap(page => page.orders);
+
+    // Filter the stat universe to the selected meal window (Lunch/Dinner/All)
+    if (selectedMealWindow !== 'ALL') {
+      allLoadedOrders = allLoadedOrders.filter(o => o.mealWindow === selectedMealWindow);
+    }
 
     const CONFIRMED_STATUSES = new Set([
       'PENDING_KITCHEN_ACCEPTANCE', 'PLACED', 'ACCEPTED',
@@ -474,10 +507,21 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
     ).length;
     const revenue = confirmedOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
 
-    const stats = { confirmedToday, totalMealsToday, pendingAcceptance, outForDelivery, failedOrders, revenue };
-    cachedStatsRef.current = stats;
+    const addonBreakdown: Record<string, number> = {};
+    confirmedOrders.forEach(o => {
+      o.items?.forEach((item: any) => {
+        item.addons?.forEach((addon: any) => {
+          const name = addon.name || addon.addonName || 'Unknown';
+          addonBreakdown[name] = (addonBreakdown[name] || 0) + (addon.quantity || 1);
+        });
+      });
+    });
+    const totalAddonsToday = Object.values(addonBreakdown).reduce((s, v) => s + v, 0);
+
+    const stats = { confirmedToday, totalMealsToday, pendingAcceptance, outForDelivery, failedOrders, revenue, totalAddonsToday, addonBreakdown };
+    cachedStatsRef.current[selectedMealWindow] = stats;
     return stats;
-  }, [ordersData, selectedStatus]);
+  }, [ordersData, selectedStatus, selectedMealWindow]);
 
   const renderStatsSection = () => {
     if (ordersLoading && !ordersData) {
@@ -488,6 +532,12 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
       );
     }
 
+    // Suffix the labels with the active meal window so it's obvious what's being counted
+    const mwSuffix =
+      selectedMealWindow === 'LUNCH' ? ' (Lunch)' :
+      selectedMealWindow === 'DINNER' ? ' (Dinner)' :
+      '';
+
     return (
       <ScrollView
         horizontal
@@ -495,39 +545,46 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         style={styles.statsScroll}
         contentContainerStyle={styles.statsContainer}>
         <OrderStatsCard
-          label="Today's Orders"
+          label={`Today's Orders${mwSuffix}`}
           value={todayStats.confirmedToday}
           color="#FE8733"
           icon="receipt-long"
         />
         <OrderStatsCard
-          label="Total Meals Today"
+          label={`Total Meals${mwSuffix || ' Today'}`}
           value={todayStats.totalMealsToday}
           color="#34C759"
           icon="restaurant"
           highlight={todayStats.totalMealsToday > 0}
         />
         <OrderStatsCard
-          label="Pending Acceptance"
+          label={`Add-ons${mwSuffix || ' Today'}`}
+          value={todayStats.totalAddonsToday}
+          color="#8b5cf6"
+          icon="add-circle"
+          onPress={todayStats.totalAddonsToday > 0 ? () => setShowAddonDetail(true) : undefined}
+        />
+        <OrderStatsCard
+          label={`Pending Acceptance${mwSuffix}`}
           value={todayStats.pendingAcceptance}
           color="#FF9500"
           icon="pending"
           highlight={todayStats.pendingAcceptance > 0}
         />
         <OrderStatsCard
-          label="Out for Delivery"
+          label={`Out for Delivery${mwSuffix}`}
           value={todayStats.outForDelivery}
           color="#5856D6"
           icon="delivery-dining"
         />
         <OrderStatsCard
-          label="Failed Orders"
+          label={`Failed Orders${mwSuffix}`}
           value={todayStats.failedOrders}
           color="#FF3B30"
           icon="cancel"
         />
         <OrderStatsCard
-          label="Today's Revenue"
+          label={`Today's Revenue${mwSuffix}`}
           value={`₹${todayStats.revenue.toLocaleString('en-IN', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
@@ -679,6 +736,33 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
               <Text style={styles.clearDateText}>Clear</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Meal Window Filter — splits the selected day into Lunch / Dinner */}
+        <View style={styles.mealWindowRow}>
+          {MEAL_WINDOW_FILTERS.map((filter) => {
+            const active = selectedMealWindow === filter.value;
+            return (
+              <TouchableOpacity
+                key={filter.value}
+                style={[styles.mealWindowPill, active && styles.mealWindowPillActive]}
+                onPress={() => setSelectedMealWindow(filter.value)}
+                activeOpacity={0.7}>
+                <Icon
+                  name={filter.icon}
+                  size={14}
+                  color={active ? '#FFFFFF' : '#6B7280'}
+                />
+                <Text
+                  style={[
+                    styles.mealWindowPillText,
+                    active && styles.mealWindowPillTextActive,
+                  ]}>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Search Bar */}
@@ -851,6 +935,46 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
                 arrowColor: '#FE8733',
               }}
             />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Add-ons Detail Modal */}
+      <Modal
+        visible={showAddonDetail}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setShowAddonDetail(false)}>
+        <TouchableOpacity
+          style={styles.dateModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAddonDetail(false)}>
+          <View style={styles.addonModalContent}>
+            <View style={styles.dateModalHeader}>
+              <View style={styles.addonModalTitleRow}>
+                <Icon name="add-circle" size={20} color="#8b5cf6" />
+                <Text style={styles.dateModalTitle}>Add-ons To Pack Today</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAddonDetail(false)}>
+                <Icon name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.addonModalSubtitle}>
+              Total: {todayStats.totalAddonsToday} add-on{todayStats.totalAddonsToday !== 1 ? 's' : ''}
+            </Text>
+            <ScrollView style={styles.addonList} showsVerticalScrollIndicator={false}>
+              {Object.entries(todayStats.addonBreakdown)
+                .sort(([, a], [, b]) => b - a)
+                .map(([name, qty]) => (
+                  <View key={name} style={styles.addonRow}>
+                    <Text style={styles.addonName}>{name}</Text>
+                    <View style={styles.addonQtyBadge}>
+                      <Text style={styles.addonQtyText}>×{qty}</Text>
+                    </View>
+                  </View>
+                ))}
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -1138,6 +1262,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
   },
+  mealWindowRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  mealWindowPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  mealWindowPillActive: {
+    backgroundColor: '#FE8733',
+    borderColor: '#FE8733',
+  },
+  mealWindowPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  mealWindowPillTextActive: {
+    color: '#FFFFFF',
+  },
   dateModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1164,6 +1319,57 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
+  },
+  addonModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  addonModalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addonModalSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  addonList: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  addonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  addonName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#111827',
+    marginRight: 12,
+  },
+  addonQtyBadge: {
+    backgroundColor: '#ede9fe',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  addonQtyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8b5cf6',
   },
 });
 

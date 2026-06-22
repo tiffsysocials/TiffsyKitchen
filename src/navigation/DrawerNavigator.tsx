@@ -15,7 +15,7 @@ import { DrawerParamList } from './types';
 import DashboardScreen from '../screens/admin/DashboardScreen.enhanced';
 import OrdersNavigator from './OrdersNavigator';
 import KitchenNavigator from './KitchenNavigator';
-import { KitchensManagementScreen, KitchenDetailScreen, BatchManagementScreen, BatchManagementLandingScreen, KitchenApprovalsScreen, KitchenProfileScreen } from '../modules/kitchens/screens';
+import { KitchensManagementScreen, KitchenDetailScreen, BatchManagementScreen, BatchManagementLandingScreen, KitchenApprovalsScreen, KitchenProfileScreen, KitchenDeliveryZonesScreen } from '../modules/kitchens/screens';
 import { ZonesManagementScreen } from '../modules/zones/screens/ZonesManagementScreen';
 import { PincodesManagementScreen } from '../modules/pincodes/screens/PincodesManagementScreen';
 import { SubscriptionsScreen, SubscriptionsScreenSimple } from '../modules/subscriptions';
@@ -212,6 +212,10 @@ export default function DrawerNavigator({ onLogout }: { onLogout: () => void }) 
       </Drawer.Screen>
 
       <Drawer.Screen name="Kitchens" component={KitchensNavigator} />
+
+      <Drawer.Screen name="KitchenDeliveryZones">
+        {(props) => <KitchenDeliveryZonesScreen onMenuPress={() => props.navigation.toggleDrawer()} />}
+      </Drawer.Screen>
 
       <Drawer.Screen name="DeliveryManagement">
         {(props) => <DeliveryManagementScreen onMenuPress={() => props.navigation.toggleDrawer()} />}

@@ -15,11 +15,12 @@ import {
 import Geolocation from 'react-native-geolocation-service';
 import { useAlert } from '../../../hooks/useAlert';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Area, Kitchen, KitchenType, NearbyArea, Zone } from '../../../types/api.types';
+import { Area, Kitchen, KitchenType, NearbyArea } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { AreaPickerModal } from './AreaPickerModal';
 import { AreaMapPreview } from './AreaMapPreview';
+import { LocationPickerModal } from './LocationPickerModal';
 import areaService from '../../../services/area.service';
 import { SearchableSelect } from '../../../components/common/SearchableSelect';
 import { TimePickerField } from '../../../components/common/TimePickerField';
@@ -82,6 +83,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [areaPickerVisible, setAreaPickerVisible] = useState(false);
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<Array<NearbyArea | Area>>([]);
   const [areaMapAreas, setAreaMapAreas] = useState<Area[]>([]);
   const [formData, setFormData] = useState<KitchenFormState>({
@@ -115,8 +117,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
   useEffect(() => {
     if (visible && kitchen) {
-      // Pre-fill from populated areasServed; fall back to legacy zonesServed pincodes
-      // (reverse-map handled in a separate effect below).
+      // Pre-fill from populated areasServed.
       const populatedAreas = Array.isArray(kitchen.areasServed)
         ? (kitchen.areasServed as Area[]).filter(
             (a): a is Area => typeof a === 'object' && a !== null && !!a._id,
@@ -196,45 +197,43 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
     }
   }, [visible, kitchen]);
 
-  // Legacy reverse-map: kitchens created before the areas pivot only have
-  // zonesServed (pincode-based). On open, map those pincodes to areas so the
-  // admin can see and confirm the migrated coverage.
-  useEffect(() => {
-    if (!visible || !kitchen) return;
-    const hasAreas = Array.isArray(kitchen.areasServed) && kitchen.areasServed.length > 0;
-    if (hasAreas) return;
-    const legacyPincodes = Array.isArray(kitchen.zonesServed)
-      ? (kitchen.zonesServed as Zone[])
-          .filter((z): z is Zone => typeof z === 'object' && z !== null && !!z.pincode)
-          .map((z) => z.pincode)
-      : [];
-    if (legacyPincodes.length === 0) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const areas = await areaService.mapPincodesToAreas(legacyPincodes);
-        if (cancelled || areas.length === 0) return;
-        setSelectedAreas(areas);
-        setFormData((prev) => ({
-          ...prev,
-          serviceableAreas: areas.map((a) => a._id),
-        }));
-        showSuccess(
-          'Coverage migrated',
-          `Mapped ${legacyPincodes.length} legacy pincode${legacyPincodes.length === 1 ? '' : 's'} to ${areas.length} area${areas.length === 1 ? '' : 's'}. Review and save.`,
-        );
-      } catch (err) {
-        console.error('Pincode→area reverse-map failed:', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, kitchen, showSuccess]);
-
   const updateField = (field: keyof KitchenFormState, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Parse the current lat/lng strings into coords for the map picker (so it
+  // opens centered on an already-set / edited location). null when unset/invalid.
+  const initialMapCoords = (() => {
+    const lat = parseFloat(formData.latitude);
+    const lng = parseFloat(formData.longitude);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { latitude: lat, longitude: lng };
+  })();
+
+  // Result of confirming a point on the map: write coords + merge any address
+  // fields the reverse-geocode resolved (same merge rules as Detect Location).
+  const handleMapPick = (result: {
+    latitude: number;
+    longitude: number;
+    addressLine1?: string;
+    addressLine2?: string;
+    locality?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: result.latitude.toFixed(6),
+      longitude: result.longitude.toFixed(6),
+      addressLine1: result.addressLine1 || prev.addressLine1,
+      addressLine2: result.addressLine2 || prev.addressLine2,
+      locality: result.locality || prev.locality,
+      city: result.city || prev.city,
+      state: result.state || prev.state,
+      pincode: result.pincode && /^\d{6}$/.test(result.pincode) ? result.pincode : prev.pincode,
+    }));
+    setMapPickerVisible(false);
   };
 
   /**
@@ -813,19 +812,28 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
 
               <View style={styles.coordinatesHeader}>
                 <Text style={styles.label}>Coordinates</Text>
-                <TouchableOpacity
-                  style={styles.detectButton}
-                  onPress={detectLocation}
-                  disabled={loading || detectingLocation}>
-                  {detectingLocation ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <>
-                      <Icon name="crosshairs-gps" size={16} color={colors.primary} />
-                      <Text style={styles.detectButtonText}>Detect Location</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                <View style={styles.coordinatesActions}>
+                  <TouchableOpacity
+                    style={styles.detectButton}
+                    onPress={() => setMapPickerVisible(true)}
+                    disabled={loading}>
+                    <Icon name="map-marker-plus" size={16} color={colors.primary} />
+                    <Text style={styles.detectButtonText}>Pick on Map</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.detectButton}
+                    onPress={detectLocation}
+                    disabled={loading || detectingLocation}>
+                    {detectingLocation ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <Icon name="crosshairs-gps" size={16} color={colors.primary} />
+                        <Text style={styles.detectButtonText}>Detect Location</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
@@ -849,7 +857,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
                   />
                 </View>
               </View>
-              <Text style={styles.hint}>Used for geofencing-based delivery matching. Tap "Detect Location" while at the kitchen — it will also auto-fill the address fields above.</Text>
+              <Text style={styles.hint}>Used for distance-based delivery fees and routing. Tap "Detect Location" while at the kitchen, or "Pick on Map" to place a kitchen anywhere — both auto-fill the address fields above.</Text>
             </View>
 
             {/* Delivery Zones — configured after kitchen is saved.
@@ -1074,6 +1082,13 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
       {/* AreaPickerModal removed — area selection now happens per
           delivery zone via the Delivery Zones screen, not on the
           kitchen form. */}
+
+      <LocationPickerModal
+        visible={mapPickerVisible}
+        initialCoords={initialMapCoords}
+        onClose={() => setMapPickerVisible(false)}
+        onConfirm={handleMapPick}
+      />
     </>
   );
 };
@@ -1201,6 +1216,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  coordinatesActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   detectButton: {
     flexDirection: 'row',

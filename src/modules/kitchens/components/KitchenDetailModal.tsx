@@ -190,15 +190,12 @@ export const KitchenDetailModal: React.FC<KitchenDetailModalProps> = ({
       )}
 
       {/* Coverage */}
-      {((kitchen.areasServed && kitchen.areasServed.length > 0) ||
-        (kitchen.zonesServed && kitchen.zonesServed.length > 0)) && (
+      {kitchen.areasServed && kitchen.areasServed.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Areas Served</Text>
           <Text style={styles.sectionText}>
-            {(() => {
-              const count = kitchen.areasServed?.length ?? kitchen.zonesServed?.length ?? 0;
-              return `${count} area${count !== 1 ? 's' : ''}`;
-            })()}
+            {kitchen.areasServed.length} area
+            {kitchen.areasServed.length !== 1 ? 's' : ''}
           </Text>
         </View>
       )}

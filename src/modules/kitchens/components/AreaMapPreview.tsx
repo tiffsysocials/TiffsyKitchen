@@ -9,10 +9,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker, Circle, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Area } from '../../../types/api.types';
 import { colors } from '../../../theme/colors';
+
+type GeoJsonPolygon = { type: 'Polygon'; coordinates: number[][][] };
 
 interface AreaMapPreviewProps {
   kitchenCoords?: { latitude: number; longitude: number };
@@ -20,15 +22,10 @@ interface AreaMapPreviewProps {
   onRemoveArea?: (areaId: string) => void;
   /** Pass true when already inside a Modal — avoids nested-Modal crash on Android */
   embeddedInModal?: boolean;
+  /** Optional outer boundary polygon rendered as a light overlay */
+  boundary?: GeoJsonPolygon;
 }
 
-const AREA_RADIUS_METERS = 600;
-
-/**
- * Handles both coordinate formats:
- * - Normalized { latitude, longitude } — from GET /api/areas via toApiArea()
- * - Raw GeoJSON { type: "Point", coordinates: [lng, lat] } — from Mongoose populate
- */
 function getAreaCoords(area: Area): { latitude: number; longitude: number } | null {
   const coords = area.coordinates as any;
   if (!coords) return null;
@@ -41,15 +38,66 @@ function getAreaCoords(area: Area): { latitude: number; longitude: number } | nu
   return null;
 }
 
+/**
+ * Generate a regular polygon (16 sides) centered at (lat, lng) with the given
+ * radius in meters. Used as a fallback when no real OSM boundary exists.
+ */
+function generateApproxPolygon(
+  latitude: number,
+  longitude: number,
+  radiusMeters: number = 700,
+): { latitude: number; longitude: number }[] {
+  const SIDES = 16;
+  const R = 6371000;
+  const latRad = (latitude * Math.PI) / 180;
+  const pts: { latitude: number; longitude: number }[] = [];
+  for (let i = 0; i <= SIDES; i++) {
+    const angle = (2 * Math.PI * i) / SIDES;
+    const dLat = (radiusMeters / R) * (180 / Math.PI) * Math.cos(angle);
+    const dLng =
+      (radiusMeters / R) * (180 / Math.PI) * (Math.sin(angle) / Math.cos(latRad));
+    pts.push({ latitude: latitude + dLat, longitude: longitude + dLng });
+  }
+  return pts;
+}
+
+/**
+ * Converts an area's real OSM boundary to coordinate ring arrays.
+ * Returns empty array if no real boundary exists.
+ */
+function getRealBoundaryRings(
+  boundary: Area['boundary'],
+): { latitude: number; longitude: number }[][] {
+  if (!boundary) return [];
+  if (boundary.type === 'Polygon') {
+    const outerRing = (boundary.coordinates as number[][][])[0];
+    if (!outerRing?.length) return [];
+    return [outerRing.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))];
+  }
+  // MultiPolygon
+  return (boundary.coordinates as number[][][][])
+    .map((polygon) => {
+      const outer = polygon[0];
+      return outer?.length ? outer.map(([lng, lat]) => ({ latitude: lat, longitude: lng })) : null;
+    })
+    .filter((r): r is { latitude: number; longitude: number }[] => r !== null);
+}
+
 function computeRegion(
   kitchenCoords?: { latitude: number; longitude: number },
   areas?: Area[],
 ): Region {
   const points: { latitude: number; longitude: number }[] = [];
   if (kitchenCoords) points.push(kitchenCoords);
+
   (areas ?? []).forEach((a) => {
-    const c = getAreaCoords(a);
-    if (c) points.push(c);
+    if (a.boundary) {
+      const rings = getRealBoundaryRings(a.boundary);
+      rings.forEach((ring) => ring.forEach((pt) => points.push(pt)));
+    } else {
+      const c = getAreaCoords(a);
+      if (c) points.push(c);
+    }
   });
 
   if (points.length === 0) {
@@ -62,8 +110,8 @@ function computeRegion(
   const maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs);
   const maxLng = Math.max(...lngs);
-  const latPad = Math.max((maxLat - minLat) * 0.4, 0.02);
-  const lngPad = Math.max((maxLng - minLng) * 0.4, 0.02);
+  const latPad = Math.max((maxLat - minLat) * 0.4, 0.03);
+  const lngPad = Math.max((maxLng - minLng) * 0.4, 0.03);
 
   return {
     latitude: (minLat + maxLat) / 2,
@@ -73,19 +121,33 @@ function computeRegion(
   };
 }
 
-// ─── Map layer (shared between thumbnail, embedded, and full-screen) ───────────
+// ─── Map layer ─────────────────────────────────────────────────────────────────
 const MapLayer: React.FC<{
   kitchenCoords?: { latitude: number; longitude: number };
   areasWithCoords: { area: Area; coords: { latitude: number; longitude: number } }[];
   region: Region;
   interactive: boolean;
-}> = ({ kitchenCoords, areasWithCoords, region, interactive }) => {
+  boundary?: GeoJsonPolygon;
+}> = ({ kitchenCoords, areasWithCoords, region, interactive, boundary }) => {
   const mapRef = useRef<MapView>(null);
+
+  const outerPolygonCoords = boundary?.coordinates?.[0]?.map(([lng, lat]) => ({
+    latitude: lat,
+    longitude: lng,
+  }));
 
   const fitAll = () => {
     const coords: { latitude: number; longitude: number }[] = [];
     if (kitchenCoords) coords.push(kitchenCoords);
-    areasWithCoords.forEach(({ coords: c }) => coords.push(c));
+    areasWithCoords.forEach(({ area, coords: centroid }) => {
+      const rings = getRealBoundaryRings(area.boundary);
+      if (rings.length > 0) {
+        rings.forEach((ring) => ring.forEach((pt) => coords.push(pt)));
+      } else {
+        coords.push(centroid);
+      }
+    });
+    if (outerPolygonCoords) coords.push(...outerPolygonCoords);
     if (coords.length > 0) {
       mapRef.current?.fitToCoordinates(coords, {
         edgePadding: { top: 80, right: 40, bottom: 60, left: 40 },
@@ -106,27 +168,39 @@ const MapLayer: React.FC<{
         pitchEnabled={false}
         rotateEnabled={false}
         onMapReady={interactive ? fitAll : undefined}>
+
+        {/* Optional outer service zone hull */}
+        {outerPolygonCoords && (
+          <Polygon
+            coordinates={outerPolygonCoords}
+            fillColor="rgba(245,107,76,0.04)"
+            strokeColor="rgba(245,107,76,0.3)"
+            strokeWidth={1}
+          />
+        )}
+
+        {/* Area boundaries — real OSM polygon or generated approximation */}
+        {areasWithCoords.flatMap(({ area, coords }) => {
+          const realRings = getRealBoundaryRings(area.boundary);
+          const isReal = realRings.length > 0;
+          const rings = isReal ? realRings : [generateApproxPolygon(coords.latitude, coords.longitude)];
+
+          return rings.map((ring, i) => (
+            <Polygon
+              key={`poly-${area._id}-${i}`}
+              coordinates={ring}
+              fillColor={isReal ? 'rgba(245,107,76,0.18)' : 'rgba(245,107,76,0.10)'}
+              strokeColor={isReal ? colors.primary : 'rgba(245,107,76,0.55)'}
+              strokeWidth={isReal ? 2 : 1.5}
+            />
+          ));
+        })}
+
         {kitchenCoords && (
           <Marker coordinate={kitchenCoords} title="Kitchen" pinColor={colors.primary} />
         )}
-        {areasWithCoords.map(({ area, coords }) => (
-          <React.Fragment key={area._id}>
-            <Circle
-              center={coords}
-              radius={AREA_RADIUS_METERS}
-              fillColor="rgba(245,107,76,0.18)"
-              strokeColor="#F56B4C"
-              strokeWidth={1.5}
-            />
-            <Marker
-              coordinate={coords}
-              title={area.name}
-              description={[area.city, area.state].filter(Boolean).join(', ') || undefined}
-              pinColor="#F56B4C"
-            />
-          </React.Fragment>
-        ))}
       </MapView>
+
       {interactive && (
         <TouchableOpacity style={styles.fitButton} onPress={fitAll}>
           <Icon name="fit-to-page-outline" size={20} color={colors.textPrimary} />
@@ -188,14 +262,15 @@ const AreaChipList: React.FC<{
   );
 };
 
-// ─── Full-screen modal — separate component so useSafeAreaInsets hook is at top level ──
+// ─── Full-screen modal ─────────────────────────────────────────────────────────
 const CoverageMapModal: React.FC<{
   kitchenCoords?: { latitude: number; longitude: number };
   areasWithCoords: { area: Area; coords: { latitude: number; longitude: number } }[];
   region: Region;
   onRemoveArea?: (areaId: string) => void;
   onClose: () => void;
-}> = ({ kitchenCoords, areasWithCoords, region, onRemoveArea, onClose }) => {
+  boundary?: GeoJsonPolygon;
+}> = ({ kitchenCoords, areasWithCoords, region, onRemoveArea, onClose, boundary }) => {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible animationType="slide" statusBarTranslucent onRequestClose={onClose}>
@@ -221,6 +296,7 @@ const CoverageMapModal: React.FC<{
             areasWithCoords={areasWithCoords}
             region={region}
             interactive={true}
+            boundary={boundary}
           />
         </View>
       </View>
@@ -234,6 +310,7 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
   areas,
   onRemoveArea,
   embeddedInModal = false,
+  boundary,
 }) => {
   const [fullScreen, setFullScreen] = useState(false);
 
@@ -255,7 +332,6 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
     );
   }
 
-  // ── Embedded mode: already inside a Modal, show interactive map inline ──────
   if (embeddedInModal) {
     return (
       <View style={styles.embeddedContainer}>
@@ -266,13 +342,13 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
             areasWithCoords={areasWithCoords}
             region={region}
             interactive={true}
+            boundary={boundary}
           />
         </View>
       </View>
     );
   }
 
-  // ── Normal mode: static thumbnail + full-screen modal ──────────────────────
   return (
     <>
       <TouchableOpacity
@@ -284,6 +360,7 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
           areasWithCoords={areasWithCoords}
           region={region}
           interactive={false}
+          boundary={boundary}
         />
         <View style={styles.tapOverlay}>
           <View style={styles.tapBadge}>
@@ -307,6 +384,7 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
           region={region}
           onRemoveArea={onRemoveArea}
           onClose={() => setFullScreen(false)}
+          boundary={boundary}
         />
       )}
     </>
@@ -314,7 +392,6 @@ export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
 };
 
 const styles = StyleSheet.create({
-  // Thumbnail
   thumbnailContainer: {
     marginTop: 12,
     borderRadius: 10,
@@ -323,11 +400,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     height: 180,
   },
-  tapOverlay: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
+  tapOverlay: { position: 'absolute', top: 10, right: 10 },
   tapBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -336,12 +409,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  tapBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
+  tapBadgeText: { color: '#fff', fontSize: 11, fontWeight: '500', marginLeft: 4 },
   thumbnailLegend: {
     position: 'absolute',
     bottom: 0,
@@ -353,13 +421,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: 'rgba(255,255,255,0.92)',
   },
-  legendText: {
-    fontSize: 11,
-    color: '#374151',
-    fontWeight: '500',
-    marginLeft: 5,
-  },
-  // Placeholder
+  legendText: { fontSize: 11, color: '#374151', fontWeight: '500', marginLeft: 5 },
   placeholder: {
     marginTop: 12,
     height: 70,
@@ -371,12 +433,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     flexDirection: 'row',
   },
-  placeholderText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginLeft: 6,
-  },
-  // Fit button
+  placeholderText: { fontSize: 13, color: '#9CA3AF', marginLeft: 6 },
   fitButton: {
     position: 'absolute',
     bottom: 16,
@@ -390,7 +447,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  // Embedded (inside another Modal)
   embeddedContainer: {
     marginTop: 12,
     borderRadius: 10,
@@ -398,17 +454,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  embeddedMap: {
-    height: 260,
-  },
-  // Full-screen modal
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalMapContainer: {
-    flex: 1,
-  },
+  embeddedMap: { height: 260 },
+  modalContainer: { flex: 1, backgroundColor: '#fff' },
+  modalMapContainer: { flex: 1 },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,19 +466,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  // Chip section
-  chipSection: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
+  modalTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  closeButton: { padding: 4 },
+  chipSection: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   chipSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -438,21 +476,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  chipSectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  chipSectionHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
   chipSectionTitle: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
     marginLeft: 6,
   },
-  chipRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-  },
+  chipRow: { flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 10 },
   areaChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -471,9 +502,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     maxWidth: 110,
   },
-  chipRemoveBtn: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
+  chipRemoveBtn: { justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
 });

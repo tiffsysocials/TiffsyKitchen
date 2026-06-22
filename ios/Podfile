@@ -17,6 +17,9 @@ end
 target 'TiffsyKitchen' do
   config = use_native_modules!
 
+  # Enable Google Maps on iOS (uses the 'Google' subspec of react-native-maps)
+  pod 'react-native-maps', :subspecs => ['Maps', 'Google'], :path => '../node_modules/react-native-maps'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

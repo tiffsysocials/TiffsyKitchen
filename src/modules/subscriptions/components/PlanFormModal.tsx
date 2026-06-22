@@ -27,8 +27,6 @@ interface PlanFormModalProps {
 }
 
 const PRIMARY_COLOR = '#FE8733';
-const DURATION_OPTIONS = [7, 14, 30, 60];
-const VOUCHERS_PER_DAY_OPTIONS = [1, 2, 3, 4];
 
 export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, onSubmit, plan }) => {
   const { showWarning, showError } = useAlert();
@@ -37,11 +35,18 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [durationDays, setDurationDays] = useState<7 | 14 | 30 | 60>(7);
-  const [vouchersPerDay, setVouchersPerDay] = useState(2);
+  const [durationDays, setDurationDays] = useState('7');
+  // Vouchers per day is no longer editable in the form; every plan issues one
+  // voucher per day. Retained for the request payload and summary math.
+  const [vouchersPerDay, setVouchersPerDay] = useState(1);
   const [voucherValidityDays, setVoucherValidityDays] = useState(90);
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
+  // GST on the voucher-pack purchase. Stored here as a PERCENT (e.g. '5');
+  // converted to/from the backend's fraction (0.05) at the boundary.
+  const [taxRatePercent, setTaxRatePercent] = useState('');
+  const [taxInclusive, setTaxInclusive] = useState(true);
+  const [hsnCode, setHsnCode] = useState('');
   const [badge, setBadge] = useState('');
   const [features, setFeatures] = useState<string[]>(['']);
   const [displayOrder, setDisplayOrder] = useState('1');
@@ -56,11 +61,15 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
     if (plan) {
       setName(plan.name);
       setDescription(plan.description || '');
-      setDurationDays(plan.durationDays);
+      setDurationDays(plan.durationDays.toString());
       setVouchersPerDay(plan.vouchersPerDay);
       setVoucherValidityDays(plan.voucherValidityDays);
       setPrice(plan.price.toString());
       setOriginalPrice(plan.originalPrice?.toString() || '');
+      // Backend stores a fraction; show it as a percent.
+      setTaxRatePercent(plan.taxRate ? (plan.taxRate * 100).toString() : '');
+      setTaxInclusive(plan.taxInclusive ?? true);
+      setHsnCode(plan.hsnCode || '');
       setBadge(plan.badge || '');
       setFeatures(plan.features.length > 0 ? plan.features : ['']);
       setDisplayOrder(plan.displayOrder.toString());
@@ -73,11 +82,14 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
   const resetForm = () => {
     setName('');
     setDescription('');
-    setDurationDays(7);
-    setVouchersPerDay(2);
+    setDurationDays('7');
+    setVouchersPerDay(1);
     setVoucherValidityDays(90);
     setPrice('');
     setOriginalPrice('');
+    setTaxRatePercent('');
+    setTaxInclusive(true);
+    setHsnCode('');
     setBadge('');
     setFeatures(['']);
     setDisplayOrder('1');
@@ -106,6 +118,12 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       return false;
     }
 
+    const durationNum = parseInt(durationDays);
+    if (!durationDays || isNaN(durationNum) || durationNum < 1) {
+      showWarning('Validation Error', 'Valid duration (days) is required');
+      return false;
+    }
+
     const priceNum = parseFloat(price);
     if (!price || isNaN(priceNum) || priceNum <= 0) {
       showWarning('Validation Error', 'Valid price is required');
@@ -116,6 +134,14 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       const originalPriceNum = parseFloat(originalPrice);
       if (isNaN(originalPriceNum) || originalPriceNum <= priceNum) {
         showWarning('Validation Error', 'Original price must be greater than price');
+        return false;
+      }
+    }
+
+    if (taxRatePercent.trim()) {
+      const taxNum = parseFloat(taxRatePercent);
+      if (isNaN(taxNum) || taxNum < 0 || taxNum > 100) {
+        showWarning('Validation Error', 'GST rate must be between 0 and 100');
         return false;
       }
     }
@@ -144,11 +170,15 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       const planData: CreatePlanRequest = {
         name: name.trim(),
         description: description.trim() || undefined,
-        durationDays,
+        durationDays: parseInt(durationDays),
         vouchersPerDay,
         voucherValidityDays,
         price: parseFloat(price),
         originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
+        // Convert percent → fraction for the backend (5 → 0.05).
+        taxRate: taxRatePercent.trim() ? parseFloat(taxRatePercent) / 100 : 0,
+        taxInclusive,
+        hsnCode: hsnCode.trim() || undefined,
         coverageRules: {
           includesAddons,
           addonValuePerVoucher: includesAddons && addonValue ? parseFloat(addonValue) : null,
@@ -214,43 +244,15 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
           {/* Duration */}
           <View style={styles.field}>
             <Text style={styles.label}>Duration (Days) * {isEditMode && '(Cannot be changed)'}</Text>
-            <View style={styles.optionsRow}>
-              {DURATION_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[styles.optionButton, durationDays === option && styles.optionButtonActive]}
-                  onPress={() => !isEditMode && setDurationDays(option as any)}
-                  disabled={isEditMode}
-                >
-                  <Text
-                    style={[styles.optionText, durationDays === option && styles.optionTextActive]}
-                  >
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Vouchers Per Day */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Vouchers Per Day * {isEditMode && '(Cannot be changed)'}</Text>
-            <View style={styles.optionsRow}>
-              {VOUCHERS_PER_DAY_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[styles.optionButton, vouchersPerDay === option && styles.optionButtonActive]}
-                  onPress={() => !isEditMode && setVouchersPerDay(option)}
-                  disabled={isEditMode}
-                >
-                  <Text
-                    style={[styles.optionText, vouchersPerDay === option && styles.optionTextActive]}
-                  >
-                    {option}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TextInput
+              style={[styles.input, isEditMode && styles.inputDisabled]}
+              value={durationDays}
+              onChangeText={(text) => !isEditMode && setDurationDays(text.replace(/[^0-9]/g, ''))}
+              placeholder="e.g., 30"
+              keyboardType="numeric"
+              placeholderTextColor="#9ca3af"
+              editable={!isEditMode}
+            />
           </View>
 
           {/* Voucher Validity */}
@@ -288,6 +290,56 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               onChangeText={setOriginalPrice}
               placeholder="999 (for showing discount)"
               keyboardType="numeric"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+
+          {/* Tax (GST) */}
+          <View style={styles.field}>
+            <Text style={styles.label}>GST Rate (%)</Text>
+            <TextInput
+              style={styles.input}
+              value={taxRatePercent}
+              onChangeText={(text) => setTaxRatePercent(text.replace(/[^0-9.]/g, ''))}
+              placeholder="e.g., 5 (leave empty for no GST)"
+              keyboardType="numeric"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>GST Treatment</Text>
+            <View style={styles.optionsRow}>
+              {([
+                { key: true, label: 'Inclusive' },
+                { key: false, label: 'Exclusive' },
+              ] as const).map((opt) => (
+                <TouchableOpacity
+                  key={opt.label}
+                  style={[styles.optionButton, taxInclusive === opt.key && styles.optionButtonActive]}
+                  onPress={() => setTaxInclusive(opt.key)}
+                >
+                  <Text style={[styles.optionText, taxInclusive === opt.key && styles.optionTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.helperText}>
+              {taxInclusive
+                ? 'Price already includes GST — customer pays the same price.'
+                : 'GST is added on top of the price — customer pays price + GST.'}
+            </Text>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>HSN Code</Text>
+            <TextInput
+              style={styles.input}
+              value={hsnCode}
+              onChangeText={setHsnCode}
+              placeholder="e.g., 2106 (optional)"
+              autoCapitalize="characters"
               placeholderTextColor="#9ca3af"
             />
           </View>
@@ -389,9 +441,19 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
           <View style={styles.summaryBox}>
             <Text style={styles.summaryTitle}>Summary</Text>
             <Text style={styles.summaryText}>
-              Total Vouchers: {durationDays * vouchersPerDay}
+              Total Vouchers: {(parseInt(durationDays) || 0) * vouchersPerDay}
             </Text>
             <Text style={styles.summaryText}>Valid for: {voucherValidityDays} days</Text>
+            {taxRatePercent.trim() && price && parseFloat(taxRatePercent) > 0 && (
+              <Text style={styles.summaryText}>
+                {taxInclusive
+                  ? `GST ${taxRatePercent}% incl. — pay ₹${parseFloat(price).toFixed(2)}`
+                  : `GST ${taxRatePercent}% extra — pay ₹${(
+                      parseFloat(price) *
+                      (1 + parseFloat(taxRatePercent) / 100)
+                    ).toFixed(2)}`}
+              </Text>
+            )}
             {originalPrice && price && (
               <Text style={styles.summaryText}>
                 Discount:{' '}
@@ -468,6 +530,10 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#ffffff',
   },
+  inputDisabled: {
+    backgroundColor: '#f3f4f6',
+    color: '#9ca3af',
+  },
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
@@ -496,6 +562,11 @@ const styles = StyleSheet.create({
   },
   optionTextActive: {
     color: PRIMARY_COLOR,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 6,
   },
   checkboxRow: {
     flexDirection: 'row',

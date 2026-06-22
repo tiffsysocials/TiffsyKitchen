@@ -283,6 +283,13 @@ export const KitchenDeliveryZonesScreen: React.FC<KitchenDeliveryZonesScreenProp
               {z.status}
             </Text>
           </View>
+          {/* Tap-target Delete button so admins don't have to discover long-press. */}
+          <TouchableOpacity
+            onPress={() => handleDeleteZone(z)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ marginLeft: 8, padding: 4 }}>
+            <Icon name="trash-can-outline" size={20} color="#DC2626" />
+          </TouchableOpacity>
         </View>
 
         <View style={s.priceRow}>
@@ -309,7 +316,7 @@ export const KitchenDeliveryZonesScreen: React.FC<KitchenDeliveryZonesScreenProp
         </View>
 
         <View style={s.zoneFooter}>
-          <Text style={s.zoneFooterHint}>Tap to edit · Hold to delete</Text>
+          <Text style={s.zoneFooterHint}>Tap card to edit · Tap 🗑 to delete</Text>
           <Icon name="chevron-right" size={18} color="#9CA3AF" />
         </View>
       </TouchableOpacity>

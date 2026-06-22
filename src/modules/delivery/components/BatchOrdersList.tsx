@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { sortOrdersByDeliverySequence, getEffectiveSequenceNumber } from '../../../utils/batchSequence';
 
 interface Props {
   orders: any[];
   assignments: any[];
+  batch?: any;
 }
 
-const BatchOrdersList: React.FC<Props> = ({ orders, assignments }) => {
+const BatchOrdersList: React.FC<Props> = ({ orders, assignments, batch }) => {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Phase 10 — always render in optimized delivery sequence
+  const sortedOrders = useMemo(
+    () => sortOrdersByDeliverySequence(orders, batch, assignments),
+    [orders, batch, assignments],
+  );
 
   const getAssignment = (orderId: string) =>
     assignments.find((a: any) => a.orderId === orderId);
@@ -33,13 +41,15 @@ const BatchOrdersList: React.FC<Props> = ({ orders, assignments }) => {
   return (
     <View className="px-4 py-2">
       <Text className="text-base font-semibold text-gray-800 mb-3">
-        Orders ({orders.length})
+        Orders ({sortedOrders.length})
       </Text>
 
-      {orders.map((order: any) => {
+      {sortedOrders.map((order: any) => {
         const assignment = getAssignment(order._id);
         const statusIcon = getStatusIcon(assignment);
         const isExpanded = expandedOrder === order._id;
+        const seqNum = getEffectiveSequenceNumber(order._id, batch, assignments);
+        const stopBadge = Number.isFinite(seqNum) ? `Stop ${seqNum}` : null;
 
         return (
           <TouchableOpacity
@@ -52,9 +62,16 @@ const BatchOrdersList: React.FC<Props> = ({ orders, assignments }) => {
               <View className="flex-row items-center p-3">
                 <Icon name={statusIcon.icon} size={20} color={statusIcon.color} />
                 <View className="flex-1 ml-3">
-                  <Text className="text-sm font-semibold text-gray-800">
-                    #{order.orderNumber || order._id?.slice(-6)}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {stopBadge && (
+                      <View style={{ backgroundColor: '#FEE4D5', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#C2410C' }}>{stopBadge}</Text>
+                      </View>
+                    )}
+                    <Text className="text-sm font-semibold text-gray-800">
+                      #{order.orderNumber || order._id?.slice(-6)}
+                    </Text>
+                  </View>
                   <Text className="text-xs text-gray-500">
                     {assignment?.status || 'Pending'} · {order.status}
                   </Text>

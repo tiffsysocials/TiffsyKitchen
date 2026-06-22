@@ -123,6 +123,17 @@ android {
     }
 }
 
+// Force play-services-location to the pinned version regardless of what
+// Firebase / other transitive deps request. Without this, Gradle picks the
+// newest version (21.1.0+) where FusedLocationProviderClient became an
+// interface, breaking react-native-geolocation-service at runtime.
+// See android/build.gradle ext.playServicesLocationVersion.
+configurations.all {
+    resolutionStrategy {
+        force "com.google.android.gms:play-services-location:${rootProject.ext.playServicesLocationVersion}"
+    }
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")

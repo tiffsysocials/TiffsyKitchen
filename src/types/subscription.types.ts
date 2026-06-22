@@ -20,11 +20,15 @@ export interface SubscriptionPlan {
   _id: string;
   name: string;
   description?: string;
-  durationDays: 7 | 14 | 30 | 60;
+  durationDays: number;
   vouchersPerDay: number; // 1-4
   voucherValidityDays: number; // Default: 90
   price: number;
   originalPrice?: number; // For showing discount
+  // GST on the voucher-pack purchase. taxRate is a fraction (0.05 = 5%).
+  taxRate?: number;
+  taxInclusive?: boolean; // true = price already includes GST
+  hsnCode?: string;
   totalVouchers: number; // Virtual: durationDays * vouchersPerDay
   coverageRules: CoverageRules;
   applicableZoneIds: string[]; // Empty = all zones
@@ -52,11 +56,14 @@ export interface PlanListResponse {
 export interface CreatePlanRequest {
   name: string;
   description?: string;
-  durationDays: 7 | 14 | 30 | 60;
+  durationDays: number;
   vouchersPerDay: number;
   voucherValidityDays: number;
   price: number;
   originalPrice?: number;
+  taxRate?: number; // fraction (0.05 = 5%)
+  taxInclusive?: boolean;
+  hsnCode?: string;
   coverageRules: CoverageRules;
   applicableZoneIds?: string[];
   displayOrder: number;

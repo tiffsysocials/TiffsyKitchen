@@ -5,6 +5,7 @@
 // Screens
 export { SubscriptionsScreen } from './screens/SubscriptionsScreen';
 export { SubscriptionsScreenSimple } from './screens/SubscriptionsScreen.simple';
+export { SubscribersScreen } from './screens/SubscribersScreen';
 
 // Components
 export { SubscriptionPlanCard } from './components/SubscriptionPlanCard';

@@ -155,6 +155,14 @@ export interface BatchTracking {
   totalOrders: number;
   deliveredCount: number;
   failedCount: number;
+  /** Total real road distance the driver has driven so far (meters). */
+  distanceTraveledMeters?: number;
+  /** Ideal planned-route distance (kitchen → all stops) via Google (meters). */
+  idealDistanceMeters?: number | null;
+  idealDistanceSource?: 'google' | 'osrm' | 'haversine' | null;
+  /** driven − ideal; positive means the driver drove more than planned. */
+  distanceDeviationMeters?: number | null;
+  distanceDeviationPercent?: number | null;
   deliveries: Array<{
     orderId: string;
     orderNumber: string;
@@ -162,6 +170,8 @@ export interface BatchTracking {
     deliveryStatus: string | null;
     coordinates: { latitude: number; longitude: number } | null;
     distanceFromDriverMeters: number | null;
+    /** 'google'/'osrm' = real road distance; 'haversine' = straight-line estimate. */
+    distanceSource?: 'google' | 'osrm' | 'haversine' | null;
     etaSeconds: number | null;
     etaStatus: 'EARLY' | 'ON_TIME' | 'LATE' | 'CRITICAL' | null;
     sequence: {

@@ -686,6 +686,39 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                   </Text>
                 </View>
               )}
+              {/* Phase 8 — surface the distance + source label admins need to
+                  audit pricing discrepancies. Reads the per-order snapshot
+                  (distanceMetadata) so it reflects what was charged, not
+                  current config. */}
+              {(() => {
+                const dm = (order as any).distanceMetadata;
+                if (!dm) return null;
+                const parts: string[] = [];
+                if (dm.distanceFromKitchenKm != null) {
+                  parts.push(`${Number(dm.distanceFromKitchenKm).toFixed(1)} km`);
+                }
+                if (dm.appliedSourceLabel) {
+                  const label =
+                    dm.appliedSourceLabel === 'zone' ? 'Zone pricing' :
+                    dm.appliedSourceLabel === 'global' ? 'Global distance pricing' :
+                    'Flat rate';
+                  parts.push(label);
+                }
+                if (dm.computedDeliveryFee != null && dm.computedDeliveryFee !== order.charges?.deliveryFee) {
+                  parts.push(`formula ₹${Number(dm.computedDeliveryFee).toFixed(2)}`);
+                }
+                if (dm.acceptanceZone) {
+                  parts.push(dm.acceptanceZone === 'AUTO_ACCEPT' ? 'auto-accepted' : 'manual accept');
+                }
+                if (parts.length === 0) return null;
+                return (
+                  <View style={{ marginTop: -2, marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, color: '#9CA3AF' }}>
+                      {parts.join(' · ')}
+                    </Text>
+                  </View>
+                );
+              })()}
               {order.charges && order.charges.packagingFee > 0 && (
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>Packaging Fee</Text>

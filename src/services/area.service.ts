@@ -57,12 +57,36 @@ class AreaService {
 
   async getAreasByIds(ids: string[]): Promise<Area[]> {
     if (ids.length === 0) return [];
-    const query = new URLSearchParams({ ids: ids.join(',') });
+
+    // Backend caps the ?ids= query string at 2000 chars.
+    // Each ObjectId is 24 chars + 1 comma = 25 chars per ID, so we cap each
+    // batch at 70 IDs (~1750 chars + slack for the path itself).
+    const BATCH_SIZE = 70;
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      batches.push(ids.slice(i, i + BATCH_SIZE));
+    }
+
     try {
-      const response = await apiService.get<ApiResponse<{ areas: Area[] }>>(
-        `/api/areas?${query.toString()}`
+      const responses = await Promise.all(
+        batches.map((batch) => {
+          const query = new URLSearchParams({ ids: batch.join(',') });
+          return apiService.get<ApiResponse<{ areas: Area[] }>>(
+            `/api/areas?${query.toString()}`,
+          );
+        }),
       );
-      return response.data.areas;
+      // Concatenate + dedupe (in case backend returns overlaps across batches)
+      const all = responses.flatMap((r) => r.data.areas);
+      const seen = new Set<string>();
+      const unique: Area[] = [];
+      for (const a of all) {
+        if (!seen.has(a._id)) {
+          seen.add(a._id);
+          unique.push(a);
+        }
+      }
+      return unique;
     } catch (error) {
       console.error('Error fetching areas by ids:', error);
       throw error;

@@ -326,6 +326,31 @@ const SystemConfigScreen: React.FC = () => {
         </Card>
       </View>
 
+      {/* Notifications */}
+      <View className="px-4 pb-4">
+        <Card className="p-4">
+          <View className="flex-row items-center mb-4">
+            <Icon name="notifications" size={24} color="#FE8733" />
+            <Text className="text-lg font-semibold text-gray-800 ml-2">Notifications</Text>
+          </View>
+
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-3">
+              <Text className="text-sm font-medium text-gray-700">New Order Alerts</Text>
+              <Text className="text-xs text-gray-500 mt-1">
+                Notify admins on every new order (manual, auto & scheduled)
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => updateField('adminNotifications', 'newOrderEnabled', !formData.adminNotifications?.newOrderEnabled)}
+              className={`w-12 h-6 rounded-full ${formData.adminNotifications?.newOrderEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <View className={`w-5 h-5 rounded-full bg-white m-0.5 ${formData.adminNotifications?.newOrderEnabled ? 'self-end' : 'self-start'}`} />
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </View>
+
       {/* Save Button */}
       <View className="p-4">
         <TouchableOpacity

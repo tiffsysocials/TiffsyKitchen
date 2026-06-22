@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { format } from 'date-fns';
+import { sortOrdersByDeliverySequence } from '../../../utils/batchSequence';
 
 interface Props {
   batch: any;
@@ -121,24 +122,28 @@ const BatchTimeline: React.FC<Props> = ({ batch, orders, assignments }) => {
     return new Date(a.time).getTime() - new Date(b.time).getTime();
   });
 
-  // Add pending orders at the end
+  // Add pending orders at the end — in optimized delivery sequence so the
+  // timeline preview reflects the order they'll actually be visited.
   if (orders?.length) {
     const deliveredOrFailed = new Set(
       (assignments || [])
         .filter((a: any) => a.deliveredAt || a.failedAt)
         .map((a: any) => a.orderId)
     );
-    orders
-      .filter((o: any) => !deliveredOrFailed.has(o._id))
-      .forEach((order: any) => {
-        events.push({
-          time: null,
-          icon: 'radio-button-unchecked',
-          color: '#9ca3af',
-          title: `Order #${order.orderNumber || order._id?.slice(-6)} — Pending`,
-          subtitle: order.deliveryAddress?.contactName,
-        });
+    const pendingSorted = sortOrdersByDeliverySequence(
+      orders.filter((o: any) => !deliveredOrFailed.has(o._id)),
+      batch,
+      assignments,
+    );
+    pendingSorted.forEach((order: any) => {
+      events.push({
+        time: null,
+        icon: 'radio-button-unchecked',
+        color: '#9ca3af',
+        title: `Order #${order.orderNumber || order._id?.slice(-6)} — Pending`,
+        subtitle: order.deliveryAddress?.contactName,
       });
+    });
   }
 
   const formatTime = (iso: string | null) => {

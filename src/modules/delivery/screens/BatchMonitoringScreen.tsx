@@ -8,6 +8,8 @@ import { GradientBox } from '../../../components/common/GradientBox';
 import { deliveryService } from '../../../services/delivery.service';
 import BatchCard from '../components/BatchCard';
 import BatchFilters from '../components/BatchFilters';
+import MergeBatchesModal from '../components/MergeBatchesModal';
+import AssignBatchesToDriverModal from '../components/AssignBatchesToDriverModal';
 
 interface Props {
   onMenuPress: () => void;
@@ -24,6 +26,40 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
   const [page, setPage] = useState(1);
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayDateString());
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Merge selection mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<any[]>([]);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+
+  const kitchenIdOf = (b: any) => b?.kitchenId?._id || b?.kitchenId;
+
+  // A batch is mergeable if it is pre-dispatch + unassigned. Once one is picked,
+  // others must share the same kitchen + meal window.
+  const isEligible = (item: any) => {
+    const mergeableStatus =
+      ['COLLECTING', 'READY_FOR_DISPATCH'].includes(item.status) && !item.driverId;
+    if (!mergeableStatus) return false;
+    if (selected.length === 0) return true;
+    const first = selected[0];
+    return kitchenIdOf(item) === kitchenIdOf(first) && item.mealWindow === first.mealWindow;
+  };
+
+  const toggleSelect = (item: any) => {
+    setSelected((prev) =>
+      prev.some((b) => b._id === item._id)
+        ? prev.filter((b) => b._id !== item._id)
+        : [...prev, item],
+    );
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected([]);
+    setShowMergeModal(false);
+    setShowAssignModal(false);
+  };
 
   const queryParams: any = { page, limit: 20 };
   if (filters.status) queryParams.status = filters.status;
@@ -73,6 +109,13 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
           <Icon name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', flex: 1 }}>Batch Monitoring</Text>
+        <TouchableOpacity
+          onPress={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+          style={dateChipStyles.chip}
+        >
+          <Icon name={selectMode ? 'close' : 'merge-type'} size={16} color="#fff" />
+          <Text style={dateChipStyles.chipText}>{selectMode ? 'Done' : 'Merge'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowDatePicker(true)} style={dateChipStyles.chip}>
           <Icon name="calendar-today" size={16} color="#fff" />
           <Text style={dateChipStyles.chipText}>{formatDateLabel(selectedDate)}</Text>
@@ -157,10 +200,20 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
         <FlatList
           data={batches}
           keyExtractor={(item: any) => item._id}
-          contentContainerStyle={{ padding: 16 }}
-          renderItem={({ item }) => (
-            <BatchCard batch={item} onPress={onBatchSelect} />
-          )}
+          contentContainerStyle={{ padding: 16, paddingBottom: selectMode ? 88 : 16 }}
+          renderItem={({ item }) => {
+            const isSelected = selected.some((b) => b._id === item._id);
+            return (
+              <BatchCard
+                batch={item}
+                onPress={onBatchSelect}
+                selectable={selectMode}
+                selected={isSelected}
+                selectableEligible={isSelected || isEligible(item)}
+                onToggleSelect={() => toggleSelect(item)}
+              />
+            );
+          }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -186,6 +239,64 @@ const BatchMonitoringScreen: React.FC<Props> = ({ onMenuPress, onBatchSelect }) 
           }
         />
       )}
+
+      {/* Selection action bar */}
+      {selectMode && (
+        <View style={mergeBarStyles.bar}>
+          <Text style={mergeBarStyles.count}>
+            {selected.length} selected
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setShowAssignModal(true)}
+              disabled={selected.length < 1}
+              style={[mergeBarStyles.buttonOutline, selected.length < 1 && mergeBarStyles.buttonOutlineDisabled]}
+            >
+              <Icon name="person" size={18} color={selected.length < 1 ? '#9ca3af' : '#FE8733'} />
+              <Text style={[mergeBarStyles.buttonOutlineText, selected.length < 1 && { color: '#9ca3af' }]}>
+                Assign
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowMergeModal(true)}
+              disabled={selected.length < 2}
+              style={[mergeBarStyles.button, selected.length < 2 && mergeBarStyles.buttonDisabled]}
+            >
+              <Icon name="merge-type" size={18} color="#fff" />
+              <Text style={mergeBarStyles.buttonText}>Merge {selected.length >= 2 ? selected.length : ''}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <MergeBatchesModal
+        visible={showMergeModal}
+        batches={selected.map((b) => ({
+          _id: b._id,
+          batchNumber: b.batchNumber,
+          orderCount: b.orderIds?.length || 0,
+        }))}
+        onClose={() => setShowMergeModal(false)}
+        onSuccess={(mergedBatchId) => {
+          exitSelectMode();
+          handleRefresh();
+          if (mergedBatchId) onBatchSelect(mergedBatchId);
+        }}
+      />
+
+      <AssignBatchesToDriverModal
+        visible={showAssignModal}
+        batches={selected.map((b) => ({
+          _id: b._id,
+          batchNumber: b.batchNumber,
+          orderCount: b.orderIds?.length || 0,
+        }))}
+        onClose={() => setShowAssignModal(false)}
+        onSuccess={() => {
+          exitSelectMode();
+          handleRefresh();
+        }}
+      />
     </SafeAreaScreen>
   );
 };
@@ -238,6 +349,48 @@ const dateChipStyles = StyleSheet.create({
     borderRadius: 6,
   },
   allButtonText: { color: '#374151', fontWeight: '600', fontSize: 12 },
+});
+
+const mergeBarStyles = StyleSheet.create({
+  bar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  count: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FE8733',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  buttonDisabled: { backgroundColor: '#d1d5db' },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  buttonOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#FE8733',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  buttonOutlineDisabled: { borderColor: '#d1d5db' },
+  buttonOutlineText: { color: '#FE8733', fontWeight: '700', fontSize: 14 },
 });
 
 export default BatchMonitoringScreen;

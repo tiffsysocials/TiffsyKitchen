@@ -98,6 +98,29 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
       </GradientBox>
 
       <ScrollView className="flex-1">
+      {/* Per-Zone Pricing Master Toggle */}
+      <View className="p-4">
+        <Card className="p-4">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1 mr-2">
+              <Icon name="layers" size={24} color="#FE8733" />
+              <View className="ml-2 flex-1">
+                <Text className="text-lg font-semibold text-gray-800">Use Per-Zone Pricing</Text>
+                <Text className="text-xs text-gray-500 mt-1">
+                  When ON, each DeliveryZone's lunch/dinner pricing overrides the global fees below for matched orders.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => updateFee('useZonePricing', !fees?.useZonePricing)}
+              className={`w-12 h-6 rounded-full ${fees?.useZonePricing ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <View className={`w-5 h-5 rounded-full bg-white m-0.5 ${fees?.useZonePricing ? 'self-end' : 'self-start'}`} />
+            </TouchableOpacity>
+          </View>
+        </Card>
+      </View>
+
       {/* Basic Charges */}
       <View className="px-4 pb-4">
         <Card className="p-4">
@@ -161,6 +184,83 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
             />
             <Text className="text-xs text-gray-400 mt-1">Set to 0 to disable</Text>
           </View>
+        </Card>
+      </View>
+
+      {/* Distance-based Delivery Fee */}
+      <View className="px-4 pb-4">
+        <Card className="p-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center flex-1 mr-2">
+              <Icon name="straighten" size={24} color="#FE8733" />
+              <Text className="text-lg font-semibold text-gray-800 ml-2">Distance-based Delivery Fee</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => updateNestedFee('distancePricing', 'enabled', !fees?.distancePricing?.enabled)}
+              className={`w-12 h-6 rounded-full ${fees?.distancePricing?.enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <View className={`w-5 h-5 rounded-full bg-white m-0.5 ${fees?.distancePricing?.enabled ? 'self-end' : 'self-start'}`} />
+            </TouchableOpacity>
+          </View>
+          <Text className="text-xs text-gray-500 mb-4">
+            When ON, the Delivery Fee above is replaced by: (base fee) + per-km × max(0, distance − free km).
+            Per-zone pricing can override this. When OFF, the flat Delivery Fee applies.
+          </Text>
+
+          {fees?.distancePricing?.enabled && (
+            <>
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-1 mr-2">
+                  <Text className="text-sm font-medium text-gray-700">Charge a Base Fee</Text>
+                  <Text className="text-xs text-gray-500 mt-1">When OFF, the free-distance portion is truly free.</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => updateNestedFee('distancePricing', 'baseFeeEnabled', !fees?.distancePricing?.baseFeeEnabled)}
+                  className={`w-12 h-6 rounded-full ${fees?.distancePricing?.baseFeeEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <View className={`w-5 h-5 rounded-full bg-white m-0.5 ${fees?.distancePricing?.baseFeeEnabled ? 'self-end' : 'self-start'}`} />
+                </TouchableOpacity>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">Base Fee (₹)</Text>
+                <TextInput
+                  value={fees?.distancePricing?.baseFee?.toString()}
+                  onChangeText={(v) => updateNestedFee('distancePricing', 'baseFee', parseFloat(v) || 0)}
+                  placeholder="10"
+                  keyboardType="decimal-pad"
+                  className="bg-gray-100 p-3 rounded-lg text-gray-800"
+                />
+                <Text className="text-xs text-gray-500 mt-1">Covers delivery up to the free distance.</Text>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">Free Distance (km)</Text>
+                <TextInput
+                  value={fees?.distancePricing?.baseFreeUptoKm?.toString()}
+                  onChangeText={(v) => updateNestedFee('distancePricing', 'baseFreeUptoKm', parseFloat(v) || 0)}
+                  placeholder="8"
+                  keyboardType="decimal-pad"
+                  className="bg-gray-100 p-3 rounded-lg text-gray-800"
+                />
+                <Text className="text-xs text-gray-500 mt-1">Orders within this distance pay only the base fee.</Text>
+              </View>
+
+              <View>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Per km Beyond Free Distance (₹)</Text>
+                <TextInput
+                  value={fees?.distancePricing?.perKmAfterFree?.toString()}
+                  onChangeText={(v) => updateNestedFee('distancePricing', 'perKmAfterFree', parseFloat(v) || 0)}
+                  placeholder="2"
+                  keyboardType="decimal-pad"
+                  className="bg-gray-100 p-3 rounded-lg text-gray-800"
+                />
+                <Text className="text-xs text-gray-500 mt-1">
+                  Example: base ₹10, free 8 km, ₹2/km → a 12 km order = 10 + 4×2 = ₹18.
+                </Text>
+              </View>
+            </>
+          )}
         </Card>
       </View>
 

@@ -48,7 +48,8 @@ const CancelBatchModal: React.FC<Props> = ({ visible, batchId, batchNumber, onCl
           <View className="p-4">
             <View className="bg-red-50 p-3 rounded-lg mb-4">
               <Text className="text-sm text-red-700">
-                Are you sure you want to cancel batch {batchNumber}? This action cannot be undone.
+                Cancel batch {batchNumber}? Its orders will be released back to the pool
+                (set to Ready) and can be re-batched. Any assigned driver will be freed.
               </Text>
             </View>
 

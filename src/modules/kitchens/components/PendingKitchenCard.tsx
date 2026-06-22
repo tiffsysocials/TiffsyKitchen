@@ -119,15 +119,12 @@ export const PendingKitchenCard: React.FC<PendingKitchenCardProps> = ({
         )}
 
         {/* Areas Served */}
-        {((kitchen.areasServed && kitchen.areasServed.length > 0) ||
-          (kitchen.zonesServed && kitchen.zonesServed.length > 0)) && (
+        {kitchen.areasServed && kitchen.areasServed.length > 0 && (
           <View style={styles.detailRow}>
             <MaterialIcons name="map" size={16} color={colors.gray600} />
             <Text style={styles.detailText}>
-              {(() => {
-                const count = kitchen.areasServed?.length ?? kitchen.zonesServed?.length ?? 0;
-                return `${count} area${count !== 1 ? 's' : ''} served`;
-              })()}
+              {kitchen.areasServed.length} area
+              {kitchen.areasServed.length !== 1 ? 's' : ''} served
             </Text>
           </View>
         )}

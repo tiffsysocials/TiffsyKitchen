@@ -27,6 +27,7 @@ export type DrawerParamList = {
   Users: undefined;
   Drivers: undefined;
   Kitchens: undefined;
+  KitchenDeliveryZones: { kitchenId?: string } | undefined;
   Zones: undefined;
   Pincodes: undefined;
   Subscriptions: undefined;

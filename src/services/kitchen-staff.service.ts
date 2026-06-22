@@ -122,7 +122,6 @@ export interface ResubmitKitchenRequest {
   contactEmail?: string;
   ownerName?: string;
   ownerPhone?: string;
-  zonesServed?: string[];
   operatingHours?: {
     lunch?: { startTime: string; endTime: string };
     dinner?: { startTime: string; endTime: string };

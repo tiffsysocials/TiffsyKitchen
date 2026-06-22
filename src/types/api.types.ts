@@ -320,7 +320,6 @@ export interface Kitchen {
   description?: string;
   cuisineTypes: string[];
   address: Address;
-  zonesServed: Zone[] | string[];
   areasServed?: Area[] | string[];
   serviceZoneIds?: ServiceZone[] | string[];
   /** Phase 4: per-kitchen delivery zones with priced areas (replaces areasServed flow). */
@@ -471,6 +470,14 @@ export interface ServiceZone {
 // Delivery Zone Types (per-kitchen zones with per-meal-window pricing)
 // ============================================================================
 
+export interface DistancePricing {
+  enabled: boolean;
+  baseFee: number;
+  baseFeeEnabled: boolean;
+  baseFreeUptoKm: number;
+  perKmAfterFree: number;
+}
+
 export interface MealWindowPricing {
   deliveryFee: number;
   platformFee: number;
@@ -480,6 +487,9 @@ export interface MealWindowPricing {
   minOrderAmount: number;
   /** null = no free-delivery threshold (delivery is always charged) */
   freeDeliveryAbove: number | null;
+  /** Phase 8 — per-meal-window distance pricing override. When enabled and
+   * `fees.useZonePricing` is on, this overrides global distance pricing. */
+  distancePricing?: DistancePricing;
 }
 
 export interface DeliveryZone {
@@ -952,6 +962,33 @@ export interface Order {
 export interface OrderListResponse {
   orders: Order[];
   pagination: PaginationMeta;
+}
+
+// Customer review on a delivered order. Shape matches the backend
+// GET /api/orders/(admin|kitchen)/reviews response (rating embedded on Order).
+export interface Review {
+  orderId: string;
+  orderNumber: string;
+  stars: number;
+  comment: string;
+  tags: string[];
+  ratedAt: string;
+  customerName: string;
+  kitchenId: string;
+  kitchenName: string | null;
+  items: { name: string; quantity: number }[];
+}
+
+export interface ReviewStats {
+  totalRatings: number;
+  averageRating: number;
+  distribution: Record<number, number>; // 1..5 -> count
+}
+
+export interface ReviewListResponse {
+  reviews: Review[];
+  pagination: PaginationMeta;
+  stats?: ReviewStats;
 }
 
 export interface OrderStatistics {

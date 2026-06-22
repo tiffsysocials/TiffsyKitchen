@@ -13,7 +13,7 @@ import OrdersManagementContainer from './src/modules/orders/screens/OrdersManage
 import { MenuManagementMain } from './src/modules/menu/screens/MenuManagementMain';
 import { ZonesManagementScreen } from './src/modules/zones';
 import { KitchensManagementScreen } from './src/modules/kitchens/screens';
-import { SubscriptionsScreen } from './src/modules/subscriptions';
+import { SubscriptionsScreen, SubscribersScreen } from './src/modules/subscriptions';
 import { BatchManagementLandingScreen } from './src/modules/kitchens/screens';
 import { UsersManagementScreen } from './src/modules/users/screens/UsersManagementScreen';
 import { UserDetailAdminScreen } from './src/modules/users/screens/UserDetailAdminScreen';
@@ -54,11 +54,12 @@ import {
   BatchDetailScreen,
   DeliveryStatsScreen,
   DeliveryManagementScreen,
-  GeofencingConfigScreen,
+  OrderAcceptanceConfigScreen,
 } from './src/modules/delivery';
 import { CronManagementScreen } from './src/modules/cron';
 import { OrderChargesScreen } from './src/modules';
 import { CouponsManagementScreen } from './src/modules/coupons';
+import ReviewsScreen from './src/modules/reviews/screens/ReviewsScreen';
 import DeliveryConfigScreen from './src/modules/settings/screens/DeliveryConfigScreen';
 import { ReferralManagementScreen } from './src/modules/referrals';
 import AutoOrderAddonsScreen from './src/modules/orders/screens/AutoOrderAddonsScreen';
@@ -357,6 +358,13 @@ const MainContent: React.FC<{
         </PermissionGuard>
       );
 
+    case 'Subscribers':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN']} screenName="Subscribers" onMenuPress={onMenuPress}>
+          <SubscribersScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
     case 'DriverApprovals':
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="DriverApprovals" onMenuPress={onMenuPress}>
@@ -459,10 +467,10 @@ const MainContent: React.FC<{
         </PermissionGuard>
       );
 
-    case 'GeofencingConfig':
+    case 'OrderAcceptanceConfig':
       return (
         <PermissionGuard requiredRoles={['ADMIN']} onMenuPress={onMenuPress}>
-          <GeofencingConfigScreen />
+          <OrderAcceptanceConfigScreen />
         </PermissionGuard>
       );
 
@@ -531,6 +539,13 @@ const MainContent: React.FC<{
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="Coupons" onMenuPress={onMenuPress}>
           <CouponsManagementScreen onMenuPress={onMenuPress} />
+        </PermissionGuard>
+      );
+
+    case 'Reviews':
+      return (
+        <PermissionGuard requiredRoles={['ADMIN', 'KITCHEN_STAFF']} screenName="Reviews" onMenuPress={onMenuPress}>
+          <ReviewsScreen onMenuPress={onMenuPress} />
         </PermissionGuard>
       );
 

@@ -28,6 +28,16 @@ interface SubscriptionDetailModalProps {
 
 const PRIMARY_COLOR = '#FE8733';
 
+/**
+ * Safely format a date value. Returns 'N/A' for missing/invalid dates so the
+ * modal never crashes on `new Date(undefined)` (which makes date-fns throw).
+ */
+const fmtDate = (value?: string | null, pattern = 'MMM dd, yyyy hh:mm a'): string => {
+  if (!value) return 'N/A';
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? 'N/A' : format(d, pattern);
+};
+
 export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = ({
   visible,
   onClose,
@@ -101,19 +111,21 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                 </View>
               </View>
               <View style={styles.infoRow}>
-                <Icon name="schedule" size={20} color="#6b7280" />
+                <Icon name="restaurant" size={20} color="#6b7280" />
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Duration</Text>
-                  <Text style={styles.infoValue}>{subscription.planId.durationDays} days</Text>
+                  <Text style={styles.infoLabel}>Meals</Text>
+                  <Text style={styles.infoValue}>{subscription.vouchersIssued} meals</Text>
                 </View>
               </View>
-              <View style={styles.infoRow}>
-                <Icon name="confirmation-number" size={20} color="#6b7280" />
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Vouchers per Day</Text>
-                  <Text style={styles.infoValue}>{subscription.planId.vouchersPerDay}</Text>
+              {subscription.planId.durationDays ? (
+                <View style={styles.infoRow}>
+                  <Icon name="schedule" size={20} color="#6b7280" />
+                  <View style={styles.infoContent}>
+                    <Text style={styles.infoLabel}>Validity</Text>
+                    <Text style={styles.infoValue}>{subscription.planId.durationDays} days</Text>
+                  </View>
                 </View>
-              </View>
+              ) : null}
             </View>
 
             {/* Voucher Usage Section */}
@@ -175,7 +187,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Purchased At</Text>
                   <Text style={styles.infoValue}>
-                    {format(new Date(subscription.purchasedAt), 'MMM dd, yyyy hh:mm a')}
+                    {fmtDate(subscription.purchasedAt)}
                   </Text>
                 </View>
               </View>
@@ -184,7 +196,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Expires At</Text>
                   <Text style={styles.infoValue}>
-                    {format(new Date(subscription.expiresAt), 'MMM dd, yyyy hh:mm a')}
+                    {fmtDate(subscription.expiresAt)}
                   </Text>
                 </View>
               </View>
@@ -200,7 +212,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                     <View style={styles.infoContent}>
                       <Text style={styles.infoLabel}>Cancelled At</Text>
                       <Text style={styles.infoValue}>
-                        {format(new Date(subscription.cancelledAt), 'MMM dd, yyyy hh:mm a')}
+                        {fmtDate(subscription.cancelledAt)}
                       </Text>
                     </View>
                   </View>
@@ -432,7 +444,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                     <Icon name="event-busy" size={16} color="#d97706" />
                     <View style={{ flex: 1, marginLeft: 8 }}>
                       <Text style={styles.skippedSlotDate}>
-                        {format(new Date(slot.date), 'MMM dd, yyyy')} - {slot.mealWindow}
+                        {fmtDate(slot.date, 'MMM dd, yyyy')} - {slot.mealWindow}
                       </Text>
                       {slot.reason && (
                         <Text style={styles.skippedSlotReason}>{slot.reason}</Text>
@@ -480,7 +492,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                     <Text style={styles.voucherStatus}>{voucher.status}</Text>
                     {voucher.usedAt && (
                       <Text style={styles.voucherDate}>
-                        {format(new Date(voucher.usedAt), 'MMM dd')}
+                        {fmtDate(voucher.usedAt, 'MMM dd')}
                       </Text>
                     )}
                   </View>

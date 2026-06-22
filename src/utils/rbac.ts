@@ -61,6 +61,14 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     group: 'Kitchen',
   },
   {
+    id: '40',
+    label: 'Reviews',
+    icon: 'star-rate',
+    screen: 'Reviews',
+    roles: ['ADMIN', 'KITCHEN_STAFF'],
+    group: 'Kitchen',
+  },
+  {
     id: '5',
     label: 'Kitchen Profile',
     icon: 'store',
@@ -161,6 +169,14 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
     label: 'Plans',
     icon: 'credit-card',
     screen: 'Subscriptions',
+    roles: ['ADMIN'],
+    group: 'System',
+  },
+  {
+    id: '41',
+    label: 'Subscribers',
+    icon: 'loyalty',
+    screen: 'Subscribers',
     roles: ['ADMIN'],
     group: 'System',
   },
@@ -324,6 +340,12 @@ export const mapBackendRoleToAppRole = (backendRole: string): UserRole | null =>
   const roleMap: Record<string, UserRole> = {
     'ADMIN': 'ADMIN',
     'admin': 'ADMIN',
+    // OWNER is the god-mode super-role. Kitchen management lives inside this
+    // admin app, so OWNER is treated as ADMIN here: full menu + admin endpoints.
+    // The JWT still carries the real "OWNER" role, which the backend authorizes
+    // as admin-level (and beyond) on every route.
+    'OWNER': 'ADMIN',
+    'owner': 'ADMIN',
     'KITCHEN_STAFF': 'KITCHEN_STAFF',
     'kitchen_staff': 'KITCHEN_STAFF',
     'DRIVER': 'DRIVER',

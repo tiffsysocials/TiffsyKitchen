@@ -189,6 +189,7 @@ export const getChannelForNotificationType = (type?: string): string => {
 
   switch (type.toUpperCase()) {
     case 'NEW_ORDER':
+    case 'NEW_ORDER_ADMIN':
     case 'NEW_AUTO_ORDER':
     case 'NEW_MANUAL_ORDER':
     case 'NEW_AUTO_ACCEPTED_ORDER':

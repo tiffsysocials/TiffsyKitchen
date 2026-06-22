@@ -155,9 +155,17 @@ export interface SystemConfig {
     handlingFee: number;
     platformFee: number;
     taxRate: number;
+    useZonePricing?: boolean;
     surgePricing: { enabled: boolean; amount: number };
     smallOrderFee: { enabled: boolean; minOrderAmount: number; amount: number };
     lateNightFee: { enabled: boolean; startHour: number; endHour: number; amount: number };
+    distancePricing?: {
+      enabled: boolean;
+      baseFee: number;
+      baseFeeEnabled: boolean;
+      baseFreeUptoKm: number;
+      perKmAfterFree: number;
+    };
   };
   batching: {
     maxBatchSize: number;
@@ -215,6 +223,16 @@ export interface SystemConfig {
     maxDriverSearchRadiusMeters: number;
     autoReassignOnTimeout: boolean;
     manualAssignmentEnabled: boolean;
+  };
+  adminNotifications?: {
+    // When true, admins receive a push for every new order
+    newOrderEnabled: boolean;
+  };
+  orderAcceptance?: {
+    requireKitchenAcceptance: boolean;
+    kitchenAcceptanceTimeoutMinutes: number;
+    autoRejectOnTimeout: boolean;
+    refundOnAutoReject: boolean;
   };
 }
 

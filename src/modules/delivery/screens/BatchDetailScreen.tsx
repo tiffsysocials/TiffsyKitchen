@@ -13,7 +13,10 @@ import BatchTimeline from '../components/BatchTimeline';
 import BatchTrackingList from '../components/BatchTrackingList';
 import ReassignDriverModal from '../components/ReassignDriverModal';
 import CancelBatchModal from '../components/CancelBatchModal';
+import ForceCompleteBatchModal from '../components/ForceCompleteBatchModal';
 import DispatchToDriverModal from '../components/DispatchToDriverModal';
+import ReorderStopsModal, { ReorderStop } from '../components/ReorderStopsModal';
+import { getEffectiveSequenceNumber } from '../../../utils/batchSequence';
 
 interface Props {
   batchId: string;
@@ -27,7 +30,9 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
   const [activeTab, setActiveTab] = useState<TabName>('orders');
   const [showReassign, setShowReassign] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showForceComplete, setShowForceComplete] = useState(false);
   const [showDispatchToDriver, setShowDispatchToDriver] = useState(false);
+  const [showReorder, setShowReorder] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +70,31 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
   const canDispatchToDriver = batch?.status === 'COLLECTING' || batch?.status === 'READY_FOR_DISPATCH';
   const canReassign = batch?.status === 'DISPATCHED' || batch?.status === 'IN_PROGRESS';
   const canCancel = batch && batch.status !== 'COMPLETED' && batch.status !== 'CANCELLED';
+  const canForceComplete =
+    batch && !['COMPLETED', 'PARTIAL_COMPLETE', 'CANCELLED'].includes(batch.status);
+
+  // Reorder is allowed while the batch isn't finished/cancelled and the sequence isn't locked.
+  const canReorder =
+    batch &&
+    !['COMPLETED', 'PARTIAL_COMPLETE', 'CANCELLED'].includes(batch.status) &&
+    batch.sequencePolicy !== 'LOCKED' &&
+    orders.length >= 2;
+
+  // Build the stops in their current delivery order — uses the shared util so
+  // every batch-orders display in the app picks the same sequence source.
+  const seqOf = (orderId: string): number =>
+    getEffectiveSequenceNumber(orderId, batch, assignments);
+  const orderedStops: ReorderStop[] = [...orders]
+    .map((o: any) => ({
+      orderId: o._id,
+      orderNumber: o.orderNumber,
+      address: [o.deliveryAddress?.addressLine1, o.deliveryAddress?.locality, o.deliveryAddress?.city]
+        .filter(Boolean)
+        .join(', '),
+      _seq: seqOf(o._id),
+    }))
+    .sort((a, b) => a._seq - b._seq)
+    .map(({ _seq, ...rest }) => rest);
 
   if (isLoading) {
     return (
@@ -201,12 +231,12 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
         {/* Tab Content */}
         {activeTab === 'orders' ? (
           <>
-            <BatchOrdersList orders={orders} assignments={assignments} />
+            <BatchOrdersList orders={orders} assignments={assignments} batch={batch} />
             <BatchTimeline batch={batch} orders={orders} assignments={assignments} />
           </>
         ) : (
           tracking ? (
-            <BatchTrackingList tracking={tracking} />
+            <BatchTrackingList tracking={tracking} batch={batch} orders={orders} />
           ) : (
             <View className="items-center py-16">
               {isActive ? (
@@ -243,6 +273,26 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
               >
                 <Icon name="swap-horiz" size={20} color="#ffffff" />
                 <Text className="text-white font-semibold ml-2">Reassign Driver</Text>
+              </TouchableOpacity>
+            )}
+
+            {canReorder && (
+              <TouchableOpacity
+                onPress={() => setShowReorder(true)}
+                className="flex-row items-center justify-center py-3 rounded-lg border border-orange-500 mb-3"
+              >
+                <Icon name="reorder" size={20} color="#ea580c" />
+                <Text className="text-orange-600 font-semibold ml-2">Reorder Stops</Text>
+              </TouchableOpacity>
+            )}
+
+            {canForceComplete && (
+              <TouchableOpacity
+                onPress={() => setShowForceComplete(true)}
+                className="flex-row items-center justify-center py-3 rounded-lg bg-blue-600 mb-3"
+              >
+                <Icon name="done-all" size={20} color="#ffffff" />
+                <Text className="text-white font-semibold ml-2">Force Complete</Text>
               </TouchableOpacity>
             )}
 
@@ -283,12 +333,35 @@ const BatchDetailScreen: React.FC<Props> = ({ batchId, onBack }) => {
             }}
           />
 
+          <ForceCompleteBatchModal
+            visible={showForceComplete}
+            batchId={batchId}
+            batchNumber={batch.batchNumber}
+            orders={orders}
+            onClose={() => setShowForceComplete(false)}
+            onSuccess={() => {
+              setShowForceComplete(false);
+              refetch();
+            }}
+          />
+
           <DispatchToDriverModal
             visible={showDispatchToDriver}
             batchId={batchId}
             onClose={() => setShowDispatchToDriver(false)}
             onSuccess={() => {
               setShowDispatchToDriver(false);
+              refetch();
+            }}
+          />
+
+          <ReorderStopsModal
+            visible={showReorder}
+            batchId={batchId}
+            stops={orderedStops}
+            onClose={() => setShowReorder(false)}
+            onSuccess={() => {
+              setShowReorder(false);
               refetch();
             }}
           />

@@ -5,6 +5,12 @@ import { BatchTracking } from '../../../types/delivery';
 
 interface Props {
   tracking: BatchTracking;
+  /** Phase 10 — full batch document so we can read planned per-stop ETA
+   *  and per-leg distance/duration from optimizedSequence/deliverySequence. */
+  batch?: any;
+  /** Phase 10 — populated orders (with deliveryAddress, items, charges) so
+   *  we can show full per-stop details on the tracking tab too. */
+  orders?: any[];
 }
 
 const ETA_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -22,8 +28,28 @@ const DELIVERY_STATUS_CONFIG: Record<string, { icon: string; color: string }> = 
   FAILED: { icon: 'cancel', color: '#dc2626' },
 };
 
-const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
+const BatchTrackingList: React.FC<Props> = ({ tracking, batch, orders }) => {
   const { driver, deliveries } = tracking;
+
+  // Lookup tables for the planned per-stop ETA/leg metrics and the full
+  // order document by orderId, used in the per-stop details block below.
+  const planByOrder = new Map<string, any>();
+  const seqSource = batch?.optimizedSequence?.length > 0
+    ? batch.optimizedSequence
+    : batch?.deliverySequence || [];
+  for (const s of seqSource) {
+    if (s?.orderId) planByOrder.set(String(s.orderId), s);
+  }
+  const orderByOrderId = new Map<string, any>();
+  for (const o of orders || []) {
+    if (o?._id) orderByOrderId.set(String(o._id), o);
+  }
+  const fmtClock = (iso?: string | Date | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const getTimeSince = (isoDate: string) => {
     const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -57,11 +83,40 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
                 Last seen: {getTimeSince(driver.updatedAt)} · {driver.driverStatus}
                 {isStale && <Text className="text-red-500"> (stale)</Text>}
               </Text>
+              {driver.latitude != null && driver.longitude != null && (
+                <Text className="text-[10px] text-blue-500 mt-0.5">
+                  @ {driver.latitude.toFixed(5)}, {driver.longitude.toFixed(5)}
+                </Text>
+              )}
             </View>
           ) : (
             <Text className="text-sm text-blue-600 ml-2">No driver location data</Text>
           )}
         </View>
+        {(tracking.distanceTraveledMeters || tracking.idealDistanceMeters) ? (
+          <View className="mt-1 ml-7">
+            <Text className="text-xs text-blue-600">
+              {tracking.idealDistanceMeters != null && (
+                <Text>Ideal route: {(tracking.idealDistanceMeters / 1000).toFixed(1)} km</Text>
+              )}
+              {tracking.distanceTraveledMeters != null && tracking.distanceTraveledMeters > 0 && (
+                <Text>
+                  {tracking.idealDistanceMeters != null ? '  ·  ' : ''}
+                  Driven: {(tracking.distanceTraveledMeters / 1000).toFixed(1)} km
+                </Text>
+              )}
+            </Text>
+            {tracking.distanceDeviationMeters != null && tracking.distanceDeviationMeters > 200 && (
+              <Text
+                className="text-xs font-semibold mt-0.5"
+                style={{ color: (tracking.distanceDeviationPercent ?? 0) >= 25 ? '#dc2626' : '#a16207' }}
+              >
+                +{(tracking.distanceDeviationMeters / 1000).toFixed(1)} km over ideal
+                {tracking.distanceDeviationPercent != null ? ` (+${tracking.distanceDeviationPercent}%)` : ''}
+              </Text>
+            )}
+          </View>
+        ) : null}
       </View>
 
       {/* Progress Summary */}
@@ -97,6 +152,24 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
         const statusConfig = DELIVERY_STATUS_CONFIG[delivery.deliveryStatus || 'ASSIGNED'] || DELIVERY_STATUS_CONFIG.ASSIGNED;
         const etaColors = delivery.etaStatus ? ETA_STATUS_COLORS[delivery.etaStatus] : null;
         const isLast = index === sortedDeliveries.length - 1;
+        const plan = planByOrder.get(String(delivery.orderId));
+        const order = orderByOrderId.get(String(delivery.orderId));
+        const arrivalClock = fmtClock(plan?.estimatedArrival);
+        const legKm = plan?.distanceFromPrevMeters != null
+          ? (plan.distanceFromPrevMeters / 1000).toFixed(1)
+          : null;
+        const legMin = plan?.estimatedDurationFromPrevSeconds != null
+          ? Math.round(plan.estimatedDurationFromPrevSeconds / 60)
+          : null;
+        const addr = order?.deliveryAddress;
+        const addrLine = addr
+          ? [addr.addressLine1, addr.locality, addr.pincode].filter(Boolean).join(', ')
+          : null;
+        const itemsSummary = order?.items?.length
+          ? order.items
+              .map((it: any) => `${it.quantity}× ${it.name}`)
+              .join(', ')
+          : null;
 
         return (
           <View key={delivery.orderId} className="flex-row">
@@ -121,6 +194,11 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
                   <Text className="text-sm font-medium text-gray-800 ml-1">
                     #{delivery.orderNumber}
                   </Text>
+                  {arrivalClock && (
+                    <Text className="text-xs text-gray-500 ml-2">
+                      arrives ~{arrivalClock}
+                    </Text>
+                  )}
                 </View>
                 {etaColors && delivery.etaStatus && (
                   <View style={{ backgroundColor: etaColors.bg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
@@ -131,18 +209,49 @@ const BatchTrackingList: React.FC<Props> = ({ tracking }) => {
                 )}
               </View>
 
+              {/* Live driver-tracking line */}
               <View className="flex-row items-center mt-1">
                 {delivery.etaSeconds != null && (
                   <Text className="text-xs text-gray-500 mr-3">
-                    ETA: ~{Math.round(delivery.etaSeconds / 60)} min
+                    Live ETA: ~{Math.round(delivery.etaSeconds / 60)} min
                   </Text>
                 )}
                 {delivery.distanceFromDriverMeters != null && (
                   <Text className="text-xs text-gray-500">
-                    {(delivery.distanceFromDriverMeters / 1000).toFixed(1)} km away
+                    {delivery.distanceSource && delivery.distanceSource !== 'haversine' ? '' : '~'}
+                    {(delivery.distanceFromDriverMeters / 1000).toFixed(1)} km from driver
                   </Text>
                 )}
               </View>
+
+              {/* Planned leg metrics (from kitchen/previous stop) */}
+              {(legKm != null || legMin != null) && (
+                <Text className="text-xs text-gray-400 mt-0.5">
+                  Leg: {legKm ?? '–'} km · ~{legMin ?? '–'} min from {index === 0 ? 'kitchen' : 'prev stop'}
+                </Text>
+              )}
+
+              {/* Customer + address + items */}
+              {(addr?.contactName || addr?.contactPhone) && (
+                <Text className="text-xs text-gray-600 mt-1" numberOfLines={1}>
+                  {addr.contactName}{addr.contactName && addr.contactPhone ? ' · ' : ''}{addr.contactPhone}
+                </Text>
+              )}
+              {addrLine && (
+                <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={2}>
+                  {addrLine}
+                </Text>
+              )}
+              {itemsSummary && (
+                <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
+                  {itemsSummary}
+                </Text>
+              )}
+              {order?.grandTotal != null && (
+                <Text className="text-xs text-gray-500 mt-0.5">
+                  ₹{Math.round(order.grandTotal)} · {order.paymentStatus || 'PENDING'}
+                </Text>
+              )}
 
               <Text className="text-xs text-gray-400 mt-0.5">
                 {delivery.deliveryStatus || 'Pending'} · {delivery.orderStatus}

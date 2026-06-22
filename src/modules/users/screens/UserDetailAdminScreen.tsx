@@ -52,6 +52,11 @@ const spacing = {
   xl: 32,
 };
 
+// A voucher counts as usable/available if it is freshly AVAILABLE or was
+// RESTORED (e.g. after an order cancellation). Mirrors the backend, which
+// computes available = AVAILABLE + RESTORED.
+const isUsableVoucher = (status?: string) => status === 'AVAILABLE' || status === 'RESTORED';
+
 const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
   userId,
   onBack,
@@ -152,11 +157,16 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
     const status = statusFilter ?? voucherStatusFilter;
     try {
       setLoadingVouchers(true);
+      // A RESTORED voucher is still usable/available (backend counts
+      // available = AVAILABLE + RESTORED). The admin endpoint only exact-matches
+      // a single status, so for the "Available" tab we fetch all and keep the
+      // usable ones rather than asking the API for AVAILABLE alone.
       const response = await vouchersService.adminGetVouchersForUser(userId, {
-        status: status === 'ALL' ? undefined : 'AVAILABLE',
+        status: undefined,
         limit: 100,
       });
-      setVouchers(response.vouchers || []);
+      const all = response.vouchers || [];
+      setVouchers(status === 'ALL' ? all : all.filter((v) => isUsableVoucher(v.status)));
     } catch (err: any) {
       console.log('Failed to fetch vouchers:', err?.message || err);
       setVouchers([]);
@@ -355,7 +365,7 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
               <Text style={styles.voucherInfoValue}>
                 {loadingVouchers
                   ? '…'
-                  : vouchers.filter((v) => v.status === 'AVAILABLE').length || (stats?.availableVouchers ?? 0)}
+                  : vouchers.filter((v) => isUsableVoucher(v.status)).length || (stats?.availableVouchers ?? 0)}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowIssueVoucherModal(true)}
@@ -504,7 +514,7 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
               vouchers.map((v) => {
                 const isExpired = v.status === 'EXPIRED' || new Date(v.expiryDate) < new Date();
                 const statusColor =
-                  v.status === 'AVAILABLE' && !isExpired ? colors.success
+                  isUsableVoucher(v.status) && !isExpired ? colors.success
                   : v.status === 'REDEEMED' ? colors.primary
                   : v.status === 'CANCELLED' ? colors.danger
                   : isExpired ? colors.gray
@@ -552,7 +562,7 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
                       backgroundColor: `${statusColor}20`,
                     }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>
-                        {isExpired && v.status === 'AVAILABLE' ? 'EXPIRED' : v.status}
+                        {isExpired && isUsableVoucher(v.status) ? 'EXPIRED' : v.status}
                       </Text>
                     </View>
                   </View>
@@ -612,10 +622,10 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
                   </View>
                   <View style={styles.subscriptionDates}>
                     <Text style={styles.subscriptionDateText}>
-                      Purchased: {new Date(subscription.purchasedAt).toLocaleDateString('en-IN')}
+                      Purchased: {subscription.purchasedAt ? new Date(subscription.purchasedAt).toLocaleDateString('en-IN') : 'N/A'}
                     </Text>
                     <Text style={styles.subscriptionDateText}>
-                      Expires: {new Date(subscription.expiresAt).toLocaleDateString('en-IN')}
+                      Expires: {subscription.expiresAt ? new Date(subscription.expiresAt).toLocaleDateString('en-IN') : 'N/A'}
                     </Text>
                   </View>
                   <View style={styles.subscriptionAmount}>

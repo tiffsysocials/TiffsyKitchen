@@ -16,7 +16,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { Kitchen, Zone, Area, KitchenDetailsResponse } from '../../../types/api.types';
+import { Kitchen, Area, KitchenDetailsResponse } from '../../../types/api.types';
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { AreaMapPreview } from '../components/AreaMapPreview';
@@ -46,6 +46,15 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   const [suspendError, setSuspendError] = useState('');
   const [suspending, setSuspending] = useState(false);
 
+  // Holidays & Closures — recurring weekly off-days + one-off dates (admin edit).
+  const [editingHolidays, setEditingHolidays] = useState(false);
+  const [savingHolidays, setSavingHolidays] = useState(false);
+  const [holidaysForm, setHolidaysForm] = useState<{
+    closedDays: string[];
+    closedDates: string[];
+    newDate: string;
+  }>({ closedDays: [], closedDates: [], newDate: '' });
+
   useEffect(() => {
     loadKitchenDetails();
   }, [kitchenId]);
@@ -62,20 +71,6 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
       showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRemoveArea = async (areaId: string) => {
-    if (!kitchen) return;
-    const remainingIds = (Array.isArray(kitchen.areasServed)
-      ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
-      : []
-    ).filter(a => a._id !== areaId).map(a => a._id);
-    try {
-      await kitchenService.updateServiceableAreas(kitchen._id, { serviceableAreas: remainingIds });
-      loadKitchenDetails();
-    } catch (err: any) {
-      showError('Failed', err?.message || 'Could not remove area.');
     }
   };
 
@@ -149,6 +144,37 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
       showToast(err?.message || 'Failed to suspend kitchen', 'error');
     } finally {
       setSuspending(false);
+    }
+  };
+
+  const handleEditHolidays = () => {
+    if (!kitchen) return;
+    setHolidaysForm({
+      closedDays: Array.isArray((kitchen as any).closedDays)
+        ? [...(kitchen as any).closedDays]
+        : [],
+      closedDates: Array.isArray((kitchen as any).closedDates)
+        ? [...(kitchen as any).closedDates]
+        : [],
+      newDate: '',
+    });
+    setEditingHolidays(true);
+  };
+
+  const handleSaveHolidays = async () => {
+    if (!kitchen) return;
+    const closedDays = [...new Set(holidaysForm.closedDays.map((d) => d.toLowerCase()))];
+    const closedDates = [...new Set(holidaysForm.closedDates)].sort();
+    setSavingHolidays(true);
+    try {
+      await kitchenService.updateKitchen(kitchen._id, { closedDays, closedDates });
+      setKitchen({ ...kitchen, closedDays, closedDates } as any);
+      setEditingHolidays(false);
+      showToast('Holidays updated', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update holidays', 'error');
+    } finally {
+      setSavingHolidays(false);
     }
   };
 
@@ -258,9 +284,6 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
 
   const areas = Array.isArray(kitchen.areasServed)
     ? kitchen.areasServed.filter((a): a is Area => typeof a !== 'string')
-    : [];
-  const legacyZones = Array.isArray(kitchen.zonesServed)
-    ? kitchen.zonesServed.filter((z): z is Zone => typeof z !== 'string')
     : [];
 
   return (
@@ -425,11 +448,10 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           </View>
         </View>
 
-        {/* Areas Served */}
+        {/* Areas Served — read-only. Edit coverage via Delivery Zones. */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Areas Served ({areas.length > 0 ? areas.length : legacyZones.length})
-          </Text>
+          <Text style={styles.sectionTitle}>Areas Served ({areas.length})</Text>
+          <Text style={styles.emptyText}>Edit coverage via Delivery Zones.</Text>
           {areas.length > 0 ? (
             areas.map((area) => (
               <View key={area._id} style={styles.zoneItem}>
@@ -442,20 +464,6 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
                 <Icon name="check-circle" size={16} color={colors.success} />
               </View>
             ))
-          ) : legacyZones.length > 0 ? (
-            legacyZones.map((zone) => (
-              <View key={zone._id} style={styles.zoneItem}>
-                <View style={styles.zoneInfo}>
-                  <Text style={styles.zonePincode}>{zone.pincode}</Text>
-                  <Text style={styles.zoneName}>{zone.name}, {zone.city}</Text>
-                </View>
-                {zone.orderingEnabled ? (
-                  <Icon name="check-circle" size={16} color={colors.success} />
-                ) : (
-                  <Icon name="close-circle" size={16} color={colors.error} />
-                )}
-              </View>
-            ))
           ) : (
             <Text style={styles.emptyText}>No areas assigned</Text>
           )}
@@ -463,7 +471,6 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
             <AreaMapPreview
               kitchenCoords={kitchen.address?.coordinates ?? undefined}
               areas={areas}
-              onRemoveArea={handleRemoveArea}
             />
           )}
         </View>
@@ -488,6 +495,147 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
                 {kitchen.operatingHours.dinner.startTime} - {kitchen.operatingHours.dinner.endTime}
               </Text>
             </View>
+          )}
+        </View>
+
+        {/* Holidays & Closures — recurring weekly off-days + one-off dates */}
+        <View style={styles.section}>
+          <View style={styles.holidaysHeader}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Holidays & Closures</Text>
+            {!editingHolidays && (
+              <TouchableOpacity onPress={handleEditHolidays}>
+                <Icon name="pencil" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {editingHolidays ? (
+            <>
+              <Text style={styles.holidaysLabel}>Closed every week on</Text>
+              <View style={styles.dayPillRow}>
+                {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const).map((d) => {
+                  const active = holidaysForm.closedDays.includes(d);
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      onPress={() =>
+                        setHolidaysForm({
+                          ...holidaysForm,
+                          closedDays: active
+                            ? holidaysForm.closedDays.filter((x) => x !== d)
+                            : [...holidaysForm.closedDays, d],
+                        })
+                      }
+                      style={[
+                        styles.dayPill,
+                        { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : '#fff' },
+                      ]}
+                    >
+                      <Text style={[styles.dayPillText, { color: active ? '#fff' : colors.textPrimary }]}>
+                        {d.slice(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.holidaysLabel, { marginTop: spacing.md }]}>
+                One-off closure dates (YYYY-MM-DD)
+              </Text>
+              <View style={styles.dateInputRow}>
+                <TextInput
+                  style={styles.dateInput}
+                  value={holidaysForm.newDate}
+                  onChangeText={(t) => setHolidaysForm({ ...holidaysForm, newDate: t })}
+                  placeholder="e.g. 2026-08-15"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.addDateButton}
+                  onPress={() => {
+                    const v = (holidaysForm.newDate || '').trim();
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                      showToast('Use YYYY-MM-DD format', 'error');
+                      return;
+                    }
+                    if (holidaysForm.closedDates.includes(v)) {
+                      showToast(`${v} is already in the list`, 'error');
+                      return;
+                    }
+                    setHolidaysForm({
+                      ...holidaysForm,
+                      closedDates: [...holidaysForm.closedDates, v].sort(),
+                      newDate: '',
+                    });
+                  }}
+                >
+                  <Text style={styles.addDateButtonText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+
+              {holidaysForm.closedDates.length > 0 && (
+                <View style={{ marginTop: spacing.sm }}>
+                  {holidaysForm.closedDates.map((d) => (
+                    <View key={d} style={styles.dateChip}>
+                      <Text style={styles.dateChipText}>{d}</Text>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setHolidaysForm({
+                            ...holidaysForm,
+                            closedDates: holidaysForm.closedDates.filter((x) => x !== d),
+                          })
+                        }
+                      >
+                        <Icon name="close-circle" size={20} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.holidaysActions}>
+                <TouchableOpacity
+                  style={[styles.holidaysButton, styles.holidaysCancelButton]}
+                  onPress={() => setEditingHolidays(false)}
+                  disabled={savingHolidays}
+                >
+                  <Text style={styles.holidaysCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.holidaysButton, styles.holidaysSaveButton, savingHolidays && { opacity: 0.6 }]}
+                  onPress={handleSaveHolidays}
+                  disabled={savingHolidays}
+                >
+                  {savingHolidays ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.holidaysSaveText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.hoursRow}>
+                <Icon name="calendar-week" size={18} color={colors.textSecondary} />
+                <Text style={styles.hoursLabel}>Weekly:</Text>
+                <Text style={[styles.hoursValue, { flex: 1 }]}>
+                  {Array.isArray((kitchen as any).closedDays) && (kitchen as any).closedDays.length > 0
+                    ? (kitchen as any).closedDays.map((d: string) => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')
+                    : 'None'}
+                </Text>
+              </View>
+              <View style={styles.hoursRow}>
+                <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
+                <Text style={styles.hoursLabel}>Dates:</Text>
+                <Text style={[styles.hoursValue, { flex: 1 }]}>
+                  {Array.isArray((kitchen as any).closedDates) && (kitchen as any).closedDates.length > 0
+                    ? (kitchen as any).closedDates.join(', ')
+                    : 'None'}
+                </Text>
+              </View>
+            </>
           )}
         </View>
 
@@ -824,6 +972,107 @@ const styles = StyleSheet.create({
   hoursValue: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  holidaysHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  holidaysLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  dayPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  dayPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: '#fff',
+  },
+  addDateButton: {
+    marginLeft: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  addDateButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  dateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  dateChipText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  holidaysActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  holidaysButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  holidaysCancelButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  holidaysCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  holidaysSaveButton: {
+    backgroundColor: colors.primary,
+  },
+  holidaysSaveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
   actionButton: {
     flexDirection: 'row',

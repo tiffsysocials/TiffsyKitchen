@@ -416,6 +416,54 @@ class DeliveryService {
   }
 
   /**
+   * Complete (finalize) a batch. Backend reconciles counters and sets the final
+   * status (COMPLETED / PARTIAL_COMPLETE / CANCELLED) and frees the driver.
+   * Requires every order to be terminal first — callers resolve pending orders
+   * before invoking this.
+   */
+  async completeBatch(batchId: string, data?: {
+    notes?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data?: { batch: any; summary: { totalOrders: number; delivered: number; failed: number } };
+  }> {
+    return apiService.patch(`/api/delivery/batches/${batchId}/complete`, data || {});
+  }
+
+  /**
+   * Merge two or more pre-dispatch batches into one new optimized batch.
+   */
+  async mergeBatches(batchIds: string[], reason?: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: { mergedBatch: any; sourceBatchIds: string[]; orderCount: number };
+  }> {
+    return apiService.post('/api/delivery/batches/merge', { batchIds, reason });
+  }
+
+  /**
+   * Assign multiple batches to one driver in the given order (sequence).
+   */
+  async assignBatchesToDriver(driverId: string, batchIds: string[], reason?: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: { driverId: string; assignedBatchIds: string[]; count: number };
+  }> {
+    return apiService.post('/api/delivery/batches/assign-to-driver', { driverId, batchIds, reason });
+  }
+
+  /**
+   * Reorder a batch's delivery stops. `sequence` is the new order (sequenceNumber 1..N).
+   */
+  async updateDeliverySequence(
+    batchId: string,
+    sequence: Array<{ orderId: string; sequenceNumber: number }>,
+  ): Promise<{ success: boolean; message: string }> {
+    return apiService.patch(`/api/delivery/batches/${batchId}/sequence`, { sequence });
+  }
+
+  /**
    * Get available drivers for reassignment
    */
   async getAvailableDrivers(): Promise<any> {

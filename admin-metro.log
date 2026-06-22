@@ -1,0 +1,53 @@
+
+> TiffsyKitchen@0.0.1 start
+> react-native start
+
+
+Welcome to React Native v0.82
+Starting dev server on http://localhost:8081
+
+
+                        ▒▒▓▓▓▓▒▒
+                     ▒▓▓▓▒▒░░▒▒▓▓▓▒
+                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒
+                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓
+                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓
+                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓
+                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓
+                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓
+                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒
+                     ▒▓▓▓▒░░░░▒▓▓▓▒
+                        ▒▒▓▓▓▓▒▒
+
+
+                Welcome to Metro v0.83.3
+              Fast - Scalable - Integrated
+
+
+ INFO  Dev server ready. Press Ctrl+C to exit.
+ INFO  Interactive mode is not supported in this environment
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0.0% (0/1)
+ BUNDLE  ./index.js ▓▓░░░░░░░░░░░░░░ 16.0% (43/225)
+ BUNDLE  ./index.js ▓▓▓▓▓░░░░░░░░░░░ 37.1% (410/673)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 64.2% (752/1176)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.4% (1296/1590)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.7% (1776/1918)
+ BUNDLE  ./index.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (2254/2254)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.tiffsykitchen' on device='motorola edge 50 fusion - 16 - API 36'.
+ INFO  [1m[7m💡 JavaScript logs have moved![22m They can now be viewed in React Native DevTools. Tip: Type [1mj[22m in the terminal to open (requires Google Chrome or Microsoft Edge).[27m
+ INFO  Launching DevTools...
+ INFO  Connection established to DevTools for app='com.tiffsykitchen' on device='motorola edge 50 fusion - 16 - API 36'.
+ MAP  ./index.js 
+ MAP  src\modules\kitchens\components/DeliveryZoneFormModal.tsx ░░░░░░░░░░░░░░░░ 0.0% (0/1)
+ MAP  src\modules\kitchens\components/DeliveryZoneFormModal.tsx 
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0.0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection closed to device='motorola edge 50 fusion - 16 - API 36' for app='com.tiffsykitchen' with code='1006' and reason=''.
+ BUNDLE  ./index.js ░░░░░░░░░░░░░░░░ 0.0% (0/1)
+ BUNDLE  ./index.js 
+ INFO  Connection established to app='com.tiffsykitchen' on device='motorola edge 50 fusion - 16 - API 36'.
+ INFO  Connection closed to DevTools for app='com.tiffsykitchen' on device='motorola edge 50 fusion - 16 - API 36' with code='1006' and reason=''.
+ ERROR  [timeout] connection terminated with Device for app='com.tiffsykitchen' on device='motorola edge 50 fusion - 16 - API 36' after not responding for 60 seconds.
+ INFO  Connection closed to device='motorola edge 50 fusion - 16 - API 36' for app='com.tiffsykitchen' with code='1006' and reason=''.

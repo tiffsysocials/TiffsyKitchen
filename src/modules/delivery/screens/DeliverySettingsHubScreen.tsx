@@ -30,10 +30,10 @@ const settingsItems = [
     screen: 'DeliveryConfig' as const,
   },
   {
-    title: 'Geofencing',
-    description: 'Configure distance-based order acceptance and delivery radii',
-    icon: 'my-location',
-    screen: 'GeofencingConfig' as const,
+    title: 'Order Acceptance',
+    description: 'Require kitchen acceptance, acceptance timeout, and auto-reject/refund',
+    icon: 'how-to-reg',
+    screen: 'OrderAcceptanceConfig' as const,
   },
 ];
 

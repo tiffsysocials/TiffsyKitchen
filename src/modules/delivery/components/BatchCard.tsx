@@ -7,17 +7,56 @@ import BatchStatusBadge from './BatchStatusBadge';
 interface Props {
   batch: any;
   onPress: (batchId: string) => void;
+  /** Selection mode (merge) */
+  selectable?: boolean;
+  selected?: boolean;
+  /** Whether this batch is eligible to be selected for merge */
+  selectableEligible?: boolean;
+  onToggleSelect?: (batchId: string) => void;
 }
 
-const BatchCard: React.FC<Props> = ({ batch, onPress }) => {
+const BatchCard: React.FC<Props> = ({
+  batch,
+  onPress,
+  selectable = false,
+  selected = false,
+  selectableEligible = true,
+  onToggleSelect,
+}) => {
   const route = batch.routeOptimization;
   const driver = batch.driverId;
 
+  const disabled = selectable && !selectableEligible;
+  const handlePress = () => {
+    if (selectable) {
+      if (selectableEligible) onToggleSelect?.(batch._id);
+    } else {
+      onPress(batch._id);
+    }
+  };
+
   return (
-    <TouchableOpacity onPress={() => onPress(batch._id)} activeOpacity={0.7}>
-      <Card className="p-4 mb-3">
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.7} disabled={disabled}>
+      <Card
+        className="p-4 mb-3"
+        style={
+          selected
+            ? { borderColor: '#FE8733', borderWidth: 2 }
+            : disabled
+            ? { opacity: 0.45 }
+            : undefined
+        }
+      >
         {/* Header Row */}
         <View className="flex-row items-center justify-between mb-2">
+          {selectable && (
+            <Icon
+              name={selected ? 'check-circle' : 'radio-button-unchecked'}
+              size={20}
+              color={selected ? '#FE8733' : '#9ca3af'}
+              style={{ marginRight: 8 }}
+            />
+          )}
           <Text className="text-sm font-bold text-gray-800 flex-1" numberOfLines={1}>
             {batch.batchNumber}
           </Text>

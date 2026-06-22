@@ -107,6 +107,31 @@ export const getActivePlans = async (zoneId?: string): Promise<SubscriptionPlan[
 // ============================================================================
 
 /**
+ * Normalize a raw backend subscription to the frontend Subscription shape.
+ *
+ * The backend stores these under different names than the app expects:
+ *   purchaseDate  -> purchasedAt
+ *   endDate       -> expiresAt
+ *   totalVouchersIssued -> vouchersIssued
+ * Without this mapping dates render as "Invalid Date" and voucher totals are blank.
+ */
+const normalizeSubscription = (raw: any): Subscription => {
+  if (!raw || typeof raw !== 'object') {
+    return raw;
+  }
+  const vouchersIssued = raw.vouchersIssued ?? raw.totalVouchersIssued ?? 0;
+  const vouchersUsed = raw.vouchersUsed ?? 0;
+  return {
+    ...raw,
+    purchasedAt: raw.purchasedAt ?? raw.purchaseDate ?? raw.startDate ?? raw.createdAt,
+    expiresAt: raw.expiresAt ?? raw.endDate,
+    vouchersIssued,
+    vouchersUsed,
+    vouchersRemaining: raw.vouchersRemaining ?? Math.max(vouchersIssued - vouchersUsed, 0),
+  };
+};
+
+/**
  * Get all customer subscriptions (admin)
  */
 export const getAllSubscriptions = async (filters?: SubscriptionFilters): Promise<SubscriptionListResponse> => {
@@ -137,16 +162,19 @@ export const getAllSubscriptions = async (filters?: SubscriptionFilters): Promis
   const queryString = queryParams.toString();
   const endpoint = `/api/subscriptions/admin/all${queryString ? `?${queryString}` : ''}`;
 
-  const response = await apiService.get<{ subscriptions: Subscription[]; pagination: any }>(endpoint);
-  return response.data;
+  const response = await apiService.get<{ subscriptions: any[]; pagination: any }>(endpoint);
+  return {
+    ...response.data,
+    subscriptions: (response.data.subscriptions || []).map(normalizeSubscription),
+  };
 };
 
 /**
  * Get subscription by ID
  */
 export const getSubscriptionById = async (subscriptionId: string): Promise<SubscriptionDetail> => {
-  const response = await apiService.get<{ subscription: SubscriptionDetail }>(`/api/subscriptions/${subscriptionId}`);
-  return response.data.subscription;
+  const response = await apiService.get<{ subscription: any }>(`/api/subscriptions/${subscriptionId}`);
+  return normalizeSubscription(response.data.subscription) as SubscriptionDetail;
 };
 
 /**
