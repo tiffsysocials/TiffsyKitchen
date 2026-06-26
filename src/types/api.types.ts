@@ -225,8 +225,17 @@ export interface User {
   status: UserStatus;
   kitchenId?: string | Kitchen;
   createdAt: string;
+  lastLoginAt?: string;
   suspensionReason?: string;
   suspendedAt?: string;
+  // App-version telemetry — which app/version/platform this user was last seen on
+  // (populated by the backend from the app's headers / FCM registration).
+  appInfo?: {
+    appType?: 'consumer' | 'driver' | 'kitchen';
+    version?: string;
+    platform?: 'android' | 'ios';
+    lastSeenAt?: string;
+  };
 }
 
 export interface UserCounts {

@@ -1,8 +1,10 @@
 import "./global.css";
 
 import React, { useEffect, useState } from 'react';
-import { StatusBar, useColorScheme, View, Text, TouchableOpacity, BackHandler } from 'react-native';
+import { StatusBar, useColorScheme, View, Text, TouchableOpacity, BackHandler, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import ForceUpdateModal from './src/components/ForceUpdateModal';
+import { checkForUpdate, UpdateCheckResult } from './src/services/appUpdate.service';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PhoneAuthScreen } from './src/screens/admin/PhoneAuthScreen';
 import { DashboardScreen } from './src/screens/admin/DashboardScreen';
@@ -599,6 +601,28 @@ function App() {
   const [registrationPhone, setRegistrationPhone] = useState<string>('');
   const [kitchenApprovalStatus, setKitchenApprovalStatus] = useState<string | null>(null);
 
+  // Force/soft update gate. Fail-open: a backend error leaves the app usable.
+  const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
+  const [softDismissed, setSoftDismissed] = useState(false);
+
+  const runUpdateCheck = async () => {
+    try {
+      const result = await checkForUpdate();
+      setUpdateInfo(result);
+      if (result.status === 'required') setSoftDismissed(false);
+    } catch (err: any) {
+      console.log('[App] update check failed (non-blocking):', err?.message);
+    }
+  };
+
+  useEffect(() => {
+    runUpdateCheck();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') runUpdateCheck();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -863,6 +887,17 @@ function App() {
           </AuthProvider>
         </AlertProvider>
       </QueryClientProvider>
+      {updateInfo &&
+        updateInfo.status !== 'none' &&
+        !(updateInfo.status === 'available' && softDismissed) && (
+          <ForceUpdateModal
+            visible
+            mode={updateInfo.status === 'required' ? 'required' : 'available'}
+            message={updateInfo.message}
+            storeUrl={updateInfo.storeUrl}
+            onDismiss={() => setSoftDismissed(true)}
+          />
+        )}
     </SafeAreaProvider>
   );
 }

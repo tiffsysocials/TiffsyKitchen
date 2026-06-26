@@ -120,6 +120,17 @@ export const UserCard: React.FC<UserCardProps> = ({ user, onPress }) => {
         </View>
       )}
 
+      {user.appInfo?.version ? (
+        <View style={[styles.kitchenInfo, styles.withBorderTop]}>
+          <MaterialIcons name="smartphone" size={14} color={colors.gray} />
+          <Text style={styles.kitchenText} numberOfLines={1}>
+            {`v${user.appInfo.version}`}
+            {user.appInfo.appType ? ` · ${user.appInfo.appType}` : ''}
+            {user.appInfo.platform ? ` · ${user.appInfo.platform}` : ''}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
           <StatusBadge status={user.status} size="small" />

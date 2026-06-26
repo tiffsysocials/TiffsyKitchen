@@ -254,6 +254,13 @@ export interface User {
     name: string;
   };
   createdAt: string;
+  // App-version telemetry (populated by the backend from the user's app on login/launch).
+  appInfo?: {
+    appType?: 'consumer' | 'driver' | 'kitchen';
+    version?: string;
+    platform?: 'android' | 'ios';
+    lastSeenAt?: string;
+  };
 }
 
 export interface UsersResponse {

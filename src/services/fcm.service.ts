@@ -2,6 +2,7 @@ import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messag
 import { Platform, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from './api.enhanced.service';
+import DeviceInfo from 'react-native-device-info';
 import { createNotificationChannels, displayNotification, requestNotificationPermission } from './notificationChannels.service';
 
 const FCM_TOKEN_KEY = 'fcm_token';
@@ -11,6 +12,8 @@ export interface FCMTokenRegistration {
   fcmToken: string;
   deviceType: 'ANDROID' | 'IOS';
   deviceId: string;
+  appVersion?: string;
+  appType?: 'consumer' | 'driver' | 'kitchen';
 }
 
 export interface NotificationData {
@@ -80,10 +83,19 @@ class FCMService {
       const deviceId = await this.getDeviceId();
       const deviceType = Platform.OS === 'ios' ? 'IOS' : 'ANDROID';
 
+      let appVersion: string | undefined;
+      try {
+        appVersion = DeviceInfo.getVersion();
+      } catch {
+        appVersion = undefined;
+      }
+
       const payload: FCMTokenRegistration = {
         fcmToken: token,
         deviceType,
         deviceId,
+        appVersion,
+        appType: 'kitchen',
       };
 
       console.log('==========================================');
