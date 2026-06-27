@@ -5,6 +5,7 @@ import { StatusBar, useColorScheme, View, Text, TouchableOpacity, BackHandler, A
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import ForceUpdateModal from './src/components/ForceUpdateModal';
 import { checkForUpdate, UpdateCheckResult } from './src/services/appUpdate.service';
+import { checkForOtaUpdate } from './src/services/otaUpdate.service';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PhoneAuthScreen } from './src/screens/admin/PhoneAuthScreen';
 import { DashboardScreen } from './src/screens/admin/DashboardScreen';
@@ -617,6 +618,8 @@ function App() {
 
   useEffect(() => {
     runUpdateCheck();
+    // OTA JS-bundle check (silent; applies on next launch). Fail-open.
+    checkForOtaUpdate();
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'active') runUpdateCheck();
     });
