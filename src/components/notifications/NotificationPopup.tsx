@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, Animated, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { InAppNotification } from '../../services/notification.service';
 import { colors } from '../../theme';
@@ -18,6 +19,7 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
   onDismiss,
   onView,
 }) => {
+  const insets = useSafeAreaInsets();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(-100)).current;
 
@@ -81,7 +83,8 @@ export const NotificationPopup: React.FC<NotificationPopupProps> = ({
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onDismiss}>
       <Pressable
-        className="flex-1 bg-black/50 justify-start pt-4 px-4"
+        className="flex-1 bg-black/50 justify-start px-4"
+        style={{ paddingTop: insets.top + 8 }}
         onPress={onDismiss}
         accessibilityLabel="Close notification"
       >
