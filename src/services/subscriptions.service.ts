@@ -110,8 +110,15 @@ export const getActivePlans = async (zoneId?: string): Promise<SubscriptionPlan[
  * Normalize a raw backend subscription to the frontend Subscription shape.
  *
  * The backend stores these under different names than the app expects:
- *   purchaseDate  -> purchasedAt
- *   endDate       -> expiresAt
+ *   purchaseDate       -> purchasedAt
+ *   voucherExpiryDate  -> expiresAt  (when the customer's vouchers actually
+ *                                     expire. Falls back to endDate only for
+ *                                     older payloads. We deliberately do NOT use
+ *                                     endDate as the primary — endDate is just
+ *                                     the plan-duration period (e.g. "60 days"),
+ *                                     which is shorter than voucher validity and
+ *                                     misled admins into thinking a customer's
+ *                                     vouchers expire far earlier than they do.)
  *   totalVouchersIssued -> vouchersIssued
  * Without this mapping dates render as "Invalid Date" and voucher totals are blank.
  */
@@ -124,7 +131,7 @@ const normalizeSubscription = (raw: any): Subscription => {
   return {
     ...raw,
     purchasedAt: raw.purchasedAt ?? raw.purchaseDate ?? raw.startDate ?? raw.createdAt,
-    expiresAt: raw.expiresAt ?? raw.endDate,
+    expiresAt: raw.expiresAt ?? raw.voucherExpiryDate ?? raw.endDate,
     vouchersIssued,
     vouchersUsed,
     vouchersRemaining: raw.vouchersRemaining ?? Math.max(vouchersIssued - vouchersUsed, 0),
