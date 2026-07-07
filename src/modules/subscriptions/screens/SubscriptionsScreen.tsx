@@ -178,7 +178,9 @@ export const SubscriptionsScreen: React.FC<SubscriptionsScreenProps> = ({ onMenu
   };
 
   const handleEditPlan = () => {
-    closePlanActionsModal();
+    // Close the actions modal but KEEP selectedPlan — the form needs it to open
+    // in edit mode and to route the save to updatePlan (not createPlan).
+    setShowPlanActionsModal(false);
     setShowPlanForm(true);
   };
 

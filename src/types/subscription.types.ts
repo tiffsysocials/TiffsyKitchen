@@ -28,6 +28,9 @@ export interface SubscriptionPlan {
   // GST on the voucher-pack purchase. taxRate is a fraction (0.05 = 5%).
   taxRate?: number;
   taxInclusive?: boolean; // true = price already includes GST
+  // 0-100; % off the delivery fee on voucher orders (100 = free delivery).
+  // Absent on plans created before this field existed — treat as 0.
+  deliveryDiscountPercent?: number;
   hsnCode?: string;
   totalVouchers: number; // Virtual: durationDays * vouchersPerDay
   coverageRules: CoverageRules;
@@ -63,6 +66,8 @@ export interface CreatePlanRequest {
   originalPrice?: number;
   taxRate?: number; // fraction (0.05 = 5%)
   taxInclusive?: boolean;
+  // 0-100; % off the delivery fee on voucher orders (100 = free delivery)
+  deliveryDiscountPercent?: number;
   hsnCode?: string;
   coverageRules: CoverageRules;
   applicableZoneIds?: string[];

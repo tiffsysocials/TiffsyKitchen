@@ -926,6 +926,16 @@ export interface Order {
     discountAmount: number;
     discountType: string;
   };
+  // Subscription delivery-fee discount (plan benefit on voucher orders).
+  // charges.deliveryFee is already net of this; originalDeliveryFee is the
+  // pre-discount fee. Absent on orders placed before the feature existed.
+  subscriptionDeliveryDiscount?: {
+    percent?: number;
+    amount?: number;
+    planId?: string;
+    planName?: string;
+    originalDeliveryFee?: number;
+  };
   grandTotal: number;
   voucherUsage: {
     voucherIds?: string[];

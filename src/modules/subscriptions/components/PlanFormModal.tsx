@@ -42,6 +42,9 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
   const [voucherValidityDays, setVoucherValidityDays] = useState(90);
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
+  // % off the delivery fee on voucher orders. Whole-number string ('50');
+  // '' = no discount (sent as 0).
+  const [deliveryDiscountPercent, setDeliveryDiscountPercent] = useState('');
   // GST on the voucher-pack purchase. Stored here as a PERCENT (e.g. '5');
   // converted to/from the backend's fraction (0.05) at the boundary.
   const [taxRatePercent, setTaxRatePercent] = useState('');
@@ -66,6 +69,10 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       setVoucherValidityDays(plan.voucherValidityDays);
       setPrice(plan.price.toString());
       setOriginalPrice(plan.originalPrice?.toString() || '');
+      // Legacy plans lack the field — show empty, not "undefined".
+      setDeliveryDiscountPercent(
+        plan.deliveryDiscountPercent ? plan.deliveryDiscountPercent.toString() : ''
+      );
       // Backend stores a fraction; show it as a percent.
       setTaxRatePercent(plan.taxRate ? (plan.taxRate * 100).toString() : '');
       setTaxInclusive(plan.taxInclusive ?? true);
@@ -87,6 +94,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
     setVoucherValidityDays(90);
     setPrice('');
     setOriginalPrice('');
+    setDeliveryDiscountPercent('');
     setTaxRatePercent('');
     setTaxInclusive(true);
     setHsnCode('');
@@ -146,6 +154,14 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       }
     }
 
+    if (deliveryDiscountPercent.trim()) {
+      const ddNum = parseInt(deliveryDiscountPercent, 10);
+      if (isNaN(ddNum) || ddNum < 0 || ddNum > 100) {
+        showWarning('Validation Error', 'Delivery discount must be a whole number between 0 and 100');
+        return false;
+      }
+    }
+
     const displayOrderNum = parseInt(displayOrder);
     if (!displayOrder || isNaN(displayOrderNum) || displayOrderNum < 1) {
       showWarning('Validation Error', 'Valid display order is required');
@@ -175,6 +191,12 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
         voucherValidityDays,
         price: parseFloat(price),
         originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
+        // Send 0 explicitly (never undefined) — updates are Partial, so an
+        // omitted key would silently keep a previously-set discount when the
+        // admin clears the field.
+        deliveryDiscountPercent: deliveryDiscountPercent.trim()
+          ? parseInt(deliveryDiscountPercent, 10)
+          : 0,
         // Convert percent → fraction for the backend (5 → 0.05).
         taxRate: taxRatePercent.trim() ? parseFloat(taxRatePercent) / 100 : 0,
         taxInclusive,
@@ -292,6 +314,24 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               keyboardType="numeric"
               placeholderTextColor="#9ca3af"
             />
+          </View>
+
+          {/* Delivery Discount */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Delivery Discount (%)</Text>
+            <TextInput
+              style={styles.input}
+              value={deliveryDiscountPercent}
+              onChangeText={(text) => setDeliveryDiscountPercent(text.replace(/[^0-9]/g, ''))}
+              placeholder="e.g., 50 (leave empty for none)"
+              keyboardType="numeric"
+              placeholderTextColor="#9ca3af"
+              maxLength={3}
+            />
+            <Text style={styles.helperText}>
+              Discount on the delivery fee when ordering with this plan's vouchers. 0 = no
+              discount, 100 = free delivery. Changes apply immediately to all subscribers.
+            </Text>
           </View>
 
           {/* Tax (GST) */}
@@ -458,6 +498,14 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               <Text style={styles.summaryText}>
                 Discount:{' '}
                 {Math.round(((parseFloat(originalPrice) - parseFloat(price)) / parseFloat(originalPrice)) * 100)}%
+              </Text>
+            )}
+            {deliveryDiscountPercent.trim() !== '' && parseInt(deliveryDiscountPercent, 10) > 0 && (
+              <Text style={styles.summaryText}>
+                Delivery:{' '}
+                {parseInt(deliveryDiscountPercent, 10) === 100
+                  ? 'FREE on voucher orders'
+                  : `${deliveryDiscountPercent}% off delivery fee on voucher orders`}
               </Text>
             )}
           </View>

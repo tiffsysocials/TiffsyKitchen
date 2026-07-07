@@ -75,6 +75,19 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({ plan
         </View>
       )}
 
+      {/* Delivery Discount Info */}
+      {!!plan.deliveryDiscountPercent && plan.deliveryDiscountPercent > 0 && (
+        <View style={styles.vouchersRow}>
+          <Icon name="local-shipping" size={16} color="#6b7280" />
+          <Text style={styles.vouchersText}>
+            {plan.deliveryDiscountPercent === 100
+              ? 'Free delivery'
+              : `${plan.deliveryDiscountPercent}% off delivery`}{' '}
+            on voucher orders
+          </Text>
+        </View>
+      )}
+
       {/* Features */}
       {plan.features && plan.features.length > 0 && (
         <View style={styles.featuresContainer}>

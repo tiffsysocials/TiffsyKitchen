@@ -19,6 +19,7 @@ import { AcceptOrderModal } from '../components/AcceptOrderModal';
 import { RejectOrderModal } from '../components/RejectOrderModal';
 import { UpdateStatusModal } from '../components/UpdateStatusModal';
 import { DeliveryStatusModal } from '../components/DeliveryStatusModal';
+import { OrderLocationMapModal } from '../components/OrderLocationMapModal';
 import OrderStatusDropdown from '../components/OrderStatusDropdown';
 import { formatDistanceToNow } from 'date-fns';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -81,6 +82,7 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
   const [showDeliveryStatusModal, setShowDeliveryStatusModal] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
   const [pendingDeliveryStatus, setPendingDeliveryStatus] = useState<OrderStatus | null>(null);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useAlert();
@@ -316,6 +318,34 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
     if (phone) {
       Linking.openURL(`tel:${phone}`);
     }
+  };
+
+  // Full delivery address as a single string (for the map label + Maps fallback).
+  const getDeliveryAddressString = (): string => {
+    const a = order?.deliveryAddress;
+    if (!a) return '';
+    return [a.addressLine1, a.addressLine2, a.locality, a.city, a.pincode]
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const deliveryCoords = order?.deliveryAddress?.coordinates;
+  const hasDeliveryCoords =
+    !!deliveryCoords &&
+    Number.isFinite(deliveryCoords.latitude) &&
+    Number.isFinite(deliveryCoords.longitude);
+
+  const handleViewOnMap = () => {
+    // Prefer the in-app map when the order carries coordinates; otherwise
+    // deep-link to the Google Maps app using the address text.
+    if (hasDeliveryCoords) {
+      setShowMapModal(true);
+      return;
+    }
+    const address = getDeliveryAddressString();
+    if (!address) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    Linking.openURL(url).catch(() => {});
   };
 
   const handleCancelOrder = (data: {
@@ -583,6 +613,13 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                     Contact: {order.deliveryAddress.contactPhone}
                   </Text>
                 )}
+                <TouchableOpacity
+                  style={styles.viewMapButton}
+                  onPress={handleViewOnMap}
+                  activeOpacity={0.85}>
+                  <MaterialIcons name="map" size={18} color="#FE8733" />
+                  <Text style={styles.viewMapButtonText}>View on Map</Text>
+                </TouchableOpacity>
               </>
             ) : (
               <Text style={styles.value}>No address provided</Text>
@@ -686,6 +723,22 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                   </Text>
                 </View>
               )}
+              {/* Subscription plan delivery discount — deliveryFee above is
+                  already net of this; shown so admins see why the fee is
+                  lower than the distance formula (or missing at 100%). */}
+              {!!order.subscriptionDeliveryDiscount?.amount && (
+                <View style={styles.priceRow}>
+                  <Text style={[styles.priceLabel, styles.discountText]}>
+                    Plan Delivery Discount ({order.subscriptionDeliveryDiscount.percent || 0}%
+                    {order.subscriptionDeliveryDiscount.planName
+                      ? ` · ${order.subscriptionDeliveryDiscount.planName}`
+                      : ''})
+                  </Text>
+                  <Text style={[styles.priceValue, styles.discountText]}>
+                    -₹{(order.subscriptionDeliveryDiscount.amount || 0).toFixed(2)}
+                  </Text>
+                </View>
+              )}
               {/* Phase 8 — surface the distance + source label admins need to
                   audit pricing discrepancies. Reads the per-order snapshot
                   (distanceMetadata) so it reflects what was charged, not
@@ -705,7 +758,19 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
                   parts.push(label);
                 }
                 if (dm.computedDeliveryFee != null && dm.computedDeliveryFee !== order.charges?.deliveryFee) {
-                  parts.push(`formula ₹${Number(dm.computedDeliveryFee).toFixed(2)}`);
+                  // A formula-vs-charged difference explained by the plan
+                  // delivery discount is NOT an anomaly — don't flag it as
+                  // one (it has its own labelled row above).
+                  const subDisc = order.subscriptionDeliveryDiscount;
+                  const explainedByPlanDiscount =
+                    !!subDisc?.amount &&
+                    Math.abs(
+                      dm.computedDeliveryFee -
+                        ((order.charges?.deliveryFee || 0) + subDisc.amount)
+                    ) < 0.01;
+                  if (!explainedByPlanDiscount) {
+                    parts.push(`formula ₹${Number(dm.computedDeliveryFee).toFixed(2)}`);
+                  }
                 }
                 if (dm.acceptanceZone) {
                   parts.push(dm.acceptanceZone === 'AUTO_ACCEPT' ? 'auto-accepted' : 'manual accept');
@@ -1141,6 +1206,15 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
         loading={cancelMutation.isPending}
         hasVouchers={order.voucherUsage?.voucherCount > 0}
       />
+
+      {hasDeliveryCoords && deliveryCoords && (
+        <OrderLocationMapModal
+          visible={showMapModal}
+          coordinates={deliveryCoords}
+          addressLabel={getDeliveryAddressString()}
+          onClose={() => setShowMapModal(false)}
+        />
+      )}
     </SafeAreaScreen>
   );
 };
@@ -1459,6 +1533,24 @@ const styles = StyleSheet.create({
   },
   trackOrderButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FE8733',
+  },
+  viewMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#FE8733',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  viewMapButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FE8733',
   },
