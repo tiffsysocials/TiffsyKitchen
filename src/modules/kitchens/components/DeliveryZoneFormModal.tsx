@@ -798,7 +798,7 @@ export const DeliveryZoneFormModal: React.FC<DeliveryZoneFormModalProps> = ({
               <View style={s.dpRowToggle}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text style={s.label}>Charge a Base Fee</Text>
-                  <Text style={s.fieldHint}>When OFF, the free-distance portion is truly free.</Text>
+                  <Text style={s.fieldHint}>Applies within the free radius only: OFF = free delivery inside the radius. Customers beyond the radius always pay base fee + per-km.</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => handleDistancePricingChange(tab, 'baseFeeEnabled', !dp.baseFeeEnabled)}

@@ -212,7 +212,7 @@ const OrderChargesScreen: React.FC<OrderChargesScreenProps> = ({ onMenuPress }) 
               <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-1 mr-2">
                   <Text className="text-sm font-medium text-gray-700">Charge a Base Fee</Text>
-                  <Text className="text-xs text-gray-500 mt-1">When OFF, the free-distance portion is truly free.</Text>
+                  <Text className="text-xs text-gray-500 mt-1">Applies within the free radius only: OFF = free delivery inside the radius. Customers beyond the radius always pay base fee + per-km.</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => updateNestedFee('distancePricing', 'baseFeeEnabled', !fees?.distancePricing?.baseFeeEnabled)}
