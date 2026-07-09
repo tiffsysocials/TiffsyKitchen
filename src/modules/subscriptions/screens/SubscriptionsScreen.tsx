@@ -56,7 +56,7 @@ interface SubscriptionsScreenProps {
 
 export const SubscriptionsScreen: React.FC<SubscriptionsScreenProps> = ({ onMenuPress }) => {
   console.log('SubscriptionsScreen: Component rendering');
-  const { showSuccess, showError, showConfirm } = useAlert();
+  const { showSuccess, showError, showWarning, showConfirm } = useAlert();
   const [activeTab, setActiveTab] = useState<TabType>('plans');
 
   // Plans state
@@ -157,8 +157,14 @@ export const SubscriptionsScreen: React.FC<SubscriptionsScreenProps> = ({ onMenu
   // Handle create/update plan
   const handleSavePlan = async (planData: CreatePlanRequest) => {
     if (selectedPlan) {
-      await updatePlan(selectedPlan._id, planData);
-      showSuccess('Success', 'Plan updated successfully');
+      const { warning } = await updatePlan(selectedPlan._id, planData);
+      if (warning) {
+        // Plan has active subscribers — backend saved editable fields but
+        // skipped locked ones (e.g. price). Tell the admin, don't fake success.
+        showWarning('Plan Updated (Partially)', warning);
+      } else {
+        showSuccess('Success', 'Plan updated successfully');
+      }
     } else {
       await createPlan(planData);
       showSuccess('Success', 'Plan created successfully');

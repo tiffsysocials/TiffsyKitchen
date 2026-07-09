@@ -39,7 +39,9 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
   // Vouchers per day is no longer editable in the form; every plan issues one
   // voucher per day. Retained for the request payload and summary math.
   const [vouchersPerDay, setVouchersPerDay] = useState(1);
-  const [voucherValidityDays, setVoucherValidityDays] = useState(90);
+  // String state (like durationDays) so the admin can clear/retype the field;
+  // parsed + validated on submit.
+  const [voucherValidityDays, setVoucherValidityDays] = useState('90');
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   // % off the delivery fee on voucher orders. Whole-number string ('50');
@@ -66,7 +68,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       setDescription(plan.description || '');
       setDurationDays(plan.durationDays.toString());
       setVouchersPerDay(plan.vouchersPerDay);
-      setVoucherValidityDays(plan.voucherValidityDays);
+      setVoucherValidityDays(plan.voucherValidityDays?.toString() || '90');
       setPrice(plan.price.toString());
       setOriginalPrice(plan.originalPrice?.toString() || '');
       // Legacy plans lack the field — show empty, not "undefined".
@@ -83,6 +85,10 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       setStatus(plan.status);
       setIncludesAddons(plan.coverageRules.includesAddons);
       setAddonValue(plan.coverageRules.addonValuePerVoucher?.toString() || '');
+    } else {
+      // Plan cleared (edit closed without saving) — reset so the next
+      // "Create Plan" doesn't open pre-filled with the last edited plan.
+      resetForm();
     }
   }, [plan]);
 
@@ -91,7 +97,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
     setDescription('');
     setDurationDays('7');
     setVouchersPerDay(1);
-    setVoucherValidityDays(90);
+    setVoucherValidityDays('90');
     setPrice('');
     setOriginalPrice('');
     setDeliveryDiscountPercent('');
@@ -129,6 +135,12 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
     const durationNum = parseInt(durationDays);
     if (!durationDays || isNaN(durationNum) || durationNum < 1) {
       showWarning('Validation Error', 'Valid duration (days) is required');
+      return false;
+    }
+
+    const validityNum = parseInt(voucherValidityDays);
+    if (!voucherValidityDays || isNaN(validityNum) || validityNum < 1 || validityNum > 365) {
+      showWarning('Validation Error', 'Voucher validity must be between 1 and 365 days');
       return false;
     }
 
@@ -188,7 +200,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
         description: description.trim() || undefined,
         durationDays: parseInt(durationDays),
         vouchersPerDay,
-        voucherValidityDays,
+        voucherValidityDays: parseInt(voucherValidityDays),
         price: parseFloat(price),
         originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
         // Send 0 explicitly (never undefined) — updates are Partial, so an
@@ -282,8 +294,8 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
             <Text style={styles.label}>Voucher Validity (Days) *</Text>
             <TextInput
               style={styles.input}
-              value={voucherValidityDays.toString()}
-              onChangeText={(text) => setVoucherValidityDays(parseInt(text) || 90)}
+              value={voucherValidityDays}
+              onChangeText={(text) => setVoucherValidityDays(text.replace(/[^0-9]/g, ''))}
               placeholder="90"
               keyboardType="numeric"
               placeholderTextColor="#9ca3af"
@@ -483,7 +495,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
             <Text style={styles.summaryText}>
               Total Vouchers: {(parseInt(durationDays) || 0) * vouchersPerDay}
             </Text>
-            <Text style={styles.summaryText}>Valid for: {voucherValidityDays} days</Text>
+            <Text style={styles.summaryText}>Valid for: {parseInt(voucherValidityDays) || 0} days</Text>
             {taxRatePercent.trim() && price && parseFloat(taxRatePercent) > 0 && (
               <Text style={styles.summaryText}>
                 {taxInclusive

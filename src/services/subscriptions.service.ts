@@ -62,11 +62,21 @@ export const createPlan = async (planData: CreatePlanRequest): Promise<Subscript
 };
 
 /**
- * Update existing plan
+ * Update existing plan.
+ *
+ * `warning` is set by the backend when the plan has active subscribers and
+ * some submitted fields (e.g. price) were locked and silently skipped —
+ * callers should surface it or the admin thinks every field saved.
  */
-export const updatePlan = async (planId: string, planData: UpdatePlanRequest): Promise<SubscriptionPlan> => {
-  const response = await apiService.put<{ plan: SubscriptionPlan }>(`/api/subscriptions/plans/${planId}`, planData);
-  return response.data.plan;
+export const updatePlan = async (
+  planId: string,
+  planData: UpdatePlanRequest
+): Promise<{ plan: SubscriptionPlan; warning?: string }> => {
+  const response = await apiService.put<{ plan: SubscriptionPlan; warning?: string }>(
+    `/api/subscriptions/plans/${planId}`,
+    planData
+  );
+  return response.data;
 };
 
 /**
