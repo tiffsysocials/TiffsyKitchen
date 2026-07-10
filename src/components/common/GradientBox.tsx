@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ViewStyle, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 
 interface GradientBoxProps {
   children?: React.ReactNode;
-  style?: ViewStyle;
+  // StyleProp so callers can pass style arrays: [styles.header, { paddingTop: 8 }]
+  style?: StyleProp<ViewStyle>;
 }
 
 export const GradientBox: React.FC<GradientBoxProps> = ({ children, style }) => {

@@ -58,21 +58,23 @@ export interface PlanListResponse {
 
 export interface CreatePlanRequest {
   name: string;
-  description?: string;
+  // Optional text/number fields: null explicitly CLEARS the stored value on
+  // update; undefined/omitted keeps it (backend updates are Partial).
+  description?: string | null;
   durationDays: number;
   vouchersPerDay: number;
   voucherValidityDays: number;
   price: number;
-  originalPrice?: number;
+  originalPrice?: number | null;
   taxRate?: number; // fraction (0.05 = 5%)
   taxInclusive?: boolean;
   // 0-100; % off the delivery fee on voucher orders (100 = free delivery)
   deliveryDiscountPercent?: number;
-  hsnCode?: string;
+  hsnCode?: string | null;
   coverageRules: CoverageRules;
   applicableZoneIds?: string[];
   displayOrder: number;
-  badge?: string;
+  badge?: string | null;
   features: string[];
   status?: PlanStatus;
   validFrom?: string;

@@ -185,6 +185,16 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
       showWarning('Validation Error', 'At least one feature is required');
       return false;
     }
+    // Mirror the backend limits so the admin gets a readable message instead
+    // of a raw Joi validation error.
+    if (filteredFeatures.length > 10) {
+      showWarning('Validation Error', 'Maximum 10 features allowed');
+      return false;
+    }
+    if (filteredFeatures.some((f) => f.trim().length > 100)) {
+      showWarning('Validation Error', 'Each feature must be 100 characters or less');
+      return false;
+    }
 
     return true;
   };
@@ -195,34 +205,39 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
     setLoading(true);
 
     try {
+      // Cleared optional fields are sent as null (not undefined): updates are
+      // Partial on the backend, so an omitted key silently KEEPS the old
+      // value — null is what actually clears it.
       const planData: CreatePlanRequest = {
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: description.trim() || null,
         durationDays: parseInt(durationDays),
         vouchersPerDay,
         voucherValidityDays: parseInt(voucherValidityDays),
         price: parseFloat(price),
-        originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
-        // Send 0 explicitly (never undefined) — updates are Partial, so an
-        // omitted key would silently keep a previously-set discount when the
-        // admin clears the field.
+        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
+        // Send 0 explicitly for the same clearing reason.
         deliveryDiscountPercent: deliveryDiscountPercent.trim()
           ? parseInt(deliveryDiscountPercent, 10)
           : 0,
         // Convert percent → fraction for the backend (5 → 0.05).
         taxRate: taxRatePercent.trim() ? parseFloat(taxRatePercent) / 100 : 0,
         taxInclusive,
-        hsnCode: hsnCode.trim() || undefined,
+        hsnCode: hsnCode.trim() || null,
         coverageRules: {
           includesAddons,
           addonValuePerVoucher: includesAddons && addonValue ? parseFloat(addonValue) : null,
           mealTypes: ['BOTH'],
         },
-        applicableZoneIds: [],
+        // applicableZoneIds deliberately NOT sent — the form doesn't expose
+        // zone targeting, and posting [] would wipe any targeting set
+        // elsewhere.
         displayOrder: parseInt(displayOrder),
-        badge: badge.trim() || undefined,
+        badge: badge.trim() || null,
         features: features.filter((f) => f.trim() !== ''),
-        status,
+        // An archived plan's status is immutable; echoing "ARCHIVED" back is
+        // pointless, so only send real ACTIVE/INACTIVE choices.
+        ...(status === 'ACTIVE' || status === 'INACTIVE' ? { status } : {}),
       };
 
       await onSubmit(planData);
@@ -258,6 +273,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               onChangeText={setName}
               placeholder="e.g., Weekly Starter"
               placeholderTextColor="#9ca3af"
+              maxLength={100}
             />
           </View>
 
@@ -272,6 +288,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={3}
+              maxLength={500}
             />
           </View>
 
@@ -405,6 +422,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
               onChangeText={setBadge}
               placeholder="e.g., BEST VALUE, POPULAR"
               placeholderTextColor="#9ca3af"
+              maxLength={30}
             />
           </View>
 
