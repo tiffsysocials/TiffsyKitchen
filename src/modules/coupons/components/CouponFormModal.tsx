@@ -30,7 +30,11 @@ import {
   TARGET_USER_OPTIONS,
   MENU_TYPE_OPTIONS,
   MEAL_MENU_ONLY_TYPES,
+  APPLICABLE_FOR_OPTIONS,
+  PLAN_PURCHASE_TYPES,
 } from '../models/types';
+import { getPlans } from '../../../services/subscriptions.service';
+import { SubscriptionPlan } from '../../../types/subscription.types';
 
 interface CouponFormModalProps {
   visible: boolean;
@@ -69,7 +73,13 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
   const [excludedKitchenPickerVisible, setExcludedKitchenPickerVisible] = useState(false);
   const [customerPickerVisible, setCustomerPickerVisible] = useState(false);
 
+  // Plans list for PLAN_PURCHASE scoping (fetched lazily on first need)
+  const [plansList, setPlansList] = useState<SubscriptionPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+
   const isEditMode = coupon !== null;
+  const appliesToOrder = formData.applicableFor.includes('ORDER');
+  const appliesToPlan = formData.applicableFor.includes('PLAN_PURCHASE');
 
   useEffect(() => {
     if (visible) {
@@ -87,6 +97,11 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
           extraVoucherExpiryDays: coupon.extraVoucherExpiryDays?.toString() || '30',
           minOrderValue: coupon.minOrderValue?.toString() || '0',
           minItems: coupon.minItems?.toString() || '0',
+          applicableFor:
+            coupon.applicableFor && coupon.applicableFor.length > 0
+              ? coupon.applicableFor
+              : ['ORDER'],
+          applicablePlanIds: coupon.applicablePlanIds || [],
           applicableMenuTypes: coupon.applicableMenuTypes || [],
           applicableKitchenIds: coupon.applicableKitchenIds || [],
           applicableZoneIds: coupon.applicableZoneIds || [],
@@ -112,12 +127,27 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
     }
   }, [visible, coupon]);
 
-  // Auto-lock menu types for MEAL_MENU-only discount types
+  // Auto-lock menu types for MEAL_MENU-only discount types (order coupons
+  // only — menu types don't exist for plan-purchase-only coupons).
   useEffect(() => {
-    if (MEAL_MENU_ONLY_TYPES.includes(formData.discountType)) {
+    if (
+      formData.applicableFor.includes('ORDER') &&
+      MEAL_MENU_ONLY_TYPES.includes(formData.discountType)
+    ) {
       setFormData(prev => ({ ...prev, applicableMenuTypes: ['MEAL_MENU'] }));
     }
-  }, [formData.discountType]);
+  }, [formData.discountType, formData.applicableFor]);
+
+  // Lazily fetch plans when the coupon targets plan purchases
+  useEffect(() => {
+    if (!visible || !appliesToPlan || plansList.length > 0 || plansLoading) return;
+    setPlansLoading(true);
+    getPlans({ limit: 100 })
+      .then((resp) => setPlansList(resp?.plans || []))
+      .catch(() => setPlansList([]))
+      .finally(() => setPlansLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, appliesToPlan]);
 
   const handleChange = (field: keyof CouponFormState, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -163,8 +193,25 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
       newErrors.specificUserIds = 'At least one user ID is required';
     }
 
-    if (!formData.applicableMenuTypes || formData.applicableMenuTypes.length === 0) {
+    if (formData.applicableFor.length === 0) {
+      newErrors.applicableFor = 'Select what this coupon applies to';
+    }
+
+    // Menu types are an order-side concept — only required for order coupons.
+    if (
+      formData.applicableFor.includes('ORDER') &&
+      (!formData.applicableMenuTypes || formData.applicableMenuTypes.length === 0)
+    ) {
       newErrors.applicableMenuTypes = 'Select at least one menu type';
+    }
+
+    // Plan purchases only support money-off and bonus-voucher coupons.
+    if (
+      formData.applicableFor.includes('PLAN_PURCHASE') &&
+      !PLAN_PURCHASE_TYPES.includes(formData.discountType)
+    ) {
+      newErrors.applicableFor =
+        'Plan-purchase coupons must be Percentage, Flat Amount, or Extra Vouchers';
     }
 
     setErrors(newErrors);
@@ -191,7 +238,14 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
       discountType: formData.discountType,
       minOrderValue: parseInt(formData.minOrderValue) || 0,
       minItems: parseInt(formData.minItems) || 0,
-      applicableMenuTypes: formData.applicableMenuTypes,
+      applicableFor: formData.applicableFor,
+      applicablePlanIds: formData.applicableFor.includes('PLAN_PURCHASE')
+        ? formData.applicablePlanIds
+        : [],
+      // Menu types only matter for order coupons; plan-only coupons send [].
+      applicableMenuTypes: formData.applicableFor.includes('ORDER')
+        ? formData.applicableMenuTypes
+        : [],
       applicableKitchenIds: formData.applicableKitchenIds,
       applicableZoneIds: formData.applicableZoneIds,
       excludedKitchenIds: formData.excludedKitchenIds,
@@ -459,6 +513,78 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
             {renderSectionHeader('Applicability', 'applicability', 'filter-variant')}
             {sections.applicability && (
               <View style={styles.sectionContent}>
+                <Text style={styles.label}>Applies To</Text>
+                <View style={styles.chipGroup}>
+                  {APPLICABLE_FOR_OPTIONS.map((option) => {
+                    const isSelected = formData.applicableFor.includes(option.value);
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[styles.chip, isSelected && styles.chipActive]}
+                        onPress={() => {
+                          const next = isSelected
+                            ? formData.applicableFor.filter(v => v !== option.value)
+                            : [...formData.applicableFor, option.value];
+                          handleChange('applicableFor', next);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {appliesToPlan && !PLAN_PURCHASE_TYPES.includes(formData.discountType) && (
+                  <Text style={[styles.hintText, { color: colors.error }]}>
+                    Plan-purchase coupons must be Percentage, Flat Amount, or Extra Vouchers
+                  </Text>
+                )}
+                {renderError('applicableFor')}
+
+                {appliesToPlan && (
+                  <>
+                    <Text style={styles.label}>Applicable Plans</Text>
+                    {plansLoading ? (
+                      <Text style={styles.hintText}>Loading plans…</Text>
+                    ) : plansList.length === 0 ? (
+                      <Text style={styles.hintText}>No plans found — coupon will apply to all plans</Text>
+                    ) : (
+                      <View>
+                        <Text style={styles.hintText}>
+                          {formData.applicablePlanIds.length === 0
+                            ? 'None selected — applies to ALL plans'
+                            : `${formData.applicablePlanIds.length} plan(s) selected`}
+                        </Text>
+                        {plansList.map((p) => {
+                          const checked = formData.applicablePlanIds.includes(p._id);
+                          return (
+                            <TouchableOpacity
+                              key={p._id}
+                              style={[styles.chip, checked && styles.chipActive, { marginTop: 6, alignSelf: 'flex-start' }]}
+                              onPress={() => {
+                                const next = checked
+                                  ? formData.applicablePlanIds.filter(id => id !== p._id)
+                                  : [...formData.applicablePlanIds, p._id];
+                                handleChange('applicablePlanIds', next);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.chipText, checked && styles.chipTextActive]}>
+                                {p.name} · ₹{p.price}
+                              </Text>
+                              {checked && <Icon name="check" size={12} color="#fff" />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {appliesToOrder && (
+                <>
                 <Text style={styles.label}>Menu Types</Text>
                 <View style={styles.chipGroup}>
                   {MENU_TYPE_OPTIONS.map((option) => {
@@ -531,8 +657,12 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                   </Text>
                   <Icon name="chevron-right" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
+                </>
+                )}
 
-                <Text style={styles.label}>Min Order Value (Rs.)</Text>
+                <Text style={styles.label}>
+                  {appliesToPlan && !appliesToOrder ? 'Min Pack Value (Rs.)' : 'Min Order Value (Rs.)'}
+                </Text>
                 <TextInput
                   style={styles.input}
                   value={formData.minOrderValue}
@@ -542,6 +672,8 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                   keyboardType="numeric"
                 />
 
+                {appliesToOrder && (
+                <>
                 <Text style={styles.label}>Min Items</Text>
                 <TextInput
                   style={styles.input}
@@ -551,6 +683,8 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                 />
+                </>
+                )}
               </View>
             )}
 
@@ -741,7 +875,11 @@ export const CouponFormModal: React.FC<CouponFormModalProps> = ({
           <View style={styles.pickerModalContent}>
             <Text style={styles.pickerModalTitle}>Select Discount Type</Text>
             <FlatList
-              data={DISCOUNT_TYPE_OPTIONS}
+              data={
+                appliesToPlan
+                  ? DISCOUNT_TYPE_OPTIONS.filter(o => PLAN_PURCHASE_TYPES.includes(o.value))
+                  : DISCOUNT_TYPE_OPTIONS
+              }
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
                 <TouchableOpacity

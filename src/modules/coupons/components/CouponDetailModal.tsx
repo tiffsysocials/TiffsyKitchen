@@ -173,6 +173,21 @@ export const CouponDetailModal: React.FC<CouponDetailModalProps> = ({
                 {coupon.applicableMenuTypes && coupon.applicableMenuTypes.length > 0 && (
                   renderInfoRow('Menu Types', coupon.applicableMenuTypes.map(t => t === 'MEAL_MENU' ? 'Meal' : 'On Demand').join(', '), 'food')
                 )}
+                {renderInfoRow(
+                  'Applies To',
+                  (coupon.applicableFor && coupon.applicableFor.length > 0 ? coupon.applicableFor : ['ORDER'])
+                    .map(v => (v === 'PLAN_PURCHASE' ? 'Plan Purchase' : 'Food Orders'))
+                    .join(', '),
+                  'tag-multiple'
+                )}
+                {coupon.applicableFor?.includes('PLAN_PURCHASE') &&
+                  renderInfoRow(
+                    'Plans',
+                    coupon.applicablePlanIds && coupon.applicablePlanIds.length > 0
+                      ? `${coupon.applicablePlanIds.length} selected`
+                      : 'All plans',
+                    'ticket-confirmation'
+                  )}
               </View>
 
               {/* Terms */}

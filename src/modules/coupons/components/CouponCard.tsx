@@ -121,10 +121,18 @@ export const CouponCard: React.FC<CouponCardProps> = ({
         </View>
       </View>
 
-      {/* Menu Types */}
-      {coupon.applicableMenuTypes && coupon.applicableMenuTypes.length > 0 && (
+      {/* Applies-to + Menu Types */}
+      {((coupon.applicableMenuTypes && coupon.applicableMenuTypes.length > 0) ||
+        coupon.applicableFor?.includes('PLAN_PURCHASE')) && (
         <View style={styles.menuTypesRow}>
-          {coupon.applicableMenuTypes.map((mt) => (
+          {coupon.applicableFor?.includes('PLAN_PURCHASE') && (
+            <View style={[styles.menuTypeBadge, { backgroundColor: '#EDE9FE' }]}>
+              <Text style={[styles.menuTypeText, { color: '#7C3AED' }]}>
+                Plan Purchase{coupon.applicablePlanIds && coupon.applicablePlanIds.length > 0 ? ` (${coupon.applicablePlanIds.length})` : ' (all plans)'}
+              </Text>
+            </View>
+          )}
+          {(coupon.applicableMenuTypes || []).map((mt) => (
             <View key={mt} style={styles.menuTypeBadge}>
               <Text style={styles.menuTypeText}>
                 {mt === 'MEAL_MENU' ? 'Meal' : 'On Demand'}

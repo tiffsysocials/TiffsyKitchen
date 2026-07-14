@@ -33,6 +33,8 @@ export interface CouponFormState {
   extraVoucherExpiryDays: string;
   minOrderValue: string;
   minItems: string;
+  applicableFor: ('ORDER' | 'PLAN_PURCHASE')[];
+  applicablePlanIds: string[];
   applicableMenuTypes: string[];
   applicableKitchenIds: string[];
   applicableZoneIds: string[];
@@ -64,6 +66,8 @@ export const DEFAULT_FORM_STATE: CouponFormState = {
   extraVoucherExpiryDays: '30',
   minOrderValue: '0',
   minItems: '0',
+  applicableFor: ['ORDER'],
+  applicablePlanIds: [],
   applicableMenuTypes: [],
   applicableKitchenIds: [],
   applicableZoneIds: [],
@@ -124,6 +128,19 @@ export const MEAL_MENU_ONLY_TYPES: DiscountType[] = [
   'FREE_DELIVERY',
   'FREE_ADDON_COUNT',
   'FREE_ADDON_VALUE',
+  'FREE_EXTRA_VOUCHER',
+];
+
+// What the coupon redeems against
+export const APPLICABLE_FOR_OPTIONS: { value: 'ORDER' | 'PLAN_PURCHASE'; label: string; description: string }[] = [
+  { value: 'ORDER', label: 'Food Orders', description: 'Cart / scheduled meal orders' },
+  { value: 'PLAN_PURCHASE', label: 'Plan Purchase', description: 'Voucher-pack (meal plan) purchases' },
+];
+
+// Discount types valid on plan purchases (no delivery/addons at purchase time)
+export const PLAN_PURCHASE_TYPES: DiscountType[] = [
+  'PERCENTAGE',
+  'FLAT',
   'FREE_EXTRA_VOUCHER',
 ];
 

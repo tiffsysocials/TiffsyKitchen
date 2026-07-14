@@ -681,6 +681,10 @@ export interface Coupon {
   minOrderValue?: number;
   minItems?: number;
   applicableMenuTypes?: string[];
+  /** What the coupon redeems against: ORDER (default) and/or PLAN_PURCHASE (voucher packs). */
+  applicableFor?: ('ORDER' | 'PLAN_PURCHASE')[];
+  /** PLAN_PURCHASE scoping — empty means all plans. */
+  applicablePlanIds?: string[];
   applicableKitchenIds?: string[];
   applicableZoneIds?: string[];
   /** Phase 5: per-kitchen DeliveryZone restriction. Coexists with applicableZoneIds (OR semantics). */
@@ -755,6 +759,10 @@ export interface CreateCouponRequest {
   minOrderValue?: number;
   minItems?: number;
   applicableMenuTypes?: string[];
+  /** What the coupon redeems against: ORDER (default) and/or PLAN_PURCHASE (voucher packs). */
+  applicableFor?: ('ORDER' | 'PLAN_PURCHASE')[];
+  /** PLAN_PURCHASE scoping — empty means all plans. */
+  applicablePlanIds?: string[];
   applicableKitchenIds?: string[];
   applicableZoneIds?: string[];
   /** Phase 5: per-kitchen DeliveryZone restriction (request side) */
