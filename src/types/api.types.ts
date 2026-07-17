@@ -336,6 +336,10 @@ export interface Kitchen {
   /** Phase 3 migration flag — true if Default Zone was auto-created and needs admin review. */
   needsZoneReview?: boolean;
   operatingHours: OperatingHours;
+  /** Recurring weekly off-days (lowercase day names, e.g. ["sunday"]). */
+  closedDays?: string[];
+  /** One-off holiday closures as "YYYY-MM-DD" IST strings. */
+  closedDates?: string[];
   contactPhone?: string;
   contactEmail?: string;
   ownerName?: string;

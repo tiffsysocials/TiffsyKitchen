@@ -191,6 +191,7 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
           cuisineTypes: cuisineTypesArray,
           address,
           operatingHours,
+          closedDays: formData.closedDays,
           contactPhone: formData.contactPhone,
           contactEmail: formData.contactEmail,
         };
@@ -241,6 +242,7 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
           address,
           serviceableAreas: formData.serviceableAreas,
           operatingHours,
+          closedDays: formData.closedDays,
           // Add default flags for new kitchens
           authorizedFlag: false,
           premiumFlag: false,

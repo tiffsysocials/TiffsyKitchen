@@ -45,6 +45,7 @@ export interface KitchenFormState {
   onDemandStartTime: string;
   onDemandEndTime: string;
   isAlwaysOpen: boolean;
+  closedDays: string[];
   contactPhone: string;
   contactEmail: string;
   ownerName: string;
@@ -105,6 +106,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
     onDemandStartTime: '10:00',
     onDemandEndTime: '22:00',
     isAlwaysOpen: false,
+    closedDays: [],
     contactPhone: '',
     contactEmail: '',
     ownerName: '',
@@ -153,6 +155,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         onDemandStartTime: kitchen.operatingHours.onDemand?.startTime || '10:00',
         onDemandEndTime: kitchen.operatingHours.onDemand?.endTime || '22:00',
         isAlwaysOpen: kitchen.operatingHours.onDemand?.isAlwaysOpen || false,
+        closedDays: Array.isArray(kitchen.closedDays) ? [...kitchen.closedDays] : [],
         contactPhone: kitchen.contactPhone || '',
         contactEmail: kitchen.contactEmail || '',
         ownerName: kitchen.ownerName || '',
@@ -185,6 +188,7 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
         onDemandStartTime: '10:00',
         onDemandEndTime: '22:00',
         isAlwaysOpen: false,
+        closedDays: [],
         contactPhone: '',
         contactEmail: '',
         ownerName: '',
@@ -991,6 +995,46 @@ export const KitchenFormModal: React.FC<KitchenFormModalProps> = ({
                 />
                 <Text style={styles.checkboxLabel}>Always Open (24/7)</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Weekly Closures */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Weekly Closures</Text>
+              <Text style={styles.label}>Closed every week on</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const).map((d) => {
+                  const active = formData.closedDays.includes(d);
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      disabled={loading}
+                      onPress={() =>
+                        updateField(
+                          'closedDays',
+                          active
+                            ? formData.closedDays.filter((x) => x !== d)
+                            : [...formData.closedDays, d],
+                        )
+                      }
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: active ? colors.primary : '#D1D5DB',
+                        backgroundColor: active ? colors.primary : '#FFFFFF',
+                      }}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#FFFFFF' : '#374151', textTransform: 'capitalize' }}>
+                        {d.slice(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={styles.hint}>
+                On closed days no orders, scheduled meals or auto-orders are served. One-off holiday
+                dates can be set from the kitchen's detail page.
+              </Text>
             </View>
 
             {/* Contact Information */}
