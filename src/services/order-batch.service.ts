@@ -137,12 +137,16 @@ export const orderBatchService = {
   async cancelOrder(
     orderId: string,
     reason: string,
-    initiateRefund: boolean = true
+    issueRefund: boolean = true,
+    restoreVouchers: boolean = true
   ): Promise<ApiResponse> {
     try {
+      // Field names must match adminCancelOrderSchema exactly — the backend
+      // validates with stripUnknown, so a misnamed flag is dropped silently and
+      // falls back to its default instead of erroring.
       const response = await apiService.patch<ApiResponse>(
         `/api/orders/${orderId}/admin-cancel`,
-        { reason, initiateRefund }
+        { reason, issueRefund, restoreVouchers }
       );
       return response;
     } catch (error: any) {

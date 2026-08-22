@@ -276,7 +276,7 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
       issueRefund: boolean;
       restoreVouchers: boolean;
     }) => ordersService.cancelOrder(orderId, data),
-    onSuccess: (data, variables) => {
+    onSuccess: (data: any, variables) => {
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orderStats'] });
@@ -286,18 +286,27 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
         ? `\n${data.vouchersRestored} voucher(s) restored`
         : '';
 
-      // If admin asked to restore vouchers but backend restored zero, warn
+      // Vouchers that had already expired can't be restored usefully — the
+      // backend mints fresh ones instead. That's a success, not a gap.
+      const replaced = data.replacementVouchersIssued ?? 0;
+      const replacementLine = replaced > 0
+        ? `\n${replaced} expired voucher(s) replaced with new ones`
+        : '';
+
+      // A real gap now means: asked to restore, the order had vouchers, and
+      // nothing came back either restored or replaced.
       const voucherRestoreFailed =
         variables.restoreVouchers &&
         (order?.voucherUsage?.voucherCount ?? 0) > 0 &&
-        (!data.vouchersRestored || data.vouchersRestored === 0);
-      const warningLine = voucherRestoreFailed
-        ? '\n⚠️ Voucher restore returned 0 — check voucher status on user profile.'
+        !data.vouchersRestored &&
+        replaced === 0;
+      const warningLine = (voucherRestoreFailed || data.voucherRestorationFailed)
+        ? '\n⚠️ Some vouchers were neither restored nor replaced — check the user profile.'
         : '';
 
       showSuccess(
         'Order Cancelled',
-        `Order cancelled successfully${refundLine}${voucherLine}${warningLine}`,
+        `Order cancelled successfully${refundLine}${voucherLine}${replacementLine}${warningLine}`,
         () => setShowCancelModal(false),
       );
     },
@@ -387,6 +396,11 @@ const OrderDetailAdminScreen: React.FC<OrderDetailAdminScreenProps> = ({
     // Kitchen staff cannot cancel orders, only admins can
     if (isKitchenMode) return false;
     const cancellableStatuses: OrderStatus[] = [
+      // Bulk-scheduled meals and auto-orders sit in SCHEDULED until their
+      // delivery day. Omitting it here left admins with no cancel path for them
+      // except the plain status dropdown, which carries no refund or voucher
+      // controls — that is how customers silently lost paid-for meals.
+      'SCHEDULED',
       'PENDING_KITCHEN_ACCEPTANCE',
       'PLACED',
       'ACCEPTED',
