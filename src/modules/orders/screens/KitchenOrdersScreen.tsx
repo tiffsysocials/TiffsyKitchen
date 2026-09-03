@@ -24,6 +24,7 @@ import { AcceptOrderModal } from '../components/AcceptOrderModal';
 import { RejectOrderModal } from '../components/RejectOrderModal';
 import { Calendar } from 'react-native-calendars';
 import { isAutoOrder, isAutoAccepted } from '../../../utils/autoAccept';
+import { groupOrdersByArea } from '../utils/areaGrouping';
 import { useAlert } from '../../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GradientBox } from '../../../components/common/GradientBox';
@@ -141,6 +142,9 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'FAILED';
 
   // Filter orders for auto-orders view, exclude SCHEDULED from "All"
+  // Group the run into delivery-area sections instead of one flat chronological list.
+  const [groupByArea, setGroupByArea] = useState(true);
+
   const filteredOrders = useMemo(() => {
     const orders = ordersData?.orders || [];
     if (selectedStatus === 'FAILED_PAYMENTS') {
@@ -425,6 +429,40 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     }
   };
 
+  /**
+   * The list stays a FlatList (rather than becoming a SectionList) so
+   * onEndReached paging and the refresh control keep working untouched. When
+   * grouping is on, area headers are interleaved as rows.
+   */
+  type ListRow =
+    | { type: 'header'; key: string; title: string; count: number }
+    | { type: 'order'; order: Order };
+
+  const listRows = useMemo<ListRow[]>(() => {
+    if (!groupByArea) {
+      return filteredOrders.map(order => ({ type: 'order', order } as ListRow));
+    }
+    return groupOrdersByArea(filteredOrders).flatMap(section => [
+      { type: 'header', key: section.key, title: section.title, count: section.orders.length } as ListRow,
+      ...section.orders.map(order => ({ type: 'order', order } as ListRow)),
+    ]);
+  }, [filteredOrders, groupByArea]);
+
+  const renderRow = ({ item }: { item: ListRow }) => {
+    if (item.type === 'header') {
+      return (
+        <View style={styles.areaHeader}>
+          <Icon name="place" size={16} color="#ea580c" />
+          <Text style={styles.areaHeaderText} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.areaCountPill}>
+            <Text style={styles.areaCountText}>{item.count}</Text>
+          </View>
+        </View>
+      );
+    }
+    return renderOrderItem({ item: item.order });
+  };
+
   const renderOrderItem = ({ item }: { item: Order }) => {
     return (
       <OrderCardKitchen
@@ -523,13 +561,30 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
         </GradientBox>
       )}
 
-      {/* Selected Date Display */}
-      {selectedDate && (
-        <View style={styles.selectedDateContainer}>
-          <Icon name="event" size={18} color="#FE8733" />
-          <Text style={styles.selectedDateText}>{formatDisplayDate(selectedDate)}</Text>
-        </View>
-      )}
+      {/* Selected date + area grouping, side by side */}
+      <View style={styles.selectedDateContainer}>
+        {selectedDate ? (
+          <>
+            <Icon name="event" size={18} color="#FE8733" />
+            <Text style={styles.selectedDateText}>{formatDisplayDate(selectedDate)}</Text>
+          </>
+        ) : null}
+
+        {/* On by default; staff can switch back to a flat chronological run. */}
+        <TouchableOpacity
+          style={[styles.areaToggle, groupByArea && styles.areaToggleActive]}
+          onPress={() => setGroupByArea(prev => !prev)}
+          activeOpacity={0.7}>
+          <Icon
+            name={groupByArea ? 'place' : 'format-list-bulleted'}
+            size={16}
+            color={groupByArea ? '#FFFFFF' : '#6B7280'}
+          />
+          <Text style={[styles.areaToggleText, groupByArea && styles.areaToggleTextActive]}>
+            {groupByArea ? 'By Area' : 'By Time'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Meal Window Filters */}
       <View style={styles.filterSection}>
@@ -588,9 +643,11 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
       {/* Orders List */}
       <View style={styles.ordersSection}>
         <FlatList
-          data={filteredOrders}
-          renderItem={renderOrderItem}
-          keyExtractor={(item) => item._id}
+          data={listRows}
+          renderItem={renderRow}
+          keyExtractor={(item) =>
+            item.type === 'header' ? `area-${item.key}` : item.order._id
+          }
           refreshControl={
             <RefreshControl
               refreshing={isLoading && !isFetching}
@@ -826,6 +883,62 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFFFFF',
+  },
+  areaToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  areaToggleActive: {
+    backgroundColor: '#ea580c',
+    borderColor: '#ea580c',
+  },
+  areaToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  areaToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  areaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+    marginBottom: 4,
+    backgroundColor: '#fff7ed',
+    borderLeftWidth: 3,
+    borderLeftColor: '#ea580c',
+    borderRadius: 4,
+  },
+  areaHeaderText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9a3412',
+  },
+  areaCountPill: {
+    minWidth: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#ea580c',
+    alignItems: 'center',
+  },
+  areaCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   ordersSection: {
     flex: 1,

@@ -18,6 +18,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+import { groupOrdersByArea } from '../utils/areaGrouping';
+
 interface ExpandableKitchenOrderCardProps {
   kitchenId: string;
   kitchenName: string;
@@ -29,6 +31,8 @@ interface ExpandableKitchenOrderCardProps {
   selectionMode?: boolean;
   selectedOrderIds?: Set<string>;
   onOrderSelect?: (orderId: string) => void;
+  /** When set, orders are split into delivery-area sections instead of one flat run. */
+  groupByArea?: boolean;
 }
 
 const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
@@ -42,6 +46,7 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
   selectionMode = false,
   selectedOrderIds,
   onOrderSelect,
+  groupByArea = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [rotateAnim] = useState(new Animated.Value(0));
@@ -150,22 +155,41 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
               <Text style={styles.emptyText}>No orders for this kitchen</Text>
             </View>
           ) : (
-            orders.map((order) => (
-              <OrderCardAdminImproved
-                key={order._id}
-                order={order}
-                onPress={() =>
-                  selectionMode && onOrderSelect
-                    ? onOrderSelect(order._id)
-                    : onOrderPress(order._id)
-                }
-                onStatusChange={onStatusChange}
-                isUpdating={updatingOrderId === order._id}
-                selectionMode={selectionMode}
-                isSelected={selectedOrderIds?.has(order._id) ?? false}
-                onSelect={() => onOrderSelect?.(order._id)}
-              />
-            ))
+            (() => {
+              const renderOrder = (order: Order) => (
+                <OrderCardAdminImproved
+                  key={order._id}
+                  order={order}
+                  onPress={() =>
+                    selectionMode && onOrderSelect
+                      ? onOrderSelect(order._id)
+                      : onOrderPress(order._id)
+                  }
+                  onStatusChange={onStatusChange}
+                  isUpdating={updatingOrderId === order._id}
+                  selectionMode={selectionMode}
+                  isSelected={selectedOrderIds?.has(order._id) ?? false}
+                  onSelect={() => onOrderSelect?.(order._id)}
+                />
+              );
+
+              if (!groupByArea) return orders.map(renderOrder);
+
+              return groupOrdersByArea(orders).map((section) => (
+                <View key={section.key}>
+                  <View style={styles.areaHeader}>
+                    <Icon name="place" size={16} color="#ea580c" />
+                    <Text style={styles.areaHeaderText} numberOfLines={1}>
+                      {section.title}
+                    </Text>
+                    <View style={styles.areaCountPill}>
+                      <Text style={styles.areaCountText}>{section.orders.length}</Text>
+                    </View>
+                  </View>
+                  {section.orders.map(renderOrder)}
+                </View>
+              ));
+            })()
           )}
         </View>
       )}
@@ -254,6 +278,36 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   statValueWhite: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  areaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+    backgroundColor: '#fff7ed',
+    borderLeftWidth: 3,
+    borderLeftColor: '#ea580c',
+  },
+  areaHeaderText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9a3412',
+  },
+  areaCountPill: {
+    minWidth: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#ea580c',
+    alignItems: 'center',
+  },
+  areaCountText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#ffffff',

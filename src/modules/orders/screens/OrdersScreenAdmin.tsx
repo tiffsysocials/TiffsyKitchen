@@ -71,6 +71,8 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   const { showSuccess, showError, showInfo, showWarning, showConfirm } = useAlert();
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
   const [selectedMealWindow, setSelectedMealWindow] = useState<MealWindowFilterValue>('ALL');
+  // Group each kitchen's orders into delivery-area sections instead of one flat run.
+  const [groupByArea, setGroupByArea] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(getTodayDateString());
@@ -642,6 +644,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         selectionMode={selectionMode}
         selectedOrderIds={selectedOrderIds}
         onOrderSelect={handleOrderSelection}
+        groupByArea={groupByArea}
       />
     );
   };
@@ -736,6 +739,22 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
               <Text style={styles.clearDateText}>Clear</Text>
             </TouchableOpacity>
           )}
+
+          {/* Area grouping sits alongside the date filter. On by default; the
+              kitchen or admin can switch back to a flat chronological run. */}
+          <TouchableOpacity
+            style={[styles.areaToggle, groupByArea && styles.areaToggleActive]}
+            onPress={() => setGroupByArea(prev => !prev)}
+            activeOpacity={0.7}>
+            <Icon
+              name={groupByArea ? 'place' : 'format-list-bulleted'}
+              size={16}
+              color={groupByArea ? '#FFFFFF' : '#6B7280'}
+            />
+            <Text style={[styles.areaToggleText, groupByArea && styles.areaToggleTextActive]}>
+              {groupByArea ? 'By Area' : 'By Time'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Meal Window Filter — splits the selected day into Lunch / Dinner */}
@@ -1261,6 +1280,30 @@ const styles = StyleSheet.create({
   clearDateText: {
     fontSize: 13,
     color: '#6b7280',
+  },
+  areaToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  areaToggleActive: {
+    backgroundColor: '#ea580c',
+    borderColor: '#ea580c',
+  },
+  areaToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  areaToggleTextActive: {
+    color: '#FFFFFF',
   },
   mealWindowRow: {
     flexDirection: 'row',
