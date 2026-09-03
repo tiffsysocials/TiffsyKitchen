@@ -26,21 +26,27 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAlert } from '../../../hooks/useAlert';
 import { GradientBox } from '../../../components/common/GradientBox';
 
-type StatusFilterValue = OrderStatus | 'ALL' | 'FAILED_PAYMENTS';
+/**
+ * Order-list tabs. These map 1:1 to server-side buckets — the API resolves the
+ * multi-status / cross-field groupings so a page of N rows is N visible rows
+ * and pagination totals stay meaningful.
+ */
+type StatusFilterValue =
+  | 'pending'
+  | 'all'
+  | 'scheduled_auto'
+  | 'delivered'
+  | 'cancelled'
+  | 'failed';
 type MealWindowFilterValue = 'ALL' | 'LUNCH' | 'DINNER';
 
 const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Scheduled', value: 'SCHEDULED' },
-  { label: 'Placed', value: 'PLACED' },
-  { label: 'Accepted', value: 'ACCEPTED' },
-  { label: 'Preparing', value: 'PREPARING' },
-  { label: 'Ready', value: 'READY' },
-  { label: 'Out for Delivery', value: 'OUT_FOR_DELIVERY' },
-  { label: 'Delivered', value: 'DELIVERED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-  { label: 'Failed', value: 'FAILED' },
-  { label: 'Failed Payments', value: 'FAILED_PAYMENTS' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'All', value: 'all' },
+  { label: 'Scheduled + Auto', value: 'scheduled_auto' },
+  { label: 'Delivered', value: 'delivered' },
+  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Failed', value: 'failed' },
 ];
 
 const MEAL_WINDOW_FILTERS: { label: string; value: MealWindowFilterValue; icon: string }[] = [
@@ -69,7 +75,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // const insets = useSafeAreaInsets(); // Removed
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo, showWarning, showConfirm } = useAlert();
-  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('pending');
   const [selectedMealWindow, setSelectedMealWindow] = useState<MealWindowFilterValue>('ALL');
   // Group each kitchen's orders into delivery-area sections instead of one flat run.
   const [groupByArea, setGroupByArea] = useState(true);
@@ -137,15 +143,11 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         page: pageParam,
         limit: 20,
       };
-      // For SCHEDULED filter, use orderSource instead of status
-      // because scheduled orders transition to PLACED/ACCEPTED etc. but keep orderSource='SCHEDULED'
-      if (selectedStatus === 'SCHEDULED') {
-        params.orderSource = 'SCHEDULED';
-      } else if (selectedStatus !== 'ALL' && selectedStatus !== 'FAILED_PAYMENTS') {
-        params.status = selectedStatus;
-      }
-      // Skip date filter for SCHEDULED orders (they have future delivery dates)
-      if (selectedDate && selectedStatus !== 'SCHEDULED') {
+      // The server resolves the tab; no client-side status juggling.
+      params.bucket = selectedStatus;
+      // Scheduled/auto orders have future delivery dates, so a single-day range
+      // would hide them.
+      if (selectedDate && selectedStatus !== 'scheduled_auto') {
         // Use local timezone (not UTC 'Z') so the date range matches IST orders
         const start = new Date(`${selectedDate}T00:00:00`);
         const end = new Date(`${selectedDate}T23:59:59.999`);
@@ -355,31 +357,14 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
 
   // Flatten all pages into a single orders array, exclude SCHEDULED from "All"
   const allOrders = useMemo(() => {
-    const orders = ordersData?.pages?.flatMap(page => page.orders) ?? [];
-    let filtered: Order[];
-    if (selectedStatus === 'FAILED_PAYMENTS') {
-      filtered = orders.filter(order => order.paymentStatus === 'FAILED');
-    } else if (selectedStatus === 'ALL') {
-      // Exclude scheduled orders and orders with pending/failed payments from "All" view.
-      // Also exclude DELIVERED orders — once marked delivered they live only in the
-      // Delivered tab. (They remain in the fetched data so the stats cards above still
-      // count them; this filter only affects the displayed list.)
-      filtered = orders.filter(
-        order => !isScheduledOrder(order) && hasVisiblePayment(order) && order.status !== 'DELIVERED'
-      );
-    } else if (selectedStatus === 'SCHEDULED') {
-      // Client-side filter: show orders that are scheduled (via any field)
-      filtered = orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
-    } else {
-      filtered = orders.filter(hasVisiblePayment);
-    }
-
-    // Meal window filter — only applies to MEAL_MENU orders that have mealWindow set
+    // The bucket filter is applied server-side, so every returned order belongs
+    // in the active tab. Only the meal-window narrowing stays client-side.
+    let filtered = ordersData?.pages?.flatMap(page => page.orders) ?? [];
     if (selectedMealWindow !== 'ALL') {
       filtered = filtered.filter(order => order.mealWindow === selectedMealWindow);
     }
     return filtered;
-  }, [ordersData, selectedStatus, selectedMealWindow]);
+  }, [ordersData, selectedMealWindow]);
 
   // Group orders by kitchen with search filtering
   const kitchenOrdersGroups = useMemo(() => {
@@ -471,7 +456,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // Confirmed = orders to actually be delivered today: excludes CANCELLED/REJECTED/FAILED and scheduled.
   // Failed   = CANCELLED, REJECTED, FAILED, or PAID-but-failed orders (today).
   const todayStats = useMemo(() => {
-    if (selectedStatus !== 'ALL' || !ordersData?.pages?.length) {
+    if (selectedStatus !== 'all' || !ordersData?.pages?.length) {
       return cachedStatsRef.current[selectedMealWindow];
     }
     let allLoadedOrders = ordersData.pages.flatMap(page => page.orders);
@@ -655,11 +640,15 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
         <Icon name="inbox" size={64} color="#d1d5db" />
         <Text style={styles.emptyStateText}>No orders found</Text>
         <Text style={styles.emptyStateSubtext}>
-          {selectedStatus === 'ALL'
+          {selectedStatus === 'all'
             ? 'There are no orders yet'
-            : selectedStatus === 'FAILED_PAYMENTS'
-              ? 'No failed payments for the selected date'
-              : `No orders with status "${selectedStatus}"`}
+            : selectedStatus === 'pending'
+              ? 'Nothing pending — everything is delivered or closed'
+              : selectedStatus === 'scheduled_auto'
+                ? 'No scheduled or auto-orders'
+                : selectedStatus === 'failed'
+                  ? 'No failed orders or payments for the selected date'
+                  : `No ${selectedStatus} orders for the selected date`}
         </Text>
       </View>
     );

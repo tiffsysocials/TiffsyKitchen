@@ -29,18 +29,22 @@ import { useAlert } from '../../../hooks/useAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GradientBox } from '../../../components/common/GradientBox';
 
-type StatusFilterValue = OrderStatus | 'ALL' | 'AUTO_ORDERS' | 'FAILED_PAYMENTS';
+/** Order-list tabs; each maps to a server-side bucket. */
+type StatusFilterValue =
+  | 'pending'
+  | 'all'
+  | 'scheduled_auto'
+  | 'delivered'
+  | 'cancelled'
+  | 'failed';
 
 const STATUS_FILTERS: { label: string; value: StatusFilterValue }[] = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Scheduled', value: 'SCHEDULED' },
-  { label: 'Pending', value: 'PENDING_KITCHEN_ACCEPTANCE' },
-  { label: 'Placed', value: 'PLACED' },
-  { label: 'Accepted', value: 'ACCEPTED' },
-  { label: 'Auto-Orders', value: 'AUTO_ORDERS' },
-  { label: 'Preparing', value: 'PREPARING' },
-  { label: 'Ready', value: 'READY' },
-  { label: 'Failed Payments', value: 'FAILED_PAYMENTS' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'All', value: 'all' },
+  { label: 'Scheduled + Auto', value: 'scheduled_auto' },
+  { label: 'Delivered', value: 'delivered' },
+  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Failed', value: 'failed' },
 ];
 
 const getTodayDateString = () => {
@@ -68,7 +72,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning, showConfirm } = useAlert();
-  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('pending');
   const [selectedMealWindow, setSelectedMealWindow] = useState<'ALL' | 'LUNCH' | 'DINNER'>('ALL');
   const [page, setPage] = useState(1);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -112,19 +116,11 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
         page,
         limit: 50,
       };
-      // For SCHEDULED filter, use orderSource instead of status
-      // because scheduled orders transition to PLACED/ACCEPTED etc. but keep orderSource='SCHEDULED'
-      if (selectedStatus === 'SCHEDULED') {
-        params.orderSource = 'SCHEDULED';
-      } else if (
-        selectedStatus !== 'ALL' &&
-        selectedStatus !== 'AUTO_ORDERS' &&
-        selectedStatus !== 'FAILED_PAYMENTS'
-      ) {
-        params.status = selectedStatus;
-      }
-      // Skip date filter for SCHEDULED orders (they have future delivery dates)
-      if (selectedStatus !== 'SCHEDULED') {
+      // The server resolves the tab.
+      params.bucket = selectedStatus;
+      // Scheduled/auto orders have future delivery dates, so a single-day range
+      // would hide them.
+      if (selectedStatus !== 'scheduled_auto') {
         params.date = selectedDate || undefined;
       }
       return ordersService.getKitchenOrders(params);
@@ -146,25 +142,10 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
   const [groupByArea, setGroupByArea] = useState(true);
 
   const filteredOrders = useMemo(() => {
-    const orders = ordersData?.orders || [];
-    if (selectedStatus === 'FAILED_PAYMENTS') {
-      return orders.filter(order => order.paymentStatus === 'FAILED');
-    }
-    if (selectedStatus === 'AUTO_ORDERS') {
-      return orders.filter(order =>
-        (isAutoOrder(order) || isAutoAccepted(order)) && hasVisiblePayment(order)
-      );
-    }
-    if (selectedStatus === 'ALL') {
-      // Exclude scheduled orders and pending/failed payments from "All" view
-      return orders.filter(order => !isScheduledOrder(order) && hasVisiblePayment(order));
-    }
-    if (selectedStatus === 'SCHEDULED') {
-      // Client-side filter: show orders that are scheduled (via any field)
-      return orders.filter(order => isScheduledOrder(order) && hasVisiblePayment(order));
-    }
-    return orders.filter(hasVisiblePayment);
-  }, [ordersData, selectedStatus]);
+    // The bucket filter is applied server-side, so everything returned belongs
+    // in the active tab.
+    return ordersData?.orders || [];
+  }, [ordersData]);
 
   // Update order status mutation (Kitchen-specific endpoint)
   const updateStatusMutation = useMutation({
@@ -483,11 +464,15 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
         <Icon name="restaurant" size={64} color="#E5E5EA" />
         <Text style={styles.emptyStateText}>No orders found</Text>
         <Text style={styles.emptyStateSubtext}>
-          {selectedStatus === 'ALL'
+          {selectedStatus === 'all'
             ? 'No orders available'
-            : selectedStatus === 'FAILED_PAYMENTS'
-              ? 'No failed payments for the selected date'
-              : `No orders with status "${selectedStatus}"`}
+            : selectedStatus === 'pending'
+              ? 'Nothing pending — everything is delivered or closed'
+              : selectedStatus === 'scheduled_auto'
+                ? 'No scheduled or auto-orders'
+                : selectedStatus === 'failed'
+                  ? 'No failed orders or payments for the selected date'
+                  : `No ${selectedStatus} orders for the selected date`}
         </Text>
       </View>
     );
