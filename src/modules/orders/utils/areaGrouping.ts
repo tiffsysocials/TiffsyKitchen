@@ -14,10 +14,20 @@
  *     share one pincode.
  *   - `deliveryAddress.locality` is 100% populated and carries the actual
  *     neighbourhood ("Agrawal Nagar", "Sinhasa", "Kanchan Bagh").
+ *
+ * Corporate Meals orders are segregated by corporate instead of locality —
+ * every order for a given corporate goes to one locked office address, so
+ * grouping by corporate is more precise than the locality text (typed
+ * inconsistently by whoever set up the office address) and keeps a
+ * corporate's bulk drop as one section even if the office happens to share a
+ * locality with retail customers nearby. Corporate sections are pinned first,
+ * ahead of area sections, since they are usually one large drop the kitchen
+ * should pack as a unit.
  */
 import { Order } from '../../../types/api.types';
 
 export const UNKNOWN_AREA_TITLE = 'Other';
+const CORPORATE_KEY_PREFIX = 'corporate:';
 
 export interface OrderAreaSection {
   /** Normalised key used for grouping (lower-cased, whitespace-collapsed). */
@@ -25,19 +35,29 @@ export interface OrderAreaSection {
   /** Human-facing name — the most common spelling seen for this area. */
   title: string;
   orders: Order[];
+  /** True for a corporate section (grouped by corporate, not by locality). */
+  isCorporate?: boolean;
 }
 
-/** Collapse a locality to a stable grouping key, or '' when absent. */
+/** Collapse a locality to a stable grouping key, or empty string when absent. */
 const normalise = (value?: string | null): string =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+
+const corporateOf = (order: Order) =>
+  order?.corporateId && typeof order.corporateId === 'object' ? order.corporateId : null;
 
 /**
  * `locality` is free text the customer types, so the same area arrives spelled
  * several ways — production has both "Jaora compound" and "Jaora Compound".
- * Grouping on the raw string would split them into two sections.
+ * Grouping on the raw string would split them into two sections. A corporate
+ * order groups by the corporate's stable id instead, taking priority over
+ * whatever locality string happens to be on the office address.
  */
-export const areaKeyOf = (order: Order): string =>
-  normalise(order?.deliveryAddress?.locality).toLowerCase();
+export const areaKeyOf = (order: Order): string => {
+  const corporate = corporateOf(order);
+  if (corporate) return CORPORATE_KEY_PREFIX + corporate._id;
+  return normalise(order?.deliveryAddress?.locality).toLowerCase();
+};
 
 const placedTime = (order: Order): number => {
   const t = new Date(order?.placedAt ?? 0).getTime();
@@ -47,24 +67,33 @@ const placedTime = (order: Order): number => {
 /**
  * Group orders into area sections.
  *
- * Sections are ordered busiest-first so the largest run to pack is at the top,
- * with ties broken alphabetically for a stable order between refreshes. Orders
- * inside a section are oldest-first, so the longest-waiting order comes first.
- *
- * Orders with no locality collect into an "Other" section pinned last rather
- * than being dropped — the section counts always add up to the input length.
+ * Sections sort corporate-first, then area sections busiest-first (largest
+ * run to pack at the top, ties broken alphabetically for a stable order
+ * between refreshes), with an "Other" section for orders with no locality
+ * pinned last. Orders inside a section are oldest-first, so the
+ * longest-waiting order comes first. Orders with no locality still collect
+ * into "Other" rather than being dropped — the section counts always add up
+ * to the input length.
  */
 export const groupOrdersByArea = (orders: Order[]): OrderAreaSection[] => {
-  const buckets = new Map<string, { spellings: Map<string, number>; orders: Order[] }>();
+  const buckets = new Map<
+    string,
+    { spellings: Map<string, number>; orders: Order[]; isCorporate: boolean }
+  >();
 
   (orders ?? []).forEach(order => {
     const key = areaKeyOf(order);
+    const isCorporate = key.startsWith(CORPORATE_KEY_PREFIX);
     let bucket = buckets.get(key);
     if (!bucket) {
-      bucket = { spellings: new Map<string, number>(), orders: [] };
+      bucket = { spellings: new Map<string, number>(), orders: [], isCorporate };
       buckets.set(key, bucket);
     }
-    if (key) {
+    if (isCorporate) {
+      const corporate = corporateOf(order);
+      const label = 'Corporate - ' + (corporate?.name ?? 'Unknown');
+      bucket.spellings.set(label, (bucket.spellings.get(label) ?? 0) + 1);
+    } else if (key) {
       const spelling = normalise(order.deliveryAddress?.locality);
       bucket.spellings.set(spelling, (bucket.spellings.get(spelling) ?? 0) + 1);
     }
@@ -73,7 +102,7 @@ export const groupOrdersByArea = (orders: Order[]): OrderAreaSection[] => {
 
   const sections: OrderAreaSection[] = [];
   buckets.forEach((bucket, key) => {
-    // Display whichever spelling of this area appears most often.
+    // Display whichever spelling/label of this section appears most often.
     let title = UNKNOWN_AREA_TITLE;
     let best = 0;
     bucket.spellings.forEach((count, spelling) => {
@@ -85,15 +114,17 @@ export const groupOrdersByArea = (orders: Order[]): OrderAreaSection[] => {
     sections.push({
       key: key || UNKNOWN_AREA_TITLE,
       title,
+      isCorporate: bucket.isCorporate,
       orders: [...bucket.orders].sort((a, b) => placedTime(a) - placedTime(b)),
     });
   });
 
   return sections.sort((a, b) => {
-    // "Other" sits last regardless of size.
-    const aUnknown = a.key === UNKNOWN_AREA_TITLE;
-    const bUnknown = b.key === UNKNOWN_AREA_TITLE;
-    if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
+    // Corporate sections first, then area sections busiest-first, "Other" last.
+    const rank = (s: OrderAreaSection) => (s.isCorporate ? 0 : s.key === UNKNOWN_AREA_TITLE ? 2 : 1);
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra - rb;
     if (b.orders.length !== a.orders.length) return b.orders.length - a.orders.length;
     return a.title.localeCompare(b.title);
   });

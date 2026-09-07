@@ -914,6 +914,14 @@ export interface Order {
     name: string;
     city: string;
   };
+  // Set only on Corporate Meals orders (delivery locked to the corporate's
+  // office, paid from corporate vouchers instead of the customer's own plan).
+  // Populated by the admin/kitchen list endpoints; null on regular orders.
+  corporateId?: {
+    _id: string;
+    name: string;
+    code: string;
+  } | null;
   deliveryAddressId: string;
   deliveryAddress: DeliveryAddress;
   menuType: MenuType;

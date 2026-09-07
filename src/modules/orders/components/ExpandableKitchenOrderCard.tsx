@@ -177,12 +177,18 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
 
               return groupOrdersByArea(orders).map((section) => (
                 <View key={section.key}>
-                  <View style={styles.areaHeader}>
-                    <Icon name="place" size={16} color="#ea580c" />
-                    <Text style={styles.areaHeaderText} numberOfLines={1}>
+                  <View style={[styles.areaHeader, section.isCorporate && styles.corporateHeader]}>
+                    <Icon
+                      name={section.isCorporate ? 'business' : 'place'}
+                      size={16}
+                      color={section.isCorporate ? '#1d4ed8' : '#ea580c'}
+                    />
+                    <Text
+                      style={[styles.areaHeaderText, section.isCorporate && styles.corporateHeaderText]}
+                      numberOfLines={1}>
                       {section.title}
                     </Text>
-                    <View style={styles.areaCountPill}>
+                    <View style={[styles.areaCountPill, section.isCorporate && styles.corporateCountPill]}>
                       <Text style={styles.areaCountText}>{section.orders.length}</Text>
                     </View>
                   </View>
@@ -281,6 +287,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  corporateHeader: {
+    backgroundColor: '#eff6ff',
+    borderLeftColor: '#1d4ed8',
+  },
+  corporateHeaderText: {
+    color: '#1d4ed8',
+  },
+  corporateCountPill: {
+    backgroundColor: '#1d4ed8',
   },
   areaHeader: {
     flexDirection: 'row',

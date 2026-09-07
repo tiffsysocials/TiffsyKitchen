@@ -102,6 +102,8 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     loadKitchenId();
   }, []);
 
+  // Group the run into delivery-area sections instead of one flat chronological list.
+  const [groupByArea, setGroupByArea] = useState(true);
   // Fetch kitchen orders
   const {
     data: ordersData,
@@ -138,8 +140,6 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
     order.paymentStatus !== 'PENDING' && order.paymentStatus !== 'FAILED';
 
   // Filter orders for auto-orders view, exclude SCHEDULED from "All"
-  // Group the run into delivery-area sections instead of one flat chronological list.
-  const [groupByArea, setGroupByArea] = useState(true);
 
   const filteredOrders = useMemo(() => {
     // The bucket filter is applied server-side, so everything returned belongs
@@ -416,7 +416,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
    * grouping is on, area headers are interleaved as rows.
    */
   type ListRow =
-    | { type: 'header'; key: string; title: string; count: number }
+    | { type: 'header'; key: string; title: string; count: number; isCorporate?: boolean }
     | { type: 'order'; order: Order };
 
   const listRows = useMemo<ListRow[]>(() => {
@@ -424,7 +424,13 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
       return filteredOrders.map(order => ({ type: 'order', order } as ListRow));
     }
     return groupOrdersByArea(filteredOrders).flatMap(section => [
-      { type: 'header', key: section.key, title: section.title, count: section.orders.length } as ListRow,
+      {
+        type: 'header',
+        key: section.key,
+        title: section.title,
+        count: section.orders.length,
+        isCorporate: section.isCorporate,
+      } as ListRow,
       ...section.orders.map(order => ({ type: 'order', order } as ListRow)),
     ]);
   }, [filteredOrders, groupByArea]);
@@ -432,10 +438,18 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
   const renderRow = ({ item }: { item: ListRow }) => {
     if (item.type === 'header') {
       return (
-        <View style={styles.areaHeader}>
-          <Icon name="place" size={16} color="#ea580c" />
-          <Text style={styles.areaHeaderText} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.areaCountPill}>
+        <View style={[styles.areaHeader, item.isCorporate && styles.corporateHeader]}>
+          <Icon
+            name={item.isCorporate ? 'business' : 'place'}
+            size={16}
+            color={item.isCorporate ? '#1d4ed8' : '#ea580c'}
+          />
+          <Text
+            style={[styles.areaHeaderText, item.isCorporate && styles.corporateHeaderText]}
+            numberOfLines={1}>
+            {item.title}
+          </Text>
+          <View style={[styles.areaCountPill, item.isCorporate && styles.corporateCountPill]}>
             <Text style={styles.areaCountText}>{item.count}</Text>
           </View>
         </View>
@@ -892,6 +906,16 @@ const styles = StyleSheet.create({
   },
   areaToggleTextActive: {
     color: '#FFFFFF',
+  },
+  corporateHeader: {
+    backgroundColor: '#eff6ff',
+    borderLeftColor: '#1d4ed8',
+  },
+  corporateHeaderText: {
+    color: '#1d4ed8',
+  },
+  corporateCountPill: {
+    backgroundColor: '#1d4ed8',
   },
   areaHeader: {
     flexDirection: 'row',

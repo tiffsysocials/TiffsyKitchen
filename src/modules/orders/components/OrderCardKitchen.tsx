@@ -317,6 +317,13 @@ const OrderCardKitchen: React.FC<OrderCardKitchenProps> = ({
 
         {/* Tags Row */}
         <View style={styles.tagsRow}>
+          {order.corporateId && (
+            <View style={[styles.tag, styles.corporateTag]}>
+              <Text style={[styles.tagText, styles.corporateTagText]} numberOfLines={1}>
+                🏢 {typeof order.corporateId === 'object' ? order.corporateId.name : 'Corporate'}
+              </Text>
+            </View>
+          )}
           <View
             style={[
               styles.tag,
@@ -633,6 +640,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4338ca',
     lineHeight: rf(18),
+  },
+  corporateTag: {
+    borderColor: '#1d4ed8',
+    backgroundColor: '#eff6ff',
+  },
+  corporateTagText: {
+    color: '#1d4ed8',
   },
   tagsRow: {
     flexDirection: 'row',

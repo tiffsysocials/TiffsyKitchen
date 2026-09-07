@@ -355,6 +355,13 @@ const OrderCardAdminImproved: React.FC<OrderCardAdminImprovedProps> = ({
 
         {/* Tags Row */}
         <View style={styles.tagsRow}>
+          {order.corporateId && (
+            <View style={[styles.tag, styles.corporateTag]}>
+              <Text style={[styles.tagText, styles.corporateTagText]} numberOfLines={1}>
+                🏢 {typeof order.corporateId === 'object' ? order.corporateId.name : 'Corporate'}
+              </Text>
+            </View>
+          )}
           {order.orderSource !== 'SCHEDULED' && <OrderSourceBadge orderSource={order.orderSource} />}
           <View
             style={[
@@ -763,6 +770,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     flexWrap: 'wrap',
     gap: 6,
+  },
+  corporateTag: {
+    borderColor: '#1d4ed8',
+    backgroundColor: '#eff6ff',
+  },
+  corporateTagText: {
+    color: '#1d4ed8',
   },
   tag: {
     paddingHorizontal: 8,
