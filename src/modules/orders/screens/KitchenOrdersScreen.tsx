@@ -120,11 +120,10 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
       };
       // The server resolves the tab.
       params.bucket = selectedStatus;
-      // Scheduled/auto orders have future delivery dates, so a single-day range
-      // would hide them.
-      if (selectedStatus !== 'scheduled_auto') {
-        params.date = selectedDate || undefined;
-      }
+      // The backend matches scheduled/auto orders by scheduledFor (delivery
+      // date) rather than placedAt (creation date), so the date filter
+      // applies correctly to every tab including Scheduled + Auto.
+      params.date = selectedDate || undefined;
       return ordersService.getKitchenOrders(params);
     },
   });

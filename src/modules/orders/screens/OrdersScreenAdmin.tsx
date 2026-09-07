@@ -145,9 +145,10 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
       };
       // The server resolves the tab; no client-side status juggling.
       params.bucket = selectedStatus;
-      // Scheduled/auto orders have future delivery dates, so a single-day range
-      // would hide them.
-      if (selectedDate && selectedStatus !== 'scheduled_auto') {
+      // The backend matches scheduled/auto orders by scheduledFor (delivery
+      // date) rather than placedAt (creation date), so the date range applies
+      // correctly to every tab including Scheduled + Auto.
+      if (selectedDate) {
         // Use local timezone (not UTC 'Z') so the date range matches IST orders
         const start = new Date(`${selectedDate}T00:00:00`);
         const end = new Date(`${selectedDate}T23:59:59.999`);
