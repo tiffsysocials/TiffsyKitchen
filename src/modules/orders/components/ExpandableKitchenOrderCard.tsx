@@ -175,26 +175,58 @@ const ExpandableKitchenOrderCard: React.FC<ExpandableKitchenOrderCardProps> = ({
 
               if (!groupByArea) return orders.map(renderOrder);
 
-              return groupOrdersByArea(orders).map((section) => (
-                <View key={section.key}>
-                  <View style={[styles.areaHeader, section.isCorporate && styles.corporateHeader]}>
-                    <Icon
-                      name={section.isCorporate ? 'business' : 'place'}
-                      size={16}
-                      color={section.isCorporate ? '#1d4ed8' : '#ea580c'}
-                    />
-                    <Text
-                      style={[styles.areaHeaderText, section.isCorporate && styles.corporateHeaderText]}
-                      numberOfLines={1}>
-                      {section.title}
-                    </Text>
-                    <View style={[styles.areaCountPill, section.isCorporate && styles.corporateCountPill]}>
-                      <Text style={styles.areaCountText}>{section.orders.length}</Text>
+              return groupOrdersByArea(orders).map((section) => {
+                // Only show a sub-header per company when this area actually
+                // mixes sources (e.g. two corporate offices sharing an area).
+                // A single-source area stays a flat list, same as before.
+                const showSubHeaders = section.groups.length > 1;
+                return (
+                  <View key={section.key}>
+                    <View style={styles.areaHeader}>
+                      <Icon name="place" size={16} color="#ea580c" />
+                      <Text style={styles.areaHeaderText} numberOfLines={1}>
+                        {section.title}
+                      </Text>
+                      <View style={styles.areaCountPill}>
+                        <Text style={styles.areaCountText}>{section.orders.length}</Text>
+                      </View>
                     </View>
+                    {section.groups.map((group) => (
+                      <View key={group.key}>
+                        {showSubHeaders && (
+                          <View
+                            style={[
+                              styles.subGroupHeader,
+                              group.isCorporate && styles.corporateSubGroupHeader,
+                            ]}>
+                            <Icon
+                              name={group.isCorporate ? 'business' : 'storefront'}
+                              size={13}
+                              color={group.isCorporate ? '#1d4ed8' : '#6b7280'}
+                            />
+                            <Text
+                              style={[
+                                styles.subGroupHeaderText,
+                                group.isCorporate && styles.corporateSubGroupHeaderText,
+                              ]}
+                              numberOfLines={1}>
+                              {group.title}
+                            </Text>
+                            <View
+                              style={[
+                                styles.subGroupCountPill,
+                                group.isCorporate && styles.corporateSubGroupCountPill,
+                              ]}>
+                              <Text style={styles.subGroupCountText}>{group.orders.length}</Text>
+                            </View>
+                          </View>
+                        )}
+                        {group.orders.map(renderOrder)}
+                      </View>
+                    ))}
                   </View>
-                  {section.orders.map(renderOrder)}
-                </View>
-              ));
+                );
+              });
             })()
           )}
         </View>
@@ -288,15 +320,45 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
   },
-  corporateHeader: {
+  subGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingLeft: 26,
+    paddingVertical: 6,
+    backgroundColor: '#f9fafb',
+    borderLeftWidth: 2,
+    borderLeftColor: '#9ca3af',
+  },
+  corporateSubGroupHeader: {
     backgroundColor: '#eff6ff',
     borderLeftColor: '#1d4ed8',
   },
-  corporateHeaderText: {
+  subGroupHeaderText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  corporateSubGroupHeaderText: {
     color: '#1d4ed8',
   },
-  corporateCountPill: {
+  subGroupCountPill: {
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 9,
+    backgroundColor: '#9ca3af',
+    alignItems: 'center',
+  },
+  corporateSubGroupCountPill: {
     backgroundColor: '#1d4ed8',
+  },
+  subGroupCountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   areaHeader: {
     flexDirection: 'row',

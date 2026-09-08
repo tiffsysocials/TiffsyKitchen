@@ -415,41 +415,65 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
    * grouping is on, area headers are interleaved as rows.
    */
   type ListRow =
-    | { type: 'header'; key: string; title: string; count: number; isCorporate?: boolean }
+    | { type: 'header'; key: string; title: string; count: number }
+    | { type: 'subheader'; key: string; title: string; count: number; isCorporate: boolean }
     | { type: 'order'; order: Order };
 
   const listRows = useMemo<ListRow[]>(() => {
     if (!groupByArea) {
       return filteredOrders.map(order => ({ type: 'order', order } as ListRow));
     }
-    return groupOrdersByArea(filteredOrders).flatMap(section => [
-      {
-        type: 'header',
-        key: section.key,
-        title: section.title,
-        count: section.orders.length,
-        isCorporate: section.isCorporate,
-      } as ListRow,
-      ...section.orders.map(order => ({ type: 'order', order } as ListRow)),
-    ]);
+    return groupOrdersByArea(filteredOrders).flatMap(section => {
+      // Only show a sub-header per company when this area actually mixes
+      // sources (e.g. two corporate offices sharing an area). A single-source
+      // area stays a flat list, same as before.
+      const showSubHeaders = section.groups.length > 1;
+      const rows: ListRow[] = [
+        { type: 'header', key: section.key, title: section.title, count: section.orders.length },
+      ];
+      section.groups.forEach(group => {
+        if (showSubHeaders) {
+          rows.push({
+            type: 'subheader',
+            key: `${section.key}::${group.key}`,
+            title: group.title,
+            count: group.orders.length,
+            isCorporate: group.isCorporate,
+          });
+        }
+        group.orders.forEach(order => rows.push({ type: 'order', order }));
+      });
+      return rows;
+    });
   }, [filteredOrders, groupByArea]);
 
   const renderRow = ({ item }: { item: ListRow }) => {
     if (item.type === 'header') {
       return (
-        <View style={[styles.areaHeader, item.isCorporate && styles.corporateHeader]}>
+        <View style={styles.areaHeader}>
+          <Icon name="place" size={16} color="#ea580c" />
+          <Text style={styles.areaHeaderText} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.areaCountPill}>
+            <Text style={styles.areaCountText}>{item.count}</Text>
+          </View>
+        </View>
+      );
+    }
+    if (item.type === 'subheader') {
+      return (
+        <View style={[styles.subGroupHeader, item.isCorporate && styles.corporateSubGroupHeader]}>
           <Icon
-            name={item.isCorporate ? 'business' : 'place'}
-            size={16}
-            color={item.isCorporate ? '#1d4ed8' : '#ea580c'}
+            name={item.isCorporate ? 'business' : 'storefront'}
+            size={13}
+            color={item.isCorporate ? '#1d4ed8' : '#6b7280'}
           />
           <Text
-            style={[styles.areaHeaderText, item.isCorporate && styles.corporateHeaderText]}
+            style={[styles.subGroupHeaderText, item.isCorporate && styles.corporateSubGroupHeaderText]}
             numberOfLines={1}>
             {item.title}
           </Text>
-          <View style={[styles.areaCountPill, item.isCorporate && styles.corporateCountPill]}>
-            <Text style={styles.areaCountText}>{item.count}</Text>
+          <View style={[styles.subGroupCountPill, item.isCorporate && styles.corporateSubGroupCountPill]}>
+            <Text style={styles.subGroupCountText}>{item.count}</Text>
           </View>
         </View>
       );
@@ -644,7 +668,7 @@ const KitchenOrdersScreen: React.FC<KitchenOrdersScreenProps> = ({
           data={listRows}
           renderItem={renderRow}
           keyExtractor={(item) =>
-            item.type === 'header' ? `area-${item.key}` : item.order._id
+            item.type === 'order' ? item.order._id : `area-${item.key}`
           }
           refreshControl={
             <RefreshControl
@@ -906,15 +930,45 @@ const styles = StyleSheet.create({
   areaToggleTextActive: {
     color: '#FFFFFF',
   },
-  corporateHeader: {
+  subGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingLeft: 26,
+    paddingVertical: 6,
+    backgroundColor: '#f9fafb',
+    borderLeftWidth: 2,
+    borderLeftColor: '#9ca3af',
+  },
+  corporateSubGroupHeader: {
     backgroundColor: '#eff6ff',
     borderLeftColor: '#1d4ed8',
   },
-  corporateHeaderText: {
+  subGroupHeaderText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  corporateSubGroupHeaderText: {
     color: '#1d4ed8',
   },
-  corporateCountPill: {
+  subGroupCountPill: {
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 9,
+    backgroundColor: '#9ca3af',
+    alignItems: 'center',
+  },
+  corporateSubGroupCountPill: {
     backgroundColor: '#1d4ed8',
+  },
+  subGroupCountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   areaHeader: {
     flexDirection: 'row',
