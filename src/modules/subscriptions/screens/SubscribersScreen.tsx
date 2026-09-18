@@ -79,6 +79,16 @@ export const SubscribersScreen: React.FC<SubscribersScreenProps> = ({ onMenuPres
   // Handle subscription card press
   const handleSubscriptionPress = async (subscription: Subscription) => {
     setShowSubscriptionDetail(true);
+
+    // Corporate rows are CorporatePurchase documents, which /api/subscriptions/:id
+    // cannot resolve. The list row already carries the whole purchase document, so
+    // show it directly instead of firing a request that would 404.
+    if (subscription.source === 'CORPORATE') {
+      setSelectedSubscription(subscription as SubscriptionDetail);
+      setSubscriptionDetailLoading(false);
+      return;
+    }
+
     setSubscriptionDetailLoading(true);
 
     try {
@@ -180,7 +190,8 @@ export const SubscribersScreen: React.FC<SubscribersScreenProps> = ({ onMenuPres
         subscription={selectedSubscription}
         loading={subscriptionDetailLoading}
         onCancel={
-          selectedSubscription?.status === 'ACTIVE'
+          selectedSubscription?.status === 'ACTIVE' &&
+          selectedSubscription?.source !== 'CORPORATE'
             ? () => setShowCancelModal(true)
             : undefined
         }

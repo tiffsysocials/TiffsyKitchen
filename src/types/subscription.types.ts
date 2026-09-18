@@ -91,6 +91,19 @@ export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 
 export interface Subscription {
   _id: string;
+  /**
+   * Which collection this row came from. Corporate rows are CorporatePurchase
+   * documents merged into the same list by /api/subscriptions/admin/all — they
+   * are NOT Subscriptions, so the subscription detail/cancel endpoints do not
+   * accept their _id.
+   */
+  source?: 'REGULAR' | 'CORPORATE';
+  /** Set only when source === 'CORPORATE'. */
+  corporate?: {
+    _id: string;
+    name: string;
+    code: string;
+  };
   userId: {
     _id: string;
     name: string;

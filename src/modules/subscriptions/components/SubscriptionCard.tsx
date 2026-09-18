@@ -35,6 +35,12 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ subscription
           <Text style={styles.customerName}>{subscription.userId.name}</Text>
           <Text style={styles.customerPhone}>{subscription.userId.phone}</Text>
         </View>
+        {subscription.source === 'CORPORATE' && (
+          <View style={styles.corporateBadge}>
+            <Icon name="business" size={12} color="#1d4ed8" />
+            <Text style={styles.corporateBadgeText}>Corporate</Text>
+          </View>
+        )}
         {subscription.autoOrderingEnabled && (
           <View style={styles.autoBadge}>
             <Icon name="autorenew" size={12} color="#7c3aed" />
@@ -48,6 +54,11 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ subscription
       <View style={styles.planRow}>
         <Icon name="card-membership" size={16} color="#6b7280" />
         <Text style={styles.planName}>{subscription.planId.name}</Text>
+        {subscription.corporate?.name ? (
+          <Text style={styles.corporateName} numberOfLines={1}>
+            · {subscription.corporate.name}
+          </Text>
+        ) : null}
         <Text style={styles.planDuration}>({subscription.vouchersIssued} meals)</Text>
       </View>
 
@@ -166,6 +177,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  corporateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginRight: 6,
+  },
+  corporateBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#1d4ed8',
+  },
+  corporateName: {
+    fontSize: 12,
+    color: '#6b7280',
+    flexShrink: 1,
   },
   autoBadge: {
     flexDirection: 'row',
