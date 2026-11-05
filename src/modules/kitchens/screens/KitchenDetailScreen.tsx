@@ -20,23 +20,24 @@ import { Kitchen, Area, KitchenDetailsResponse } from '../../../types/api.types'
 import kitchenService from '../../../services/kitchen.service';
 import { GradientBox } from '../../../components/common/GradientBox';
 import { AreaMapPreview } from '../components/AreaMapPreview';
+import { HolidayDatePickerModal } from '../components/HolidayDatePickerModal';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { useAlert } from '../../../hooks/useAlert';
+import { useNavigation } from '../../../context/NavigationContext';
 
 interface KitchenDetailScreenProps {
-  route: {
-    params: {
-      kitchenId: string;
-    };
-  };
-  navigation: any;
+  kitchenId: string;
+  onBack: () => void;
 }
 
 export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
-  route,
-  navigation,
+  kitchenId,
+  onBack,
 }) => {
-  const { kitchenId } = route.params;
+  // The app's own screen-switch navigation (App.tsx), used only for the
+  // "Manage Batches" shortcut below — everything else uses the kitchenId/
+  // onBack props directly, same pattern as UserDetailAdminScreen.
+  const { navigate } = useNavigation();
   const { showConfirm, showError, showSuccess } = useAlert();
   const [kitchen, setKitchen] = useState<Kitchen | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,8 +53,10 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   const [holidaysForm, setHolidaysForm] = useState<{
     closedDays: string[];
     closedDates: string[];
-    newDate: string;
-  }>({ closedDays: [], closedDates: [], newDate: '' });
+    closureMessages: Record<string, string>;
+    closureMealWindows: Record<string, 'ALL' | 'LUNCH' | 'DINNER'>;
+  }>({ closedDays: [], closedDates: [], closureMessages: {}, closureMealWindows: {} });
+  const [showHolidayCalendar, setShowHolidayCalendar] = useState(false);
 
   useEffect(() => {
     loadKitchenDetails();
@@ -156,7 +159,8 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
       closedDates: Array.isArray((kitchen as any).closedDates)
         ? [...(kitchen as any).closedDates]
         : [],
-      newDate: '',
+      closureMessages: { ...((kitchen as any).closureMessages || {}) },
+      closureMealWindows: { ...((kitchen as any).closureMealWindows || {}) },
     });
     setEditingHolidays(true);
   };
@@ -165,10 +169,18 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     if (!kitchen) return;
     const closedDays = [...new Set(holidaysForm.closedDays.map((d) => d.toLowerCase()))];
     const closedDates = [...new Set(holidaysForm.closedDates)].sort();
+    const closureMessages = Object.fromEntries(
+      closedDates
+        .map((date) => [date, (holidaysForm.closureMessages[date] || '').trim()])
+        .filter(([, message]) => message)
+    );
+    const closureMealWindows = Object.fromEntries(
+      closedDates.map((date) => [date, holidaysForm.closureMealWindows[date] || 'ALL'])
+    );
     setSavingHolidays(true);
     try {
-      await kitchenService.updateKitchen(kitchen._id, { closedDays, closedDates });
-      setKitchen({ ...kitchen, closedDays, closedDates } as any);
+      await kitchenService.updateKitchen(kitchen._id, { closedDays, closedDates, closureMessages, closureMealWindows });
+      setKitchen({ ...kitchen, closedDays, closedDates, closureMessages, closureMealWindows } as any);
       setEditingHolidays(false);
       showToast('Holidays updated', 'success');
     } catch (err: any) {
@@ -243,7 +255,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     return (
       <SafeAreaScreen topBackgroundColor={colors.primary}>
         <GradientBox style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={onBack}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kitchen Details</Text>
@@ -261,7 +273,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
     return (
       <SafeAreaScreen topBackgroundColor={colors.primary}>
         <GradientBox style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={onBack}>
             <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kitchen Details</Text>
@@ -289,7 +301,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
   return (
     <SafeAreaScreen topBackgroundColor={colors.primary}>
       <GradientBox style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={onBack}>
           <Icon name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Kitchen Details</Text>
@@ -540,52 +552,66 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
               </View>
 
               <Text style={[styles.holidaysLabel, { marginTop: spacing.md }]}>
-                One-off closure dates (YYYY-MM-DD)
+                One-off closure dates
               </Text>
-              <View style={styles.dateInputRow}>
-                <TextInput
-                  style={styles.dateInput}
-                  value={holidaysForm.newDate}
-                  onChangeText={(t) => setHolidaysForm({ ...holidaysForm, newDate: t })}
-                  placeholder="e.g. 2026-08-15"
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity
-                  style={styles.addDateButton}
-                  onPress={() => {
-                    const v = (holidaysForm.newDate || '').trim();
-                    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-                      showToast('Use YYYY-MM-DD format', 'error');
-                      return;
-                    }
-                    if (holidaysForm.closedDates.includes(v)) {
-                      showToast(`${v} is already in the list`, 'error');
-                      return;
-                    }
-                    setHolidaysForm({
-                      ...holidaysForm,
-                      closedDates: [...holidaysForm.closedDates, v].sort(),
-                      newDate: '',
-                    });
-                  }}
-                >
-                  <Text style={styles.addDateButtonText}>Add</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.pickDateButton}
+                onPress={() => setShowHolidayCalendar(true)}
+              >
+                <Icon name="calendar-plus" size={18} color={colors.primary} />
+                <Text style={styles.pickDateButtonText}>Pick a date on the calendar</Text>
+              </TouchableOpacity>
 
               {holidaysForm.closedDates.length > 0 && (
                 <View style={{ marginTop: spacing.sm }}>
                   {holidaysForm.closedDates.map((d) => (
-                    <View key={d} style={styles.dateChip}>
-                      <Text style={styles.dateChipText}>{d}</Text>
+                    <View key={d} style={[styles.dateChip, { alignItems: 'flex-start' }]}>
+                      <View style={{ flex: 1, marginRight: spacing.sm }}>
+                        <Text style={styles.dateChipText}>{d}</Text>
+                        <View style={{ flexDirection: 'row', marginTop: spacing.xs, marginBottom: spacing.xs }}>
+                          {(['ALL', 'LUNCH', 'DINNER'] as const).map((scope) => {
+                            const active = (holidaysForm.closureMealWindows[d] || 'ALL') === scope;
+                            return (
+                              <TouchableOpacity
+                                key={scope}
+                                onPress={() => setHolidaysForm({
+                                  ...holidaysForm,
+                                  closureMealWindows: { ...holidaysForm.closureMealWindows, [d]: scope },
+                                })}
+                                style={[styles.dayPill, { marginRight: 6, paddingHorizontal: 10, backgroundColor: active ? colors.primary : '#fff', borderColor: active ? colors.primary : colors.border }]}
+                              >
+                                <Text style={[styles.dayPillText, { color: active ? '#fff' : colors.textPrimary }]}>
+                                  {scope === 'ALL' ? 'Full day' : scope === 'LUNCH' ? 'Lunch only' : 'Dinner only'}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                        <TextInput
+                          value={holidaysForm.closureMessages[d] || ''}
+                          onChangeText={(message) => setHolidaysForm({
+                            ...holidaysForm,
+                            closureMessages: { ...holidaysForm.closureMessages, [d]: message },
+                          })}
+                          placeholder="e.g. On the occasion of Diwali, our kitchen is closed. Sorry for the inconvenience and Happy Diwali!"
+                          multiline
+                          maxLength={500}
+                          style={[styles.input, { marginTop: spacing.xs, minHeight: 72, textAlignVertical: 'top' }]}
+                        />
+                      </View>
                       <TouchableOpacity
-                        onPress={() =>
+                        onPress={() => {
+                          const closureMessages = { ...holidaysForm.closureMessages };
+                          const closureMealWindows = { ...holidaysForm.closureMealWindows };
+                          delete closureMessages[d];
+                          delete closureMealWindows[d];
                           setHolidaysForm({
                             ...holidaysForm,
                             closedDates: holidaysForm.closedDates.filter((x) => x !== d),
-                          })
-                        }
+                            closureMessages,
+                            closureMealWindows,
+                          });
+                        }}
                       >
                         <Icon name="close-circle" size={20} color={colors.error} />
                       </TouchableOpacity>
@@ -626,15 +652,23 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
                     : 'None'}
                 </Text>
               </View>
-              <View style={styles.hoursRow}>
-                <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
-                <Text style={styles.hoursLabel}>Dates:</Text>
-                <Text style={[styles.hoursValue, { flex: 1 }]}>
-                  {Array.isArray((kitchen as any).closedDates) && (kitchen as any).closedDates.length > 0
-                    ? (kitchen as any).closedDates.join(', ')
-                    : 'None'}
-                </Text>
-              </View>
+              {Array.isArray((kitchen as any).closedDates) && (kitchen as any).closedDates.length > 0 ? (
+                (kitchen as any).closedDates.map((date: string) => (
+                  <View key={date} style={[styles.hoursRow, { alignItems: 'flex-start' }]}>
+                    <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
+                    <Text style={styles.hoursLabel}>{date}:</Text>
+                    <Text style={[styles.hoursValue, { flex: 1 }]}>
+                      {`${((kitchen as any).closureMealWindows?.[date] || 'ALL') === 'ALL' ? 'Full day' : `${(kitchen as any).closureMealWindows[date].toLowerCase()} only`}${(kitchen as any).closureMessages?.[date] ? ` — ${(kitchen as any).closureMessages[date]}` : ''}`}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.hoursRow}>
+                  <Icon name="calendar-remove" size={18} color={colors.textSecondary} />
+                  <Text style={styles.hoursLabel}>Dates:</Text>
+                  <Text style={styles.hoursValue}>None</Text>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -680,7 +714,7 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           <Text style={styles.sectionTitle}>Delivery Batches</Text>
           <TouchableOpacity
             style={[styles.actionButton, styles.batchManagementButton]}
-            onPress={() => navigation.navigate('BatchManagement', { kitchenId: kitchen._id, kitchenName: kitchen.name })}
+            onPress={() => navigate('BatchManagement')}
           >
             <Icon name="truck-delivery" size={20} color={colors.primary} />
             <View style={{ flex: 1 }}>
@@ -773,6 +807,27 @@ export const KitchenDetailScreen: React.FC<KitchenDetailScreenProps> = ({
           </View>
         </View>
       </Modal>
+
+      <HolidayDatePickerModal
+        visible={showHolidayCalendar}
+        existingDates={holidaysForm.closedDates}
+        onClose={() => setShowHolidayCalendar(false)}
+        onSelectDate={(dateString) => {
+          const already = holidaysForm.closedDates.includes(dateString);
+          setHolidaysForm({
+            ...holidaysForm,
+            closedDates: already
+              ? holidaysForm.closedDates.filter((x) => x !== dateString)
+              : [...holidaysForm.closedDates, dateString].sort(),
+            closureMessages: already
+              ? Object.fromEntries(Object.entries(holidaysForm.closureMessages).filter(([date]) => date !== dateString))
+              : holidaysForm.closureMessages,
+            closureMealWindows: already
+              ? Object.fromEntries(Object.entries(holidaysForm.closureMealWindows).filter(([date]) => date !== dateString))
+              : { ...holidaysForm.closureMealWindows, [dateString]: 'ALL' },
+          });
+        }}
+      />
     </SafeAreaScreen>
   );
 };
@@ -1002,31 +1057,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  dateInputRow: {
+  pickDateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  dateInput: {
-    flex: 1,
+    justifyContent: 'center',
+    marginTop: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: colors.textPrimary,
-    backgroundColor: '#fff',
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
   },
-  addDateButton: {
-    marginLeft: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-  },
-  addDateButtonText: {
-    color: '#fff',
+  pickDateButtonText: {
+    color: colors.primary,
     fontWeight: '600',
+    marginLeft: 6,
   },
   dateChip: {
     flexDirection: 'row',

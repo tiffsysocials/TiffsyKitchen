@@ -57,6 +57,8 @@ export interface UpdateKitchenRequest {
   coverImage?: string;
   closedDays?: string[];
   closedDates?: string[];
+  closureMessages?: Record<string, string>;
+  closureMealWindows?: Record<string, 'ALL' | 'LUNCH' | 'DINNER'>;
 }
 
 export interface UpdateFlagsRequest {

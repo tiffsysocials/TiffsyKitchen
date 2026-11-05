@@ -340,6 +340,9 @@ export interface Kitchen {
   closedDays?: string[];
   /** One-off holiday closures as "YYYY-MM-DD" IST strings. */
   closedDates?: string[];
+  /** Customer-facing holiday copy keyed by YYYY-MM-DD. */
+  closureMessages?: Record<string, string>;
+  closureMealWindows?: Record<string, 'ALL' | 'LUNCH' | 'DINNER'>;
   contactPhone?: string;
   contactEmail?: string;
   ownerName?: string;

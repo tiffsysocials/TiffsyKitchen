@@ -29,12 +29,19 @@ import { GradientBox } from '../../../components/common/GradientBox';
 
 interface KitchensManagementScreenProps {
   onMenuPress?: () => void;
-  navigation?: any;
+  /**
+   * Called when a kitchen card is tapped (not its pencil/delete icons), to
+   * open that kitchen's detail page. The app's real routing is the
+   * switch-statement/NavigationContext in App.tsx, not React Navigation —
+   * there is no `navigation` prop here, so the caller owns showing the
+   * detail screen (see App.tsx's `selectedKitchenId` state).
+   */
+  onKitchenPress?: (kitchen: Kitchen) => void;
 }
 
 export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> = ({
   onMenuPress,
-  navigation,
+  onKitchenPress,
 }) => {
   const { showConfirm, showError, showSuccess } = useAlert();
   const [kitchens, setKitchens] = useState<Kitchen[]>([]);
@@ -134,11 +141,12 @@ export const KitchensManagementScreen: React.FC<KitchensManagementScreenProps> =
   };
 
   const handleKitchenPress = (kitchen: Kitchen) => {
-    // Navigate to detail screen if navigation is available
-    if (navigation) {
-      navigation.navigate('KitchenDetail', { kitchenId: kitchen._id });
+    if (onKitchenPress) {
+      onKitchenPress(kitchen);
     } else {
-      // Fallback to edit modal
+      // No detail-view callback wired up (shouldn't happen in the real app —
+      // see onKitchenPress doc comment) — fall back to the edit modal rather
+      // than doing nothing.
       handleEditKitchen(kitchen);
     }
   };

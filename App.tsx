@@ -16,6 +16,7 @@ import OrdersManagementContainer from './src/modules/orders/screens/OrdersManage
 import { MenuManagementMain } from './src/modules/menu/screens/MenuManagementMain';
 import { ZonesManagementScreen } from './src/modules/zones';
 import { KitchensManagementScreen } from './src/modules/kitchens/screens';
+import { KitchenDetailScreen } from './src/modules/kitchens/screens/KitchenDetailScreen';
 import { SubscriptionsScreen, SubscribersScreen } from './src/modules/subscriptions';
 import { BatchManagementLandingScreen } from './src/modules/kitchens/screens';
 import { UsersManagementScreen } from './src/modules/users/screens/UsersManagementScreen';
@@ -216,6 +217,7 @@ const MainContent: React.FC<{
   const { currentScreen, goBack, navigate } = useNavigation();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [selectedKitchenId, setSelectedKitchenId] = useState<string | null>(null);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const { checkLatestNotification } = useInAppNotifications();
 
@@ -276,6 +278,10 @@ const MainContent: React.FC<{
         goBack();
         return true;
       }
+      if (currentScreen === 'Kitchens' && selectedKitchenId) {
+        setSelectedKitchenId(null);
+        return true;
+      }
       return false;
     };
 
@@ -285,7 +291,7 @@ const MainContent: React.FC<{
     );
 
     return () => backHandler.remove();
-  }, [currentScreen, selectedUserId, selectedBatchId]);
+  }, [currentScreen, selectedUserId, selectedBatchId, selectedKitchenId]);
 
   const handleUserPress = (user: User) => {
     setSelectedUserId(user._id);
@@ -310,6 +316,16 @@ const MainContent: React.FC<{
       <UserDetailAdminScreen
         userId={selectedUserId}
         onBack={handleBackFromUserDetail}
+      />
+    );
+  }
+
+  // If viewing kitchen details (Holidays & Closures, hours, areas, etc.)
+  if (currentScreen === 'Kitchens' && selectedKitchenId) {
+    return (
+      <KitchenDetailScreen
+        kitchenId={selectedKitchenId}
+        onBack={() => setSelectedKitchenId(null)}
       />
     );
   }
@@ -340,7 +356,10 @@ const MainContent: React.FC<{
     case 'Kitchens':
       return (
         <PermissionGuard requiredRoles={['ADMIN']} screenName="Kitchens" onMenuPress={onMenuPress}>
-          <KitchensManagementScreen onMenuPress={onMenuPress} />
+          <KitchensManagementScreen
+            onMenuPress={onMenuPress}
+            onKitchenPress={(kitchen) => setSelectedKitchenId(kitchen._id)}
+          />
         </PermissionGuard>
       );
 
