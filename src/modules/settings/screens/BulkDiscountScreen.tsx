@@ -25,11 +25,15 @@ const BULK_ORDER_DEFAULTS: BulkOrderSettings = {
   minThalisPerOrder: 8,
   maxThalisPerOrder: 100,
   maxDaysAhead: 30,
+  packagingOptions: [
+    { code: 'STANDARD', label: 'Standard packaging', enabled: true },
+    { code: 'INDIVIDUAL', label: 'Individual meal boxes', enabled: true },
+  ],
 };
 
 // Numeric fields on the Bulk Order card, in display order.
 const BULK_ORDER_FIELDS: Array<{
-  key: keyof Omit<BulkOrderSettings, 'enabled'>;
+  key: keyof Omit<BulkOrderSettings, 'enabled' | 'packagingOptions'>;
   label: string;
   hint: string;
 }> = [
@@ -96,6 +100,11 @@ const BulkDiscountScreen: React.FC<BulkDiscountScreenProps> = ({ onMenuPress }) 
   const [bulkOrder, setBulkOrder] = useState<BulkOrderSettings>(BULK_ORDER_DEFAULTS);
   // Which tier row has its type picker expanded.
   const [pickerFor, setPickerFor] = useState<number | null>(null);
+  const [reviewRemarks, setReviewRemarks] = useState<Record<string, string>>({});
+  const { data: customMenuRequests = [] } = useQuery({
+    queryKey: ['bulkCustomMenuRequests'],
+    queryFn: () => adminDashboardService.getBulkCustomMenuRequests(),
+  });
 
   useEffect(() => {
     if (config?.bulkDiscount) {
@@ -116,6 +125,15 @@ const BulkDiscountScreen: React.FC<BulkDiscountScreenProps> = ({ onMenuPress }) 
     onError: (err: any) => {
       showError('Error', err?.message || 'Failed to update bulk discounts');
     },
+  });
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, status, adminRemark }: { id: string; status: 'APPROVED' | 'REJECTED'; adminRemark: string }) =>
+      adminDashboardService.reviewBulkCustomMenuRequest(id, { status, adminRemark }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bulkCustomMenuRequests'] });
+      showSuccess('Updated', 'Custom-menu request reviewed');
+    },
+    onError: (err: any) => showError('Review failed', err?.message || 'Please try again'),
   });
 
   const handleSave = () => {
@@ -210,6 +228,40 @@ const BulkDiscountScreen: React.FC<BulkDiscountScreenProps> = ({ onMenuPress }) 
 
       <ScrollView className="flex-1">
         <View className="p-4">
+          {customMenuRequests.filter(request => request.status === 'PENDING').map(request => (
+            <Card key={request._id} className="p-4 mb-4">
+              <Text className="text-base font-semibold text-gray-800">
+                {request.userId?.name || request.userId?.phone} · {request.quantity} thalis
+              </Text>
+              <Text className="text-xs text-gray-500 mt-1">
+                {request.kitchenId?.name} · {request.mealWindow} · {new Date(request.serviceDate).toLocaleDateString('en-IN')}
+              </Text>
+              <Text className="text-sm text-gray-700 mt-3">{request.requestText}</Text>
+              <TextInput
+                className="border border-gray-200 rounded-lg px-3 py-2 text-gray-800 mt-3"
+                placeholder="Required approval/rejection remark"
+                value={reviewRemarks[request._id] || ''}
+                onChangeText={(value) => setReviewRemarks(prev => ({ ...prev, [request._id]: value }))}
+              />
+              <View className="flex-row mt-3">
+                {(['APPROVED', 'REJECTED'] as const).map(status => (
+                  <TouchableOpacity
+                    key={status}
+                    className={`flex-1 py-3 rounded-lg ${status === 'APPROVED' ? 'bg-green-500 mr-2' : 'bg-red-500'}`}
+                    onPress={() => {
+                      const adminRemark = (reviewRemarks[request._id] || '').trim();
+                      if (adminRemark.length < 3) return showError('Remark required', 'Enter a review remark first');
+                      reviewMutation.mutate({ id: request._id, status, adminRemark });
+                    }}
+                  >
+                    <Text className="text-white text-center font-semibold">
+                      {status === 'APPROVED' ? 'Approve' : 'Reject'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Card>
+          ))}
           {/* Bulk ordering: the customer-facing Bulk Order flow (one date, one
               meal window, many thalis). The tiers below price it, but they also
               price any large order — these limits govern only this flow. */}
@@ -248,6 +300,30 @@ const BulkDiscountScreen: React.FC<BulkDiscountScreenProps> = ({ onMenuPress }) 
                       placeholderTextColor="#9CA3AF"
                     />
                     <Text className="text-xs text-gray-400 mt-1">{field.hint}</Text>
+                  </View>
+                ))}
+                <Text className="text-sm font-semibold text-gray-700 mt-2 mb-2">Packaging options</Text>
+                {bulkOrder.packagingOptions.map((option, index) => (
+                  <View key={option.code} className="flex-row items-center mb-3">
+                    <TextInput
+                      className="border border-gray-200 rounded-lg px-3 py-2 text-gray-800 flex-1 mr-3"
+                      value={option.label}
+                      onChangeText={(label) => updateBulkOrder({
+                        packagingOptions: bulkOrder.packagingOptions.map((item, i) =>
+                          i === index ? { ...item, label } : item
+                        ),
+                      })}
+                    />
+                    <TouchableOpacity
+                      onPress={() => updateBulkOrder({
+                        packagingOptions: bulkOrder.packagingOptions.map((item, i) =>
+                          i === index ? { ...item, enabled: !item.enabled } : item
+                        ),
+                      })}
+                      className={`w-12 h-6 rounded-full ${option.enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <View className={`w-5 h-5 rounded-full bg-white m-0.5 ${option.enabled ? 'self-end' : 'self-start'}`} />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>

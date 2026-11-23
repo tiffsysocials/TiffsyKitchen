@@ -201,6 +201,7 @@ export interface SystemConfig {
     minThalisPerOrder: number;
     maxThalisPerOrder: number;
     maxDaysAhead: number;
+    packagingOptions: Array<{ code: string; label: string; enabled: boolean }>;
   };
   taxes: Array<{
     name: string;
@@ -218,6 +219,12 @@ export interface SystemConfig {
     enabled: boolean;
     maxScheduledMeals: number;
     maxScheduleDaysAhead: number;
+  };
+  operationalLimits?: {
+    normalOrderMaxThalis: number;
+    kitchenMealWindowCapacity: number;
+    bulkCustomMenuThreshold: number;
+    adminOrderCalendarDaysAhead: number;
   };
   refund: {
     maxRetries: number;
@@ -264,6 +271,20 @@ export interface SystemConfig {
     autoRejectOnTimeout: boolean;
     refundOnAutoReject: boolean;
   };
+}
+
+export interface BulkCustomMenuRequest {
+  _id: string;
+  userId: { _id: string; name?: string; phone: string };
+  kitchenId: { _id: string; name: string };
+  serviceDate: string;
+  mealWindow: 'LUNCH' | 'DINNER';
+  quantity: number;
+  requestText: string;
+  packagingOption?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  adminRemark?: string;
+  createdAt: string;
 }
 
 export interface DeliveryConfig {
@@ -432,6 +453,24 @@ class AdminDashboardService {
       console.error('[AdminDashboardService] error message:', error?.message);
       throw error;
     }
+  }
+
+  async getBulkCustomMenuRequests(): Promise<BulkCustomMenuRequest[]> {
+    const response = await enhancedApiService.get<{ requests: BulkCustomMenuRequest[] }>(
+      '/api/scheduling/bulk-order/custom-menu-requests'
+    );
+    return response.data?.requests || [];
+  }
+
+  async reviewBulkCustomMenuRequest(
+    id: string,
+    data: { status: 'APPROVED' | 'REJECTED'; adminRemark: string }
+  ): Promise<BulkCustomMenuRequest> {
+    const response = await enhancedApiService.patch<{ request: BulkCustomMenuRequest }>(
+      `/api/scheduling/bulk-order/custom-menu-requests/${id}`,
+      data
+    );
+    return response.data.request;
   }
 
   /**

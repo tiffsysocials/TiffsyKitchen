@@ -92,6 +92,7 @@ export interface AdminUser {
   _id: string;
   phone: string;
   role: UserRole;
+  capabilities?: UserRole[];
   name: string;
   email: string;
   username?: string;
@@ -259,6 +260,7 @@ export interface UserActivity {
 
 export interface UserDetailsResponse {
   user: User;
+  corporateVoucherBalance?: number;
   kitchen?: Kitchen;
   activity?: UserActivity;
   stats?: {

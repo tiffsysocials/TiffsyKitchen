@@ -41,6 +41,7 @@ export default function KitchenNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false, // Kitchen Orders Screen has its own header
+        gestureEnabled: true,
       }}
     >
       <Stack.Screen

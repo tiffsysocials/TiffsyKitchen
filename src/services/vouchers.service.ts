@@ -119,6 +119,8 @@ class VouchersService {
       status: string;
       source?: string;
       redeemedAt?: string;
+      cancelledAt?: string;
+      cancellationReason?: string;
     }>;
     pagination: { total: number; page: number; limit: number; pages: number };
   }> {
@@ -138,7 +140,7 @@ class VouchersService {
     userId: string;
     count: number;
     expiryDays?: number;
-    reason?: string;
+    reason: string;
   }): Promise<{ count: number; voucherIds: string[]; expiryDate: string }> {
     const response = await apiService.post<any>('/api/vouchers/admin/issue', params);
     // Backend response shape: { success, message, data: { count, voucherIds, expiryDate } }

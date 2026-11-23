@@ -60,6 +60,10 @@ export const IssueVoucherModal: React.FC<IssueVoucherModalProps> = ({
       setError('Expiry days must be between 1 and 365');
       return;
     }
+    if (reason.trim().length < 3) {
+      setError('A reason is required for voucher issuance');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -67,7 +71,7 @@ export const IssueVoucherModal: React.FC<IssueVoucherModalProps> = ({
         userId,
         count: countNum,
         expiryDays: expiryDaysNum,
-        reason: reason.trim() || undefined,
+        reason: reason.trim(),
       });
       showSuccess('Vouchers issued', `${result.count} voucher(s) granted${userName ? ` to ${userName}` : ''}.`);
       reset();
@@ -122,7 +126,7 @@ export const IssueVoucherModal: React.FC<IssueVoucherModalProps> = ({
             editable={!submitting}
           />
 
-          <Text style={styles.label}>Reason (optional)</Text>
+          <Text style={styles.label}>Reason *</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             value={reason}

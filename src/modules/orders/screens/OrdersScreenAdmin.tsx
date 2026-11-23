@@ -25,6 +25,7 @@ import ExpandableKitchenOrderCard from '../components/ExpandableKitchenOrderCard
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAlert } from '../../../hooks/useAlert';
 import { GradientBox } from '../../../components/common/GradientBox';
+import adminDashboardService from '../../../services/admin-dashboard.service';
 
 /**
  * Order-list tabs. These map 1:1 to server-side buckets — the API resolves the
@@ -63,6 +64,15 @@ const getTodayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getFutureDateString = (daysAhead: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + Math.min(Math.max(daysAhead, 1), 365));
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 interface OrdersScreenAdminProps {
   onMenuPress?: () => void;
   navigation?: any;
@@ -75,6 +85,13 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
   // const insets = useSafeAreaInsets(); // Removed
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo, showWarning, showConfirm } = useAlert();
+  const { data: systemConfig } = useQuery({
+    queryKey: ['systemConfig'],
+    queryFn: () => adminDashboardService.getSystemConfig(),
+  });
+  const orderCalendarMaxDate = getFutureDateString(
+    systemConfig?.operationalLimits?.adminOrderCalendarDaysAhead ?? 365
+  );
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterValue>('pending');
   const [selectedMealWindow, setSelectedMealWindow] = useState<MealWindowFilterValue>('ALL');
   // Group each kitchen's orders into delivery-area sections instead of one flat run.
@@ -937,7 +954,7 @@ const OrdersScreenAdmin = ({ onMenuPress, navigation }: OrdersScreenAdminProps) 
               markedDates={selectedDate ? {
                 [selectedDate]: { selected: true, selectedColor: '#FE8733' },
               } : {}}
-              maxDate={getTodayDateString()}
+              maxDate={orderCalendarMaxDate}
               theme={{
                 todayTextColor: '#FE8733',
                 selectedDayBackgroundColor: '#FE8733',

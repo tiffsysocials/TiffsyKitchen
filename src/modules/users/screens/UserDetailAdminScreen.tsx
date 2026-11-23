@@ -26,6 +26,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { SafeAreaScreen } from '../../../components/common/SafeAreaScreen';
 import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
 import { IssueVoucherModal } from '../components/IssueVoucherModal';
+import { ReduceVoucherModal } from '../components/ReduceVoucherModal';
 
 interface UserDetailAdminScreenProps {
   userId: string;
@@ -77,6 +78,7 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showIssueVoucherModal, setShowIssueVoucherModal] = useState(false);
+  const [showReduceVoucherModal, setShowReduceVoucherModal] = useState(false);
   const [vouchers, setVouchers] = useState<Array<{
     _id: string;
     voucherCode: string;
@@ -85,6 +87,8 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
     status: string;
     source?: string;
     redeemedAt?: string;
+    cancelledAt?: string;
+    cancellationReason?: string;
   }>>([]);
   const [loadingVouchers, setLoadingVouchers] = useState(false);
   const [voucherStatusFilter, setVoucherStatusFilter] = useState<'AVAILABLE' | 'ALL'>('AVAILABLE');
@@ -358,19 +362,38 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
           </View>
 
           {/* Voucher Count + Issue button for Customers (uses live vouchers list, falls back to stats while loading) */}
-          {user.role === 'CUSTOMER' && (
+          {(user.capabilities || [user.role]).includes('CUSTOMER') && (
+            <>
             <View style={styles.voucherInfoCard}>
               <MaterialIcons name="confirmation-number" size={20} color="#4ECDC4" />
               <Text style={styles.voucherInfoLabel}>Available Vouchers:</Text>
               <Text style={styles.voucherInfoValue}>
                 {loadingVouchers
                   ? '…'
-                  : vouchers.filter((v) => isUsableVoucher(v.status)).length || (stats?.availableVouchers ?? 0)}
+                  : vouchers.filter((v) => isUsableVoucher(v.status)).length}
               </Text>
+              <TouchableOpacity
+                onPress={() => setShowReduceVoucherModal(true)}
+                disabled={!vouchers.some((v) => isUsableVoucher(v.status)) || loadingVouchers}
+                style={{
+                  marginLeft: 'auto',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 3,
+                  paddingHorizontal: 8,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  backgroundColor: colors.danger,
+                  opacity: !vouchers.some((v) => isUsableVoucher(v.status)) || loadingVouchers ? 0.4 : 1,
+                }}
+              >
+                <MaterialIcons name="remove" size={14} color={colors.white} />
+                <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>Reduce</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowIssueVoucherModal(true)}
                 style={{
-                  marginLeft: 'auto',
+                  marginLeft: 6,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 4,
@@ -384,6 +407,12 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
                 <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>Issue</Text>
               </TouchableOpacity>
             </View>
+            <View style={[styles.voucherInfoCard, { marginTop: 8 }]}>
+              <MaterialIcons name="business" size={20} color="#7C3AED" />
+              <Text style={styles.voucherInfoLabel}>Corporate Vouchers:</Text>
+              <Text style={styles.voucherInfoValue}>{userData.corporateVoucherBalance || 0}</Text>
+            </View>
+            </>
           )}
 
           {user.status === 'SUSPENDED' && user.suspensionReason && (
@@ -552,6 +581,11 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
                       {v.source && (
                         <Text style={{ fontSize: 10, color: colors.gray, marginTop: 4 }}>
                           Source: {v.source}
+                        </Text>
+                      )}
+                      {v.status === 'CANCELLED' && v.cancellationReason && (
+                        <Text style={{ fontSize: 10, color: colors.danger, marginTop: 4 }}>
+                          Admin remark: {v.cancellationReason}
                         </Text>
                       )}
                     </View>
@@ -884,16 +918,30 @@ const UserDetailAdminScreenInner: React.FC<UserDetailAdminScreenProps> = ({
         onSuccess={() => fetchUserDetails()}
       />
       {user.role === 'CUSTOMER' && (
-        <IssueVoucherModal
-          visible={showIssueVoucherModal}
-          userId={user._id}
-          userName={user.name}
-          onClose={() => setShowIssueVoucherModal(false)}
-          onSuccess={() => {
-            fetchUserDetails();
-            fetchVouchers();
-          }}
-        />
+        <>
+          <IssueVoucherModal
+            visible={showIssueVoucherModal}
+            userId={user._id}
+            userName={user.name}
+            onClose={() => setShowIssueVoucherModal(false)}
+            onSuccess={() => {
+              fetchUserDetails();
+              fetchVouchers();
+            }}
+          />
+          <ReduceVoucherModal
+            visible={showReduceVoucherModal}
+            voucherId={[...vouchers]
+              .filter((voucher) => isUsableVoucher(voucher.status))
+              .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime())[0]?._id}
+            userName={user.name}
+            onClose={() => setShowReduceVoucherModal(false)}
+            onSuccess={() => {
+              fetchUserDetails();
+              fetchVouchers();
+            }}
+          />
+        </>
       )}
     </View>
     </SafeAreaScreen>

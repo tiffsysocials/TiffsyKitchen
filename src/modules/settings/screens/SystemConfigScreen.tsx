@@ -326,6 +326,36 @@ const SystemConfigScreen: React.FC = () => {
         </Card>
       </View>
 
+      {/* Operational Limits */}
+      <View className="px-4 pb-4">
+        <Card className="p-4">
+          <View className="flex-row items-center mb-4">
+            <Icon name="tune" size={24} color="#FE8733" />
+            <Text className="text-lg font-semibold text-gray-800 ml-2">Operational Limits</Text>
+          </View>
+          {[
+            ['normalOrderMaxThalis', 'Normal Order Maximum Thalis', '4'],
+            ['kitchenMealWindowCapacity', 'Kitchen Capacity per Meal Window', '30'],
+            ['bulkCustomMenuThreshold', 'Bulk Custom Menu Threshold', '20'],
+            ['adminOrderCalendarDaysAhead', 'Admin Calendar Days Ahead', '365'],
+          ].map(([field, label, placeholder]) => (
+            <View className="mb-4" key={field}>
+              <Text className="text-sm font-medium text-gray-700 mb-2">{label}</Text>
+              <TextInput
+                value={String((formData.operationalLimits as any)?.[field] ?? '')}
+                onChangeText={(value) => updateField('operationalLimits', field, parseInt(value, 10) || 0)}
+                placeholder={placeholder}
+                keyboardType="number-pad"
+                className="bg-gray-100 p-3 rounded-lg text-gray-800"
+              />
+            </View>
+          ))}
+          <Text className="text-xs text-gray-500">
+            Capacity applies per kitchen, service date, and meal window. Calendar access is capped at one year.
+          </Text>
+        </Card>
+      </View>
+
       {/* Notifications */}
       <View className="px-4 pb-4">
         <Card className="p-4">

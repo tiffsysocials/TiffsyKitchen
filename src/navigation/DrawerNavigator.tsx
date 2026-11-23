@@ -47,7 +47,7 @@ const PRIMARY_COLOR = '#FE8733';
  */
 function KitchensNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true }}>
       <Stack.Screen name="KitchensList" component={KitchensManagementScreen} />
       <Stack.Screen name="KitchenDetail" component={KitchenDetailScreen} />
       <Stack.Screen name="BatchManagement" component={BatchManagementScreen} />

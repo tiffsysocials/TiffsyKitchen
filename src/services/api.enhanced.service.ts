@@ -173,9 +173,12 @@ class EnhancedApiService {
     const requestPromise = (async () => {
       try {
         const token = await this.getAuthToken();
+        const storedRole = await AsyncStorage.getItem('userRole');
+        const appType = storedRole === 'KITCHEN_STAFF' ? 'kitchen' : 'admin';
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
+          'X-App-Type': appType,
           ...config.headers,
         };
 
@@ -203,6 +206,7 @@ class EnhancedApiService {
           method: config.method,
           headers: {
             'Content-Type': 'application/json',
+            'X-App-Type': appType,
             ...config.headers,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           },

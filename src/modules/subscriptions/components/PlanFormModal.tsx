@@ -294,15 +294,14 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ visible, onClose, 
 
           {/* Duration */}
           <View style={styles.field}>
-            <Text style={styles.label}>Duration (Days) * {isEditMode && '(Cannot be changed)'}</Text>
+            <Text style={styles.label}>Duration (Days) *</Text>
             <TextInput
-              style={[styles.input, isEditMode && styles.inputDisabled]}
+              style={styles.input}
               value={durationDays}
-              onChangeText={(text) => !isEditMode && setDurationDays(text.replace(/[^0-9]/g, ''))}
+              onChangeText={(text) => setDurationDays(text.replace(/[^0-9]/g, ''))}
               placeholder="e.g., 30"
               keyboardType="numeric"
               placeholderTextColor="#9ca3af"
-              editable={!isEditMode}
             />
           </View>
 

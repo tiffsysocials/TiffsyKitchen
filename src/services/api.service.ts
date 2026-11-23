@@ -14,9 +14,11 @@ class ApiService {
 
   private async request<T>(endpoint: string, config: RequestConfig): Promise<T> {
     const token = await this.getAuthToken();
+    const storedRole = await AsyncStorage.getItem('userRole');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'X-App-Type': storedRole === 'KITCHEN_STAFF' ? 'kitchen' : 'admin',
       ...config.headers,
     };
 

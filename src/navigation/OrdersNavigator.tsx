@@ -19,6 +19,7 @@ export default function OrdersNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: true, // Show headers
+        gestureEnabled: true,
         headerStyle: {
           backgroundColor: '#007AFF',
         },

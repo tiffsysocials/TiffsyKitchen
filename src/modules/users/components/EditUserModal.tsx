@@ -12,7 +12,7 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { adminUsersService, UpdateUserRequest } from '../../../services/admin-users.service';
 import { kitchenService } from '../../../services/kitchen.service';
-import { User, Kitchen } from '../../../types/api.types';
+import { User, Kitchen, UserRole } from '../../../types/api.types';
 import { useAlert } from '../../../hooks/useAlert';
 
 interface EditUserModalProps {
@@ -52,14 +52,16 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingKitchens, setLoadingKitchens] = useState(false);
   const [showKitchenPicker, setShowKitchenPicker] = useState(false);
+  const [capabilities, setCapabilities] = useState<UserRole[]>([]);
 
   useEffect(() => {
     if (visible && user) {
       // Initialize form with user data
       setName(user.name || '');
       setEmail(user.email || '');
+      setCapabilities(user.capabilities?.length ? user.capabilities : [user.role]);
 
-      if (user.role === 'KITCHEN_STAFF') {
+      if ((user.capabilities || [user.role]).includes('KITCHEN_STAFF')) {
         const kitchenId = typeof user.kitchenId === 'string'
           ? user.kitchenId
           : user.kitchenId?._id || '';
@@ -68,6 +70,12 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
       }
     }
   }, [visible, user]);
+
+  useEffect(() => {
+    if (visible && capabilities.includes('KITCHEN_STAFF') && kitchens.length === 0) {
+      fetchKitchens();
+    }
+  }, [visible, capabilities]);
 
   const fetchKitchens = async () => {
     try {
@@ -85,15 +93,17 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
     setName('');
     setEmail('');
     setSelectedKitchenId('');
+    setCapabilities([]);
   };
 
   const validateForm = (): string | null => {
     if (!name.trim()) {
       return 'Please enter a name';
     }
-    if (user?.role === 'KITCHEN_STAFF' && !selectedKitchenId) {
+    if (capabilities.includes('KITCHEN_STAFF') && !selectedKitchenId) {
       return 'Please select a kitchen';
     }
+    if (capabilities.length === 0) return 'Select at least one capability';
     return null;
   };
 
@@ -112,9 +122,10 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
       const data: UpdateUserRequest = {
         name: name.trim(),
         email: email.trim() || undefined,
+        capabilities,
       };
 
-      if (user.role === 'KITCHEN_STAFF') {
+      if (capabilities.includes('KITCHEN_STAFF')) {
         data.kitchenId = selectedKitchenId;
       }
 
@@ -170,27 +181,29 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>Role (Cannot be changed)</Text>
-              <View style={[styles.inputContainer, styles.disabledInput]}>
-                <MaterialIcons
-                  name={
-                    user.role === 'DRIVER'
-                      ? 'local-shipping'
-                      : user.role === 'KITCHEN_STAFF'
-                      ? 'restaurant'
-                      : 'admin-panel-settings'
-                  }
-                  size={20}
-                  color={colors.gray}
-                />
-                <Text style={styles.disabledText}>
-                  {user.role === 'KITCHEN_STAFF'
-                    ? 'Kitchen Staff'
-                    : user.role === 'DRIVER'
-                    ? 'Driver'
-                    : 'Admin'}
-                </Text>
-              </View>
+              <Text style={styles.label}>App Capabilities</Text>
+              {([
+                ['CUSTOMER', 'Customer'], ['KITCHEN_STAFF', 'Kitchen'],
+                ['DRIVER', 'Driver'], ['ADMIN', 'Admin'],
+              ] as [UserRole, string][]).map(([value, label]) => {
+                const enabled = capabilities.includes(value);
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={styles.capabilityRow}
+                    onPress={() => setCapabilities(current =>
+                      enabled ? current.filter(item => item !== value) : [...current, value]
+                    )}
+                  >
+                    <MaterialIcons
+                      name={enabled ? 'check-box' : 'check-box-outline-blank'}
+                      size={22}
+                      color={enabled ? colors.primary : colors.gray}
+                    />
+                    <Text style={styles.capabilityLabel}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Editable Fields */}
@@ -225,7 +238,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </View>
 
             {/* Kitchen Selection (for KITCHEN_STAFF) */}
-            {user.role === 'KITCHEN_STAFF' && (
+            {capabilities.includes('KITCHEN_STAFF') && (
               <View style={styles.section}>
                 <Text style={styles.label}>Kitchen *</Text>
                 {loadingKitchens ? (
@@ -401,6 +414,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     fontSize: 14,
     color: colors.gray,
+  },
+  capabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  capabilityLabel: {
+    marginLeft: spacing.sm,
+    fontSize: 14,
+    color: colors.black,
   },
   selectButton: {
     flexDirection: 'row',

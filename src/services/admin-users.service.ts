@@ -36,6 +36,7 @@ export interface UpdateUserRequest {
   name?: string;
   email?: string;
   kitchenId?: string;
+  capabilities?: UserRole[];
 }
 
 export interface SuspendUserRequest {
